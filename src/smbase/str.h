@@ -17,9 +17,10 @@
 #include <iostream>      // istream, ostream
 #include <stdarg.h>      // va_list
 #include <string.h>      // strcmp, etc.
-#include <type_traits>
 
-class Flatten;           // flatten.h
+#include <nonstd/string_view.hpp>
+#include <string>
+#include <type_traits>
 
 // certain unfortunate implementation decisions by some compilers
 // necessitate avoiding the name 'string'
@@ -77,20 +78,19 @@ public:        // funcs
   //     the length passed to its constructor!
   string(int length, SmbaseStringFunc) { s=emptyString; setlength(length); }
 
-  string(Flatten&);
-  void xfer(Flatten &flat);
-
   // simple queries
-  int length() const;           // returns number of non-null chars in the string; length of "" is 0
-  bool isempty() const { return s[0]==0; }
+  int length() const;
+  int size() const { return length(); }
   bool contains(char c) const;
-
-  // std::string has this instead; I will begin using slowly
-  bool empty() const { return isempty(); }
+  bool empty() const { return s[0]=='\0'; }
 
   // array-like access
   char& operator[] (int i) { return s[i]; }
   char operator[] (int i) const { return s[i]; }
+
+  // modifications
+  void clear() { kill(); }
+  void realloc(int size);
 
   // substring
   string substring(int startIndex, int length) const;

@@ -61,18 +61,9 @@ void string::dup(char const *src)
 void string::kill()
 {
   if (s != emptyString) {
-    delete s;
+    delete [] s;
   }
-}
-
-
-string::string(Flatten&)
-  : s(emptyString)
-{}
-
-void string::xfer(Flatten &flat)
-{
-  flat.xferCharString(s);
+  s = emptyString;
 }
 
 
@@ -88,6 +79,13 @@ bool string::contains(char c) const
   return !!strchr(s, c);
 }
 
+
+void string::realloc(int size)
+{
+  kill();
+  s = new char[size + 1];
+  memset(s, 0, size + 1);
+}
 
 string string::substring(int startIndex, int len) const
 {

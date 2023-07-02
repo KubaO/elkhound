@@ -73,6 +73,36 @@ void Flatten::xferCharString(char *&str)
   }
 }
 
+void Flatten::xferString(string& str)
+{
+  if (writing()) {
+    if (str.empty()) {
+      writeInt(-1);     // representation of NULL
+      return;
+    }
+
+    int len = str.size();
+    writeInt(len);
+
+    // write the null terminator too, as a simple
+    // sanity check when reading
+    formatAssert(str[len] == '\0');
+    xferSimple(&str[0], len + 1);
+  }
+  else {
+    int len = readInt();
+    if (len == -1) {
+      str.clear();
+      return;
+    }
+
+    str.realloc(len + 1);
+    xferSimple(&str[0], len + 1);
+    formatAssert(str[len] == '\0');
+  }
+}
+
+
 
 void Flatten::checkpoint(int code)
 {
