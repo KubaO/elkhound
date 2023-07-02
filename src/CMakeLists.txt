@@ -5,20 +5,23 @@
 cmake_minimum_required(VERSION 3.0)
 project(elkhound)
 
-mark_as_advanced(
-    CLEAR
-    BISON_EXECUTABLE
-)
+if(NOT DEFINED BISON_EXECUTABLE)
+    mark_as_advanced(
+        CLEAR
+        BISON_EXECUTABLE
+    )
 
-find_package(BISON REQUIRED)
+    find_package(BISON REQUIRED)
+endif()
 
-mark_as_advanced(
-    CLEAR
-    FLEX_EXECUTABLE
-    FLEX_INCLUDE_DIR
-)
-
-find_package(FLEX REQUIRED)
+if(NOT DEFINED FLEX_EXECUTABLE OR NOT DEFINED FLEX_INCLUDE_DIR)
+    mark_as_advanced(
+        CLEAR
+        FLEX_EXECUTABLE
+        FLEX_INCLUDE_DIR
+    )
+    find_package(FLEX REQUIRED)
+endif()
 
 if(NOT MSVC)
     # Global C flags
@@ -50,10 +53,8 @@ INCLUDE_DIRECTORIES(ast smbase elkhound elkhound/c)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # Option(s)
-if (NOT MSVC)
-    option(EXTRAS "Compile extra stuff(examples, cparse, etc)" ON)
-    option(OCAML "Run OCaml tests" ON)
-endif()
+option(EXTRAS "Compile extra stuff(examples, cparse, etc)" ON)
+option(OCAML "Run OCaml tests" ON)
 
 # set variables
 set(AST_DIR         ${CMAKE_CURRENT_BINARY_DIR}/ast)

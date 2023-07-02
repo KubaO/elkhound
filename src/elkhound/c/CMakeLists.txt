@@ -8,7 +8,7 @@ project(lexer2)
 # generate lexer1yy.cc
 add_custom_command(
     OUTPUT lexer1yy.cc
-    COMMAND flex -olexer1yy.cc ${CMAKE_CURRENT_SOURCE_DIR}/lexer1.lex
+    COMMAND ${FLEX_EXECUTABLE} -olexer1yy.cc ${CMAKE_CURRENT_SOURCE_DIR}/lexer1.lex
 )
 
 # generate c.ast.gen.{cc,h}
@@ -56,21 +56,23 @@ add_library(libcparse STATIC
 )
 # all the files for cparse
 add_executable(cparse
-    main
+    main.cc
 )
 
 # all the files for lexer2
 add_executable(lexer2
     lexer2.cc
-    lexer1
-    lexer1yy
-    cc_lang
+    lexer1.cc
+    lexer1yy.cc
+    cc_lang.cc
 )
 
 # extra compile options
 target_compile_options(lexer2 PRIVATE -DTEST_LEXER2)
 # suppress -Wsign-compare for Flex-generated code
-SET_SOURCE_FILES_PROPERTIES( lexer1yy.cc PROPERTIES COMPILE_FLAGS -Wno-sign-compare )
+if (NOT MSVC)
+    SET_SOURCE_FILES_PROPERTIES( lexer1yy.cc PROPERTIES COMPILE_FLAGS -Wno-sign-compare )
+endif()
 
 # link options
 target_link_libraries(libcparse smbase ast libelkhound)
