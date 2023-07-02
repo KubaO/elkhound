@@ -9,20 +9,21 @@ project(lexer2)
 add_custom_command(
     OUTPUT lexer1yy.cc
     COMMAND ${FLEX_EXECUTABLE} -olexer1yy.cc ${CMAKE_CURRENT_SOURCE_DIR}/lexer1.lex
+    MAIN_DEPENDENCY lexer1.lex
 )
 
 # generate c.ast.gen.{cc,h}
 add_custom_command(
     OUTPUT c.ast.gen.cc c.ast.gen.h
     COMMAND ${AST_DIR}/astgen -oc.ast.gen ${CMAKE_CURRENT_SOURCE_DIR}/c.ast
-    DEPENDS astgen
+    DEPENDS astgen c.ast
 )
 
 # generate c.gr.{cc,h}
 add_custom_command(
     OUTPUT c.gr.gen.cc c.gr.gen.h
     COMMAND ${ELKHOUND_DIR}/elkhound -tr bison -o c.gr.gen ${CMAKE_CURRENT_SOURCE_DIR}/c.gr
-    DEPENDS elkhound c.tok
+    DEPENDS elkhound c.tok c.gr
 )
 
 # generate c.tok

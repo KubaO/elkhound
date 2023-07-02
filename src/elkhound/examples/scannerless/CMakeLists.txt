@@ -7,7 +7,7 @@ project(sless)
 add_custom_command(
     OUTPUT sless.cc sless.h
     COMMAND ${ELKHOUND_DIR}/elkhound -o sless ${CMAKE_CURRENT_SOURCE_DIR}/sless.gr
-    DEPENDS elkhound
+    DEPENDS elkhound sless.gr
 )
 
 # all the files for sless

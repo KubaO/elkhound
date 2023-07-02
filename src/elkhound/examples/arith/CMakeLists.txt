@@ -7,13 +7,14 @@ project(arith)
 add_custom_command(
     OUTPUT arith.gr.gen.cc arith.gr.gen.h
     COMMAND ${ELKHOUND_DIR}/elkhound -o arith.gr.gen ${CMAKE_CURRENT_SOURCE_DIR}/arith.gr
-    DEPENDS elkhound
+    DEPENDS elkhound arith.gr
 )
 
 # generate arithyy.cc
 add_custom_command(
     OUTPUT arithyy.cc
     COMMAND ${FLEX_EXECUTABLE} -oarithyy.cc ${CMAKE_CURRENT_SOURCE_DIR}/arith.lex
+    MAIN_DEPENDENCY arith.lex
 )
 
 # all the files for arith
