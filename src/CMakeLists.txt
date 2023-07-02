@@ -48,7 +48,7 @@ else()
 endif()
 
 # Global include directories
-INCLUDE_DIRECTORIES(ast smbase elkhound elkhound/c)
+INCLUDE_DIRECTORIES(ast smbase elkhound elkhound/c ../thirdparty/include)
 # add current directory & binary directory
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
