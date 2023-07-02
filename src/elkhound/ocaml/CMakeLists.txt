@@ -19,26 +19,28 @@ find_program(OCAMLYACC_EXECUTABLE ocamlyacc HINTS "${OCAML_BINDIR}")
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lexer.ml
     COMMAND ${OCAMLLEX_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/lexer.mll -o lexer.ml
+    MAIN_DEPENDENCY lexer.mll
 )
 
 # generate ${CMAKE_CURRENT_SOURCE_DIR}/oc_arith.ml{,i}
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/oc_arith.ml ${CMAKE_CURRENT_SOURCE_DIR}/oc_arith.mli
     COMMAND ${OCAMLYACC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/oc_arith.mly
+    MAIN_DEPENDENCY oc_arith.mly
 )
 
 # generate ${CMAKE_CURRENT_BINARY_DIR}/arith.ml{,i}
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/arith.ml ${CMAKE_CURRENT_BINARY_DIR}/arith.mli
     COMMAND ${ELKHOUND_DIR}/elkhound -ocaml -o arith ${CMAKE_CURRENT_SOURCE_DIR}/arith.gr
-    DEPENDS elkhound
+    DEPENDS elkhound arith.gr
 )
 
 # generate ${CMAKE_CURRENT_BINARY_DIR}/een.ml{,i}
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/een.ml ${CMAKE_CURRENT_BINARY_DIR}/een.mli
     COMMAND ${ELKHOUND_DIR}/elkhound -ocaml -o een ${CMAKE_CURRENT_SOURCE_DIR}/een.gr
-    DEPENDS elkhound
+    DEPENDS elkhound een.gr
 )
 
 # ocaml_main files

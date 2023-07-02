@@ -11,19 +11,21 @@ if(PERL_EXECUTABLE)
     add_custom_command(
         OUTPUT gcom.cc gcom.h
         COMMAND ${ELKHOUND_DIR}/elkhound -o gcom ${CMAKE_CURRENT_SOURCE_DIR}/gcom.gr
-        DEPENDS elkhound tokens.tok
+        DEPENDS elkhound tokens.tok gcom.gr
     )
 
     # generate ast.{cc,h}
     add_custom_command(
         OUTPUT ast.cc ast.h
         COMMAND ${AST_DIR}/astgen -o ast ${CMAKE_CURRENT_SOURCE_DIR}/gcom.ast
+        DEPENDS astgen gcom.ast
     )
 
     # generate tokens.tok
     add_custom_command(
         OUTPUT tokens.tok
         COMMAND ${PERL_EXECUTABLE} ${SCRIPTS_DIR}/make-tok TokenCode < ${CMAKE_CURRENT_SOURCE_DIR}/lexer.h > tokens.tok
+        DEPENDS ${SCRIPTS_DIR}/make-tok lexer.h
     )
 
     # all the files for lexer7

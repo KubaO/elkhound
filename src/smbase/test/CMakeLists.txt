@@ -243,4 +243,9 @@ add_custom_command(TARGET srcloc POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy srcloc.h ${CMAKE_CURRENT_BINARY_DIR}/srcloc.h
   COMMAND ${CMAKE_COMMAND} -E copy srcloc.test.cc ${CMAKE_CURRENT_BINARY_DIR}/srcloc.test.cc
   COMMAND ${CMAKE_COMMAND} -E copy srcloc.test2.cc ${CMAKE_CURRENT_BINARY_DIR}/srcloc.test2.cc
+  DEPENDS srcloc.test.cc
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/srcloc.cc
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/srcloc.h
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/srcloc.test.cc
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/srcloc.test2.cc
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../)

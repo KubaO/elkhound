@@ -25,12 +25,14 @@ add_custom_command(
     COMMAND ${BISON_EXECUTABLE} -d ${CMAKE_CURRENT_SOURCE_DIR}/agrampar.y
     COMMAND ${CMAKE_COMMAND} -E copy agrampar.tab.c agrampar.tab.cpp
     COMMAND ${CMAKE_COMMAND} -E remove agrampar.tab.c
+    MAIN_DEPENDENCY agrampar.y
 )
 
 # generate agramlex.cc
 add_custom_command(
     OUTPUT agramlex.cc
     COMMAND ${FLEX_EXECUTABLE} -oagramlex.cc ${CMAKE_CURRENT_SOURCE_DIR}/agramlex.lex
+    MAIN_DEPENDENCY agramlex.lex
 )
 
 # all the files for astgen

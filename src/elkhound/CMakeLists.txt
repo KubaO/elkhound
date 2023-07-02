@@ -12,19 +12,21 @@ add_custom_command(
     COMMAND ${BISON_EXECUTABLE} -d ${CMAKE_CURRENT_SOURCE_DIR}/grampar.y
     COMMAND ${CMAKE_COMMAND} -E copy grampar.tab.c grampar.tab.cpp
     COMMAND ${CMAKE_COMMAND} -E remove agrampar.tab.c
+    MAIN_DEPENDENCY grampar.y
 )
 
 # generate gramlex.yy.cc
 add_custom_command(
     OUTPUT gramlex.cc
     COMMAND ${FLEX_EXECUTABLE} -ogramlex.cc ${CMAKE_CURRENT_SOURCE_DIR}/gramlex.lex
+    MAIN_DEPENDENCY gramlex.lex
 )
 
 # generate gramast.ast.gen.{cc,h}
 add_custom_command(
     OUTPUT gramast.ast.gen.cc gramast.ast.gen.h
     COMMAND astgen -ogramast.ast.gen ${CMAKE_CURRENT_SOURCE_DIR}/gramast.ast
-    DEPENDS astgen
+    DEPENDS astgen gramast.ast
 )
 
 # all the files for libelkhound

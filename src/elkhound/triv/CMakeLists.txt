@@ -20,66 +20,77 @@ if(PERL_EXECUTABLE)
     add_custom_command(
       OUTPUT AdB.gr
       COMMAND ${PERL_EXECUTABLE} ${SCRIPTS_DIR}/make-trivparser AdB < ${CMAKE_CURRENT_SOURCE_DIR}/AdB.gr.in > AdB.gr
+      DEPENDS ${SCRIPTS_DIR}/make-trivparser AdB.gr.in
     )
 
     # generate CAdB.gr
     add_custom_command(
       OUTPUT CAdB.gr
       COMMAND ${PERL_EXECUTABLE} ${SCRIPTS_DIR}/make-trivparser CAdB < ${CMAKE_CURRENT_SOURCE_DIR}/CAdB.gr.in > CAdB.gr
+      DEPENDS ${SCRIPTS_DIR}/make-trivparser CAdB.gr.in
     )
 
     # generate EEb.gr
     add_custom_command(
       OUTPUT EEb.gr
       COMMAND ${PERL_EXECUTABLE} ${SCRIPTS_DIR}/make-trivparser EEb < ${CMAKE_CURRENT_SOURCE_DIR}/EEb.gr.in > EEb.gr
+      DEPENDS ${SCRIPTS_DIR}/make-trivparser EEb.gr.in
     )
 
     # generate EFa.gr
     add_custom_command(
       OUTPUT EFa.gr
       COMMAND ${PERL_EXECUTABLE} ${SCRIPTS_DIR}/make-trivparser EFa < ${CMAKE_CURRENT_SOURCE_DIR}/EFa.gr.in > EFa.gr
+      DEPENDS ${SCRIPTS_DIR}/make-trivparser EFa.gr.in
     )
 
     # generate ESb.gr
     add_custom_command(
       OUTPUT ESb.gr
       COMMAND ${PERL_EXECUTABLE} ${SCRIPTS_DIR}/make-trivparser ESb < ${CMAKE_CURRENT_SOURCE_DIR}/ESb.gr.in > ESb.gr
+      DEPENDS ${SCRIPTS_DIR}/make-trivparser ESb.gr.in
     )
 
     # generate SSSx.gr
     add_custom_command(
       OUTPUT SSSx.gr
       COMMAND ${PERL_EXECUTABLE} ${SCRIPTS_DIR}/make-trivparser SSSx < ${CMAKE_CURRENT_SOURCE_DIR}/SSSx.gr.in > SSSx.gr
+      DEPENDS ${SCRIPTS_DIR}/make-trivparser SSSx.gr.in
     )
 
     # generate SSx.gr
     add_custom_command(
       OUTPUT SSx.gr
       COMMAND ${PERL_EXECUTABLE} ${SCRIPTS_DIR}/make-trivparser SSx < ${CMAKE_CURRENT_SOURCE_DIR}/SSx.gr.in > SSx.gr
+      DEPENDS ${SCRIPTS_DIR}/make-trivparser SSx.gr.in
     )
 
     # generate aSEb.gr
     add_custom_command(
       OUTPUT aSEb.gr
       COMMAND ${PERL_EXECUTABLE} ${SCRIPTS_DIR}/make-trivparser aSEb < ${CMAKE_CURRENT_SOURCE_DIR}/aSEb.gr.in > aSEb.gr
+      DEPENDS ${SCRIPTS_DIR}/make-trivparser aSEb.gr.in
     )
 
     # generate angle.gr
     add_custom_command(
       OUTPUT angle.gr
       COMMAND ${PERL_EXECUTABLE} ${SCRIPTS_DIR}/make-trivparser angle < ${CMAKE_CURRENT_SOURCE_DIR}/angle.gr.in > angle.gr
+      DEPENDS ${SCRIPTS_DIR}/make-trivparser angle.gr.in
     )
 
     # generate ite.gr
     add_custom_command(
       OUTPUT ite.gr
       COMMAND ${PERL_EXECUTABLE} ${SCRIPTS_DIR}/make-trivparser ite < ${CMAKE_CURRENT_SOURCE_DIR}/ite.gr.in > ite.gr
+      DEPENDS ${SCRIPTS_DIR}/make-trivparser ite.gr.in
     )
 
     # generate testRR.gr
     add_custom_command(
       OUTPUT testRR.gr
       COMMAND ${PERL_EXECUTABLE} ${SCRIPTS_DIR}/make-trivparser testRR < ${CMAKE_CURRENT_SOURCE_DIR}/testRR.gr.in > testRR.gr
+      DEPENDS ${SCRIPTS_DIR}/make-trivparser testRR.gr.in
     )
 
     # generate AdB.gr.gen.{cc,h}
