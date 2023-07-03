@@ -331,17 +331,16 @@ void makeRandomData(int numRandStrs) {
 // file the data array with whitespace-delimited strings from a file
 void readDataFromFile(char *inFileName) {
   dataArray = new StringArray(0);
-  char const *delim = " \t\n\r\v\f";
   std::filebuf fb;
   fb.open (inFileName, std::ios::in);
   std::istream in(&fb);
   while(true) {
-    stringBuilder s;
-    s.readdelim(in, delim);
-//      std::cout << ":" << s->pcharc() << ":" << std::endl;
+    string s;
+    in >> s;
+//      std::cout << ":" << s << ":" << std::endl;
     if (in.eof()) break;
 //      // don't insert 0 length strings
-//      if (s->length() == 0) continue;
+//      if (s.empty()) continue;
     dataArray->append(strdup(s.c_str()));
   }
 }

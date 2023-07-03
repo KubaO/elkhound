@@ -27,51 +27,29 @@
 // ----------------------- string ---------------------
 
 
-int string::length() const
+string operator&(string const& head, string const &tail)
 {
-  int clen = strlen(str.c_str());
-  xassert(clen == str.size());
-  return str.size();
-}
-
-
-bool string::empty() const
-{
-  xassert(str.empty() || str.front() != '\0');
-  return str.empty();
-}
-
-
-string string::operator&(string const &tail) const
-{
-  string dest(*this);
+  string dest(head);
   dest &= tail;
   return dest;
 }
 
-string& string::operator&=(string const &tail)
+string& operator&=(string& head, string const &tail)
 {
-  int myLen = length();
+  int headLen = head.length();
   int tailLen = tail.length();
-  str.reserve(myLen + tailLen + 1);
-  str.append(tail.str);
-  str.push_back('\0');
-  str.pop_back();
-  return *this;
-}
-
-
-void readline(std::istream& is, string &into)
-{
-  into.clear(); // readdelim did just that
-  std::getline(is, into.asWritable());
+  head.reserve(headLen + tailLen + 1);
+  head.append(tail);
+  head.push_back('\0');
+  head.pop_back();
+  return head;
 }
 
 
 void readall(std::istream& is, string &into)
 {
   const int block = 4096;
-  into.clear(); // readdelim did just that
+  into.clear();
   while (!is.fail())
   {
     int head = into.size();
@@ -120,16 +98,16 @@ stringBuilder::stringBuilder(int len)
 void stringBuilder::init(int initSize)
 {
   int size = initSize + EXTRA_SPACE + 1;     // +1 to be like string::setlength
-  str.clear();
-  str.reserve(size);
-  str.resize(initSize + 1);
-  str.pop_back();
+  clear();
+  reserve(size);
+  resize(initSize + 1);
+  pop_back();
 }
 
 
 void stringBuilder::dup(char const *str)
 {
-  this->str.assign(str);
+  assign(str);
 }
 
 
@@ -141,17 +119,7 @@ stringBuilder::stringBuilder(char const *str)
 
 stringBuilder::stringBuilder(char const *str, int len)
 {
-  this->str.assign(str, len);
-}
-
-
-stringBuilder& stringBuilder::operator=(char const *src)
-{
-  if (str.c_str() != src) {
-    clear();
-    dup(src);
-  }
-  return *this;
+  assign(str, len);
 }
 
 
@@ -165,20 +133,20 @@ stringBuilder& stringBuilder::setlength(int newlen)
 
 void stringBuilder::adjustend(char* newend)
 {
-  char* s = &str[0];
-  xassert(s <= newend  &&  newend < s + str.capacity());
+  char* s = &operator[](0);
+  xassert(s <= newend  &&  newend < s + capacity());
   int newSize = newend - s;
 
-  str.resize(newSize);
-  str.push_back('\0');     // sm 9/29/00: maintain invariant
-  str.pop_back();
+  resize(newSize);
+  push_back('\0');     // sm 9/29/00: maintain invariant
+  pop_back();
 }
 
 
 void stringBuilder::truncate(int newLength)
 {
   xassert(0 <= newLength && newLength <= length());
-  adjustend(&str[0] + newLength);
+  adjustend(&operator[](0) + newLength);
 }
 
 
@@ -190,18 +158,18 @@ stringBuilder& stringBuilder::operator&= (char const *tail)
 
 void stringBuilder::append(char const *tail, int len)
 {
-  str.append(tail, len);
-  str.push_back('\0');
-  str.pop_back();
+  string::append(tail, len);
+  push_back('\0');
+  pop_back();
 }
 
 
 stringBuilder& stringBuilder::indent(int amt)
 {
   xassert(amt >= 0);
-  str.append(amt, ' ');
-  str.push_back('\0');
-  str.pop_back();
+  string::append(amt, ' ');
+  push_back('\0');
+  pop_back();
   return *this;
 }
 
@@ -212,20 +180,20 @@ void stringBuilder::grow(int newMinLength)
   int newMinSize = newMinLength + EXTRA_SPACE + 1;         // compute resulting allocated size
 
   // I want to grow at the rate of at least 50% each time
-  int suggest = str.capacity() * 3 / 2;
+  int suggest = capacity() * 3 / 2;
 
   // see which is bigger
   newMinSize = max(newMinSize, suggest);
 
-  str.reserve(newMinSize);
+  reserve(newMinSize);
 }
 
 
 stringBuilder& stringBuilder::operator<< (char c)
 {
-  str.push_back(c);
-  str.push_back('\0');
-  str.pop_back();
+  push_back(c);
+  push_back('\0');
+  pop_back();
   return *this;
 }
 
@@ -274,19 +242,6 @@ stringBuilder& stringBuilder::operator<< (
 stringBuilder& stringBuilder::operator<< (Manipulator manip)
 {
   return manip(*this);
-}
-
-
-// slow but reliable
-void stringBuilder::readdelim(std::istream &is, char const *delim)
-{
-  char c;
-  is.get(c);
-  while (!is.eof() &&
-         (!delim || !strchr(delim, c))) {
-    *this << c;
-    is.get(c);
-  }
 }
 
 

@@ -7,8 +7,8 @@
 #define FLATTEN_H
 
 #include "trdelete.h"   // TRASHINGDELETE
+#include "str.h" // FIXME can be <string>
 
-class string;
 
 class Flatten {
 public:
