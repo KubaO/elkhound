@@ -114,12 +114,12 @@ string &string::setlength(int length)
 }
 
 
-int string::compareTo(string const &src) const
+int string::compare(string const &src) const
 {
-  return compareTo(src.s);
+  return compare(src.s);
 }
 
-int string::compareTo(char const *src) const
+int string::compare(char const *src) const
 {
   if (src == NULL) {
     src = emptyString;

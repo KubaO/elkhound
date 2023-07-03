@@ -96,14 +96,7 @@ public:        // funcs
   string substr(int startIndex, int length) const;
 
   // conversions
-  #if 0    // removing these for more standard compliace
-    //operator char* () { return s; }      // ambiguities...
-    operator char const* () const { return s; }
-    char *pchar() { return s; }
-    char const *pcharc() const { return s; }
-  #else
-    char const *c_str() const { return s; }
-  #endif
+  char const *c_str() const { return s; }
 
   // assignment
   string& operator=(string const &src)
@@ -118,13 +111,12 @@ public:        // funcs
   //   <0   if   *this < src
   //   0    if   *this == src
   //   >0   if   *this > src
-  int compareTo(string const &src) const;
-  int compareTo(char const *src) const;
+  int compare(string const &src) const;
+  int compare(char const *src) const;
 
-  #define MAKEOP(op)                                                             \
-    bool operator op (string const &src) const { return compareTo(src) op 0; }   \
-    /*bool operator op (const char *src) const { return compareTo(src) op 0; }*/ \
-    /* killed stuff with char* because compilers are too flaky; use compareTo */
+  #define MAKEOP(op)                                                           \
+    bool operator op (string const &src) const { return compare(src) op 0; }   \
+
   MAKEOP(==)  MAKEOP(!=)
   MAKEOP(>=)  MAKEOP(>)
   MAKEOP(<=)  MAKEOP(<)
