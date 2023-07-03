@@ -37,3 +37,5 @@ add_library(smbase STATIC
     voidlist.cc
     vptrmap.cc
 )
+
+target_link_libraries(smbase PUBLIC fmt::fmt)
