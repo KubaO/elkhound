@@ -87,7 +87,7 @@ void string::realloc(int size)
   memset(s, 0, size + 1);
 }
 
-string string::substring(int startIndex, int len) const
+string string::substr(int startIndex, int len) const
 {
   xassert(startIndex >= 0 &&
           len >= 0 &&

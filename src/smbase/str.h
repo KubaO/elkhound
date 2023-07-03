@@ -93,7 +93,7 @@ public:        // funcs
   void realloc(int size);
 
   // substring
-  string substring(int startIndex, int length) const;
+  string substr(int startIndex, int length) const;
 
   // conversions
   #if 0    // removing these for more standard compliace
