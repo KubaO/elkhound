@@ -9,6 +9,7 @@
 #include "parsetables.h" // ParseTables
 #include "exc.h"         // XOpen
 #include "strutil.h"     // replace
+#include "fmt/core.h"    // fmt::format
 
 
 // NOTE: The as following code is largely copied from elsewhere,
@@ -535,42 +536,42 @@ void emitMLDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
 
   if (sym.dupCode) {
     emitMLFuncDecl(g, out, dcl, sym.type,
-      stringc << "dup_" << sym.name
-              << " (" << sym.dupParam << ": " << sym.type << ") ");
+      fmt::format("dup_{} ({}: {}) ", sym.name.strref(),
+                  sym.dupParam, sym.type).c_str());
     emitMLUserCode(out, sym.dupCode);
     out << "\n";
   }
 
   if (sym.delCode) {
     emitMLFuncDecl(g, out, dcl, "unit",
-      stringc << "del_" << sym.name
-              << " (" << (sym.delParam? sym.delParam : "_")
-              << ": " << sym.type << ") ");
+      fmt::format("del_{} ({}: {}) ", sym.name.strref(),
+                  (sym.delParam? sym.delParam : "_"),
+                  sym.type).c_str());
     emitMLUserCode(out, sym.delCode);
     out << "\n";
   }
 
   if (nonterm && nonterm->mergeCode) {
     emitMLFuncDecl(g, out, dcl, notVoid(sym.type),
-      stringc << "merge_" << sym.name
-              << " (" << nonterm->mergeParam1 << ": " << notVoid(sym.type) << ") "
-              << " (" << nonterm->mergeParam2 << ": " << notVoid(sym.type) << ") ");
+      fmt::format("merge_{} ({}: {}) ({}: {}) ", sym.name.strref(),
+                  nonterm->mergeParam1, notVoid(sym.type),
+                  nonterm->mergeParam2, notVoid(sym.type)).c_str());
     emitMLUserCode(out, nonterm->mergeCode);
     out << "\n";
   }
 
   if (nonterm && nonterm->keepCode) {
     emitMLFuncDecl(g, out, dcl, "bool",
-      stringc << "keep_" << sym.name
-              << " (" << nonterm->keepParam << ": " << sym.type << ") ");
+      fmt::format("keep_{} ({}: {}) ", sym.name.strref(),
+                  nonterm->keepParam, sym.type).c_str());
     emitMLUserCode(out, nonterm->keepCode);
     out << "\n";
   }
 
   if (term && term->classifyCode) {
     emitMLFuncDecl(g, out, dcl, "int",
-      stringc << "classify_" << sym.name
-              << " (" << term->classifyParam << ": " << sym.type << ") ");
+      fmt::format("classify_{} ({}: {}) ", sym.name.strref(),
+                  term->classifyParam, sym.type).c_str());
     emitMLUserCode(out, term->classifyCode);
     out << "\n";
   }

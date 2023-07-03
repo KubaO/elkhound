@@ -6,6 +6,7 @@
 #include "xassert.h"     // xassert
 #include "exc.h"         // xformat
 #include "strutil.h"     // string, replace
+#include "fmt/core.h"    // fmt::format
 
 #include <iostream>      // std::cout
 #include <ctype.h>       // isspace
@@ -58,9 +59,8 @@ void MLSubstrate::handle(char const *str, int len, char finalDelim)
               }
             }
             else if (nesting() == 0) {
-              err->reportError(stringc
-                << "unexpected closing delimiter `" << *str
-                << "' -- probably due to missing `" << finalDelim << "'");
+              err->reportError(fmt::format("unexpected closing delimiter `{}' -- probably due to missing `{}'",
+                *str, finalDelim));
             }
             else {
               char o = delims.top();
@@ -68,9 +68,8 @@ void MLSubstrate::handle(char const *str, int len, char finalDelim)
               if (!(( o=='{' && c=='}' ) ||
                     ( o=='(' && c==')' ) ||
                     ( o=='[' && c==']' ))) {
-                err->reportError(stringc
-                  << "opening delimiter `" << o
-                  << "' does not match closing delimiter `" << c << "'");
+                err->reportError(fmt::format("opening delimiter `{}' does not match closing delimiter `{}'",
+                  o, c));
               }
               delims.pop();
             }

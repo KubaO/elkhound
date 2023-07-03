@@ -6,6 +6,7 @@
 #include "exc.h"         // xformat
 #include "strutil.h"     // string, replace
 #include "reporterr.h"   // silentReportError
+#include "fmt/core.h"    // fmt::format
 
 #include <iostream>      // std::cout
 #include <ctype.h>       // isspace
@@ -49,9 +50,8 @@ void CCSubstrate::handle(char const *str, int len, char finalDelim)
           case ')':
           case ']':
             if (nesting == 0) {
-              err->reportError(stringc
-                << "unexpected closing delimiter `" << *str
-                << "' -- probably due to missing `" << finalDelim << "'");
+              err->reportError(fmt::format("unexpected closing delimiter `{}' -- probably due to missing `{}'",
+                *str, finalDelim));
             }
             else {
               nesting--;
@@ -148,7 +148,7 @@ string CCSubstrate::getFuncBody() const
     return text;
   }
   else if (exprOnly) {
-    return stringc << "return " << text << ";";
+    return fmt::format("return {};", text);
   }
   else {
     return text;

@@ -5,6 +5,7 @@
 #include "syserr.h"        // xsyserror
 #include "srcloc.h"        // SourceLoc
 #include "trace.h"         // tracingSys
+#include "fmt/core.h"      // fmt::format
 #include <string.h>        // memcpy
 
 EmitCode::EmitCode(rostring f)
@@ -104,7 +105,7 @@ string lineDirective(SourceLoc loc)
       cfname.push_back(c);
   }
 
-  return stringc << hashLine() << line << " \"" << cfname.c_str() << "\"\n";
+  return fmt::format("{}{} \"{}\"\n", hashLine(), line, cfname);
 }
 
 stringBuilder &restoreLine(stringBuilder &sb)

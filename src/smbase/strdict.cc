@@ -2,6 +2,7 @@
 // code for strdict.h
 
 #include "strdict.h"        // this module
+#include "fmt/core.h"       // fmt::format
 #include <string.h>         // strcmp
 
 
@@ -437,7 +438,7 @@ void entry()
             dict2.remove(key.c_str());
           }
           else {
-            dict2.modify(key.c_str(), stringc << value << "x");
+            dict2.modify(key.c_str(), fmt::format("{}x",  value).c_str());
           }
           xassert(dict2 != dict);
         }

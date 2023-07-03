@@ -5,6 +5,7 @@
 #include "typ.h"          // staticAssert, TABLESIZE
 #include "trace.h"        // tracing stuff
 #include "strutil.h"      // encodeWithEscapes
+#include "fmt/core.h"     // fmt::format
 
 #include <stdio.h>        // printf
 #include <assert.h>       // assert
@@ -100,7 +101,7 @@ void Lexer1::emit(Lexer1TokenType toktype, char const *tokenText, int length)
 
   // illegal tokens should be noted
   if (toktype == L1_ILLEGAL) {
-    error(stringb("illegal token: `" << tokenText << "'"));
+    error(fmt::format("illegal token: `{}'", tokenText).c_str());
   }
 
   // add it to our running list of tokens

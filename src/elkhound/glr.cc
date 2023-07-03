@@ -115,6 +115,7 @@
 #include "cyctimer.h"    // CycleTimer
 #include "sobjlist.h"    // SObjList
 #include "owner.h"       // Owner
+#include "fmt/core.h"    // fmt::format
 
 #include <stdio.h>       // FILE
 #include <stdlib.h>      // getenv
@@ -1569,7 +1570,7 @@ StackNode *GLR::findTopmostParser(StateId state)
 // graph visualization tool of some sort
 void GLR::dumpGSS(int tokenNumber) const
 {
-  FILE *dest = fopen(stringc << "gss." << tokenNumber << ".g", "w");
+  FILE *dest = fopen(fmt::format("gss.{}.g", tokenNumber).c_str(), "w");
 
   // list of nodes we've already printed, to avoid printing any
   // node more than once

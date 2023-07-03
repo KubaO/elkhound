@@ -5,6 +5,7 @@
 #include "exc.h"         // xformat
 #include "autofile.h"    // AutoFILE
 #include "array.h"       // Array
+#include "fmt/core.h"    // fmt::format
 
 #include <ctype.h>       // isspace
 #include <string.h>      // strstr, memcmp
@@ -207,9 +208,7 @@ string encodeWithEscapes(rostring p)
 
 string quoted(rostring src)
 {
-  return stringc << "\""
-                 << encodeWithEscapes(src)
-                 << "\"";
+  return fmt::format("\"{}\"", encodeWithEscapes(src));
 }
 
 
@@ -393,16 +392,16 @@ string plural(int n, rostring prefix)
     return string("were");
   }
   if (prefix[strlen(prefix)-1] == 'y') {
-    return stringc << substring(prefix, strlen(prefix)-1) << "ies";
+    return fmt::format("{}ies", substring(prefix, strlen(prefix) - 1));
   }
   else {
-    return stringc << prefix << "s";
+    return fmt::format("{}s", prefix);
   }
 }
 
 string pluraln(int n, rostring prefix)
 {
-  return stringc << n << " " << plural(n, prefix);
+  return fmt::format("{} {}", n, plural(n, prefix));
 }
 
 
@@ -420,10 +419,10 @@ string a_or_an(rostring noun)
   }
 
   if (use_an) {
-    return stringc << "an " << noun;
+    return fmt::format("an ", noun);
   }
   else {
-    return stringc << "a " << noun;
+    return fmt::format("a ", noun);
   }
 }
 

@@ -5,6 +5,7 @@
 #include "trace.h"       // debugging trace()
 #include "ccsstr.h"      // CCSubstrate
 #include "ckheap.h"      // checkHeap
+#include "fmt/core.h"    // fmt::format
 
 #include <fstream>       // std::cout, std::ifstream
 
@@ -150,7 +151,7 @@ int GrammarLexer::yylexInc()
     // 'in' will be deleted in ~GrammarLexer
     std::ifstream *in = new std::ifstream(fname.c_str());
     if (!*in) {
-      err(stringc << "unable to open include file `" << fname << "'");
+      err(fmt::format("unable to open include file `{}'", fname));
     }
     else {
       recursivelyProcess(fname, in);
@@ -255,18 +256,18 @@ void GrammarLexer::printWarning(SourceLoc loc, rostring msg)
 
 void GrammarLexer::errorUnterminatedComment()
 {
-  err(stringc << "unterminated comment, beginning on line " //<< commentStartLine);
-      << SourceLocManager::instance()->getLine(tokenStartLoc));
+  err(fmt::format("unterminated comment, beginning on line {}", //<< commentStartLine
+      SourceLocManager::instance()->getLine(tokenStartLoc)));
 }
 
 void GrammarLexer::errorMalformedInclude()
 {
-  err(stringc << "malformed include");
+  err("malformed include");
 }
 
 void GrammarLexer::errorIllegalCharacter(char ch)
 {
-  err(stringc << "illegal character: `" << ch << "'");
+  err(fmt::format("illegal character: `{}'", ch));
 }
 
 

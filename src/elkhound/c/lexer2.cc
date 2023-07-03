@@ -7,6 +7,7 @@
 #include "exc.h"         // xformat
 #include "cc_lang.h"     // CCLang
 #include "glrconfig.h"   // SOURCELOC
+#include "fmt/core.h"    // fmt::format
 
 #include <stdlib.h>      // strtoul
 #include <string.h>      // strlen, strcmp
@@ -389,11 +390,11 @@ string Lexer2Token::toStringType(bool asSexp, Lexer2TokenType type) const
     case L2_TYPE_NAME:
     case L2_VARIABLE_NAME:
     case L2_STRING_LITERAL:
-      litVal = stringc << strValue;
+      litVal = strValue;
       break;
 
     case L2_INT_LITERAL:
-      litVal = stringc << intValue;
+      litVal = std::to_string(intValue);
       break;
 
     default:
@@ -401,10 +402,10 @@ string Lexer2Token::toStringType(bool asSexp, Lexer2TokenType type) const
   }
 
   if (!asSexp) {
-    return stringc << tokType << "(" << litVal << ")";
+    return fmt::format("{}({})", tokType, litVal);
   }
   else {
-    return stringc << "(" << tokType << " " << litVal << ")";
+    return fmt::format("({} {})", tokType, litVal);
   }
 }
 
@@ -416,10 +417,10 @@ string Lexer2Token::unparseString() const
       return string(strValue);
 
     case L2_STRING_LITERAL:
-      return stringc << quoted(strValue);
+      return quoted(strValue);
 
     case L2_INT_LITERAL:
-      return stringc << intValue;
+      return std::to_string(intValue);
 
     default:
       return l2Tok2String(type);     // operators and keywords

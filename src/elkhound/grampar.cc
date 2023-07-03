@@ -14,6 +14,7 @@
 #include "grampar.tab.h"     // token constant codes, union YYSTYPE
 #include "array.h"           // GrowArray
 #include "mlsstr.h"          // MLSubstrate
+#include "fmt/core.h"      // fmt::format
 
 #include <fstream>           // std::ifstream
 #include <ctype.h>           // isspace, isalnum
@@ -48,11 +49,10 @@ STATICDEF string XASTParse::
 {
   if (tok.validLoc()) {
     if (tok.isNonNull()) {
-      return stringc << tok.locString() << ": near " << tok
-                     << ", " << msg;
+      return fmt::format("{}: near {}, {}", tok.locString(), tok.strref(), msg);
     }
     else {
-      return stringc << tok.locString() << ": " << msg;
+      return fmt::format("{}: {}", tok.locString(), msg);
     }
   }
   else {
@@ -419,7 +419,7 @@ void astParseTerminals(Environment &env, TF_terminals const &terms)
     for (int i=0; i<maxCode; i++) {
       if (!codeHasTerm[i].b) {
         LocString dummy(dummyLoc, grammarStringTable.add(
-          stringc << "__dummy_filler_token" << i));
+          fmt::format("__dummy_filler_token{}", i)));
         env.g.declareToken(dummy, i, dummy);
       }
     }
@@ -460,7 +460,7 @@ void astParseTerminals(Environment &env, TF_terminals const &terms)
         Terminal *t = astParseToken(env, tokName);
         if (t->precedence) {
           astParseError(tokName,
-            stringc << tokName << " already has a specified precedence");
+            fmt::format("{} already has a specified precedence", tokName.strref()));
         }
 
         if (spec.prec == 0) {
@@ -584,7 +584,7 @@ void astParseDDM(Environment &env, Symbol *sym,
 
     else {
       astParseError(func.name,
-        stringc << "unrecognized spec function \"" << func.name << "\"");
+        fmt::format("unrecognized spec function \"{}\"", func.name.strref()));
     }
   }
 }
@@ -1205,7 +1205,7 @@ GrammarAST *parseGrammarFile(rostring origFname, bool useML)
   else {
     in = new std::ifstream(fname.c_str());
     if (!*in) {
-      xsyserror("open", stringc << "error opening input file " << fname);
+      xsyserror("open", fmt::format("error opening input file {}", fname));
     }
   }
 

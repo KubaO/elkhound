@@ -7,6 +7,7 @@
 #include "syserr.h"     // xsyserror
 #include "trace.h"      // traceProgress
 #include "hashline.h"   // HashLineMap
+#include "fmt/core.h"   // fmt::format
 
 #include <stdio.h>      // fprintf
 #include <string.h>     // memcpy
@@ -640,7 +641,7 @@ string SourceLocManager::getString(SourceLoc loc)
   int line, col;
   decodeLineCol(loc, name, line, col);
 
-  return stringc << name << ":" << line << ":" << col;
+  return fmt::format("{}:{}:{}", name, line, col);
 }
 
 string SourceLocManager::getLCString(SourceLoc loc)
@@ -649,7 +650,7 @@ string SourceLocManager::getLCString(SourceLoc loc)
   int line, col;
   decodeLineCol(loc, name, line, col);
 
-  return stringc << line << ":" << col;
+  return fmt::format("{}:{}", line, col);
 }
 
 
@@ -802,7 +803,7 @@ void expect(SourceLoc loc, char const *expFname, int expLine, int expCol)
 // should this be exported?
 string locString(char const *fname, int line, int col)
 {
-  return stringc << fname << ":" << line << ":" << col;
+  return fmt::format("{}:{}:{}", fname, line, col);
 }
 
 

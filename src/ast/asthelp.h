@@ -8,6 +8,7 @@
 #include "fakelist.h"    // FakeList
 #include "str.h"         // string
 #include "locstr.h"      // LocString
+#include "fmt/core.h"    // fmt::format
 
 #include <iostream>      // std::ostream
 
@@ -218,7 +219,7 @@ void debugPrintList(ASTList<T> const &list, char const *name,
   {
     FOREACH_ASTLIST(T, list, iter) {
       iter.data()->debugPrint(os, indent+2,
-        stringc << name << "[" << ct++ << "]");
+        fmt::format("{}[{}]", name, ct++).c_str());
     }
   }
 }

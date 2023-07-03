@@ -22,7 +22,7 @@
 #include "flatten.h"        // Flatten
 #include "nonport.h"        // vnprintf
 #include "array.h"          // Array
-
+#include "fmt/core.h"       // fmt::format
 
 // ----------------------- string ---------------------
 
@@ -246,10 +246,10 @@ stringBuilder& stringBuilder::operator<< (Manipulator manip)
 
 
 // ---------------------- toString ---------------------
-#define TOSTRING(type)        \
-  string toString(type val)   \
-  {                           \
-    return stringc << val;    \
+#define TOSTRING(type)          \
+  string toString(type val)     \
+  {                             \
+    return std::to_string(val); \
   }
 
 TOSTRING(int)
@@ -264,12 +264,7 @@ TOSTRING(float)
 // used by the PRINT_GENERIC macro in my astgen tool
 string toString(char const *str)
 {
-  if (!str) {
-    return string("(null)");
-  }
-  else {
-    return string(str);
-  }
+  return str ? str : "(null)";
 }
 
 
@@ -341,7 +336,7 @@ void test(unsigned long val)
 {
   //std::cout << stringb(val << " in hex: 0x" << stringBuilder::Hex(val)) << std::endl;
 
-  std::cout << stringb(val << " in hex: " << SBHex(val)) << std::endl;
+  std::cout << fmt::format("{} in hex: 0x{:X}", val, val) << std::endl;
 }
 
 int main()
