@@ -35,6 +35,8 @@ add_custom_command(
     MAIN_DEPENDENCY agramlex.lex
 )
 
+target_link_libraries(ast PUBLIC fmt::fmt)
+
 # all the files for astgen
 add_executable(astgen
     agramlex.cc
