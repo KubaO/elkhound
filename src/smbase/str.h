@@ -22,97 +22,55 @@
 #include <string>
 #include <type_traits>
 
-// certain unfortunate implementation decisions by some compilers
-// necessitate avoiding the name 'string'
-//
-// 9/19/04: I originally made this definition to work around a problem
-// with Borland C++ 4.5.  It causes a problem when using the new
-// standard library, since the name clashes with std::string.  A
-// simple solution is to remove the #definition and let namespaces do
-// their job.  Since Intel's headers are the only ones that provoke
-// the problem I'll confine it to that case for now.  Eventually I
-// will do the same for gcc.
-//
-// 2005-02-28: Let's try getting rid of this.
-//
-// 2005-03-15: There were some problems on Redhat due to flex-2.5.4a-29.
-//             I have solved them differently, but it is worth noting
-//             that re-enabling this #define also fixed the problem.
-#if 0   //!defined(__INTEL_COMPILER)
-  #define string mystring
-#endif
 
 
 // ------------------------- string ---------------------
-// This is used when I want to call a function in smbase::string
-// that does not exist or has different semantics in std::string.
-// That way for now I can keep using the function, but it is
-// marked as incompatible.
-enum SmbaseStringFunc { SMBASE_STRING_FUNC };
 
 class string {
 protected:     // data
-  // 10/12/00: switching to never letting s be NULL
-  char *s;                             // string contents; never NULL
-  static char * const emptyString;     // a global ""; should never be modified
-
-protected:     // funcs
-  void dup(char const *source);        // copies, doesn't dealloc first
-  void kill();                         // dealloc if str != 0
+  std::string str;
 
 public:        // funcs
-  string(string const &src) { dup(src.s); }
-  string(char const *src) { dup(src); }
-  string() { s=emptyString; }
-  ~string() { kill(); }
+  explicit string(const std::string& src) : str(src) {}
+  explicit string(std::string&& src) : str(std::move(src)) {}
+  string(char const* src, int length) : str(src, length) {}
+  string(string const& src) = default;
+  string(char const* src) : str(src) {}
+  string() = default;
 
-  // for this one, use ::substring instead
-  string(char const *src, int length, SmbaseStringFunc);
-
-  // for this one, there are two alternatives:
-  //   - stringBuilder has nearly the same constructor interface
-  //     as string had, but cannot export a char* for writing
-  //     (for the same reason string can't anymore); operator[] must
-  //     be used
-  //   - Array<char> is very flexible, but remember to add 1 to
-  //     the length passed to its constructor!
-  string(int length, SmbaseStringFunc) { s=emptyString; setlength(length); }
+  const std::string& asStdStr() const { return str; }
+  std::string& asWritable() { return str; }
 
   // simple queries
   int length() const;
   int size() const { return length(); }
-  bool contains(char c) const;
-  bool empty() const { return s[0]=='\0'; }
+  bool empty() const;
 
   // array-like access
-  char& operator[] (int i) { return s[i]; }
-  char operator[] (int i) const { return s[i]; }
+  char& operator[] (int i) { return str[i]; }
+  char operator[] (int i) const { return str[i]; }
 
   // modifications
-  void clear() { kill(); }
-  void realloc(int size);
+  void clear() { str.clear(); }
+  void resize(int size) { str.resize(size); }
+  void pop_back() { str.pop_back(); }
 
   // substring
-  string substr(int startIndex, int length) const;
+  string substr(int startIndex, int length) const { return string(str.substr(startIndex, length)); }
 
   // conversions
-  char const *c_str() const { return s; }
+  char const *c_str() const { return str.c_str(); }
 
   // assignment
-  string& operator=(string const &src)
-    { if (&src != this) { kill(); dup(src.s); } return *this; }
-  string& operator=(char const *src)
-    { if (src != s) { kill(); dup(src); } return *this; }
-
-  // allocate 'newlen' + 1 bytes (for null); initial contents is ""
-  string& setlength(int newlen);
+  string& operator=(string const& src) { str = src.str; return *this; }
+  string& operator=(char const* src) { str = src; return *this; }
 
   // comparison; return value has same meaning as strcmp's return value:
   //   <0   if   *this < src
   //   0    if   *this == src
   //   >0   if   *this > src
-  int compare(string const &src) const;
-  int compare(char const *src) const;
+  int compare(string const& src) const { return str.compare(src.str); }
+  int compare(char const* src) const { return str.compare(src); }
 
   #define MAKEOP(op)                                                           \
     bool operator op (string const &src) const { return compare(src) op 0; }   \
@@ -126,35 +84,20 @@ public:        // funcs
   // uses '&' instead of '+' to avoid char* coercion problems
   string operator& (string const &tail) const;
   string& operator&= (string const &tail);
-
-  // input/output
-  friend std::istream& operator>> (std::istream &is, string &obj)
-    { obj.readline(is); return is; }
-  friend std::ostream& operator<< (std::ostream &os, string const &obj)
-    { obj.write(os); return os; }
-
-  // note: the read* functions are currently implemented in a fairly
-  // inefficient manner (one char at a time)
-
-  void readdelim(std::istream &is, char const *delim);
-    // read from is until any character in delim is encountered; consumes that
-    // character, but does not put it into the string; if delim is null or
-    // empty, reads until EOF
-
-  void readall(std::istream &is) { readdelim(is, NULL); }
-    // read all remaining chars of is into this
-
-  void readline(std::istream &is) { readdelim(is, "\n"); }
-    // read a line from input stream; consumes the \n, but doesn't put it into
-    // the string
-
-  void write(std::ostream &os) const;
-    // writes all stored characters (but not '\0')
-
-  // debugging
-  void selfCheck() const;
-    // fail an assertion if there is a problem
 };
+
+// read a line from input stream; consumes the \n, but doesn't put it into
+// the string; output is cleared first
+void readline(std::istream& is, string& into);
+
+// read all remaining chars of is into the output string, clearing it first
+void readall(std::istream& is, string& into);
+
+// writes all stored characters (but not '\0')
+inline std::ostream& operator<< (std::ostream& os, string const& obj)
+  { return os << obj.asStdStr(); }
+
+inline std::istream& operator>> (std::istream& is, string& obj) = delete;
 
 
 // ------------------------ rostring ----------------------
@@ -167,9 +110,7 @@ typedef string const &rostring;
 // (and in that case would be the identity function).
 inline char const *toCStr(rostring s) { return s.c_str(); }
 
-// at the moment, if I do this it is a mistake, so catch it; this
-// function is not implemented anywhere
-void/*unusable*/ toCStr(char const *s);
+void toCStr(char const* s) = delete;
 
 // I need some compatibility functions
 inline int strlen(rostring s) { return s.length(); }
@@ -205,8 +146,6 @@ inline string substring(rostring p, int n)
 class stringBuilder : public string {
 protected:
   enum { EXTRA_SPACE = 30 };    // extra space allocated in some situations
-  char *end;          // current end of the string (points to the NUL character)
-  int size;           // amount of space (in bytes) allocated starting at 's'
 
 protected:
   void init(int initSize);
@@ -224,8 +163,8 @@ public:
   stringBuilder& operator= (string const &s) { return operator= (s.c_str()); }
   stringBuilder& operator= (stringBuilder const &s) { return operator= (s.c_str()); }
 
-  int length() const { return end-s; }
-  bool isempty() const { return length()==0; }
+  int length() const { return str.size(); }
+  bool isempty() const { return str.empty(); }
 
   // unlike 'string' above, I will allow stringBuilder to convert to
   // char const * so I can continue to use 'stringc' to build strings
@@ -237,7 +176,7 @@ public:
   stringBuilder& setlength(int newlen);    // change length, forget current data
 
   // make sure we can store 'someLength' non-null chars; grow if necessary
-  void ensure(int someLength) { if (someLength >= size) { grow(someLength); } }
+  void ensure(int someLength) { if (someLength >= str.capacity()) { grow(someLength); } }
 
   // grow the string's length (retaining data); make sure it can hold at least
   // 'newMinLength' non-null chars
@@ -253,7 +192,7 @@ public:
 
   // make the string be the empty string, but don't change the
   // allocated space
-  void clear() { adjustend(s); }
+  void clear() { str.clear(); str.push_back('\0'); str.pop_back(); }
 
   // concatenation, which is the purpose of this class
   stringBuilder& operator&= (char const *tail);

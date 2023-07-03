@@ -26,140 +26,61 @@
 
 // ----------------------- string ---------------------
 
-// put the empty string itself in read-only memory
-char const nul_byte = 0;
-
-// deliberately cast away the constness; I cannot declare
-// 'emptyString' to be const because it gets assigned to 's', but it
-// is nevertheless the intent that I never modify 'nul_byte'
-char * const string::emptyString = const_cast<char*>(&nul_byte);
-
-
-string::string(char const *src, int length, SmbaseStringFunc)
-{
-  s=emptyString;
-  setlength(length);       // setlength already has the +1; sets final NUL
-  memcpy(s, src, length);
-}
-
-
-void string::dup(char const *src)
-{
-  // std::string does not accept NULL pointers
-  xassert(src != NULL);
-
-  if (src[0]==0) {
-    s = emptyString;
-  }
-  else {
-    s = new char[ strlen(src) + 1 ];
-    xassert(s);
-    strcpy(s, src);
-  }
-}
-
-void string::kill()
-{
-  if (s != emptyString) {
-    delete [] s;
-  }
-  s = emptyString;
-}
-
 
 int string::length() const
 {
-  xassert(s);
-  return strlen(s);
-}
-
-bool string::contains(char c) const
-{
-  xassert(s);
-  return !!strchr(s, c);
+  int clen = strlen(str.c_str());
+  xassert(clen == str.size());
+  return str.size();
 }
 
 
-void string::realloc(int size)
+bool string::empty() const
 {
-  kill();
-  s = new char[size + 1];
-  memset(s, 0, size + 1);
-}
-
-string string::substr(int startIndex, int len) const
-{
-  xassert(startIndex >= 0 &&
-          len >= 0 &&
-          startIndex + len <= length());
-
-  return ::substring(s+startIndex, len);
-}
-
-
-string &string::setlength(int length)
-{
-  kill();
-  if (length > 0) {
-    s = new char[ length+1 ];
-    xassert(s);
-    s[length] = 0;      // final NUL in expectation of 'length' chars
-    s[0] = 0;           // in case we just wanted to set allocated length
-  }
-  else {
-    xassert(length == 0);     // negative wouldn't make sense
-    s = emptyString;
-  }
-  return *this;
-}
-
-
-int string::compare(string const &src) const
-{
-  return compare(src.s);
-}
-
-int string::compare(char const *src) const
-{
-  if (src == NULL) {
-    src = emptyString;
-  }
-  return strcmp(s, src);
+  xassert(str.empty() || str.front() != '\0');
+  return str.empty();
 }
 
 
 string string::operator&(string const &tail) const
 {
-  string dest(length() + tail.length(), SMBASE_STRING_FUNC);
-  strcpy(dest.s, s);
-  strcat(dest.s, tail.s);
+  string dest(*this);
+  dest &= tail;
   return dest;
 }
 
 string& string::operator&=(string const &tail)
 {
-  return *this = *this & tail;
+  int myLen = length();
+  int tailLen = tail.length();
+  str.reserve(myLen + tailLen + 1);
+  str.append(tail.str);
+  str.push_back('\0');
+  str.pop_back();
+  return *this;
 }
 
 
-void string::readdelim(std::istream &is, char const *delim)
+void readline(std::istream& is, string &into)
 {
-  stringBuilder sb;
-  sb.readdelim(is, delim);
-  operator= (sb);
+  into.clear(); // readdelim did just that
+  std::getline(is, into.asWritable());
 }
 
 
-void string::write(std::ostream &os) const
+void readall(std::istream& is, string &into)
 {
-  os << s;     // standard char* writing routine
-}
-
-
-void string::selfCheck() const
-{
-  if (s != emptyString) {
-    checkHeapNode(s);
+  const int block = 4096;
+  into.clear(); // readdelim did just that
+  while (!is.fail())
+  {
+    int head = into.size();
+    into.resize(head + block);
+    is.read(&into[head], block);
+    int read = is.gcount();
+    xassert(read >= 0 && read <= block);
+    if (read < block)
+      into.resize(head + read);
   }
 }
 
@@ -186,7 +107,7 @@ int atoi(rostring s)
 
 string substring(char const *p, int n)
 {
-  return string(p, n, SMBASE_STRING_FUNC);
+  return string(p, n);
 }
 
 
@@ -198,19 +119,17 @@ stringBuilder::stringBuilder(int len)
 
 void stringBuilder::init(int initSize)
 {
-  size = initSize + EXTRA_SPACE + 1;     // +1 to be like string::setlength
-  s = new char[size];
-  end = s;
-  end[initSize] = 0;
+  int size = initSize + EXTRA_SPACE + 1;     // +1 to be like string::setlength
+  str.clear();
+  str.reserve(size);
+  str.resize(initSize + 1);
+  str.pop_back();
 }
 
 
 void stringBuilder::dup(char const *str)
 {
-  int len = strlen(str);
-  init(len);
-  strcpy(s, str);
-  end += len;
+  this->str.assign(str);
 }
 
 
@@ -222,16 +141,14 @@ stringBuilder::stringBuilder(char const *str)
 
 stringBuilder::stringBuilder(char const *str, int len)
 {
-  init(len);
-  memcpy(s, str, len);
-  end += len;
+  this->str.assign(str, len);
 }
 
 
 stringBuilder& stringBuilder::operator=(char const *src)
 {
-  if (s != src) {
-    kill();
+  if (str.c_str() != src) {
+    clear();
     dup(src);
   }
   return *this;
@@ -240,7 +157,7 @@ stringBuilder& stringBuilder::operator=(char const *src)
 
 stringBuilder& stringBuilder::setlength(int newlen)
 {
-  kill();
+  clear();
   init(newlen);
   return *this;
 }
@@ -248,17 +165,20 @@ stringBuilder& stringBuilder::setlength(int newlen)
 
 void stringBuilder::adjustend(char* newend)
 {
-  xassert(s <= newend  &&  newend < s + size);
+  char* s = &str[0];
+  xassert(s <= newend  &&  newend < s + str.capacity());
+  int newSize = newend - s;
 
-  end = newend;
-  *end = 0;        // sm 9/29/00: maintain invariant
+  str.resize(newSize);
+  str.push_back('\0');     // sm 9/29/00: maintain invariant
+  str.pop_back();
 }
 
 
 void stringBuilder::truncate(int newLength)
 {
   xassert(0 <= newLength && newLength <= length());
-  adjustend(s + newLength);
+  adjustend(&str[0] + newLength);
 }
 
 
@@ -270,23 +190,18 @@ stringBuilder& stringBuilder::operator&= (char const *tail)
 
 void stringBuilder::append(char const *tail, int len)
 {
-  ensure(length() + len);
-
-  memcpy(end, tail, len);
-  end += len;
-  *end = 0;
+  str.append(tail, len);
+  str.push_back('\0');
+  str.pop_back();
 }
 
 
 stringBuilder& stringBuilder::indent(int amt)
 {
   xassert(amt >= 0);
-  ensure(length() + amt);
-
-  memset(end, ' ', amt);
-  end += amt;
-  *end = 0;
-
+  str.append(amt, ' ');
+  str.push_back('\0');
+  str.pop_back();
   return *this;
 }
 
@@ -297,32 +212,20 @@ void stringBuilder::grow(int newMinLength)
   int newMinSize = newMinLength + EXTRA_SPACE + 1;         // compute resulting allocated size
 
   // I want to grow at the rate of at least 50% each time
-  int suggest = size * 3 / 2;
+  int suggest = str.capacity() * 3 / 2;
 
   // see which is bigger
   newMinSize = max(newMinSize, suggest);
 
-  // remember old length..
-  int len = length();
-
-  // realloc s to be newMinSize bytes
-  char *temp = new char[newMinSize];
-  xassert(len+1 <= newMinSize);    // prevent overrun
-  memcpy(temp, s, len+1);          // copy null too
-  delete[] s;
-  s = temp;
-
-  // adjust other variables
-  end = s + len;
-  size = newMinSize;
+  str.reserve(newMinSize);
 }
 
 
 stringBuilder& stringBuilder::operator<< (char c)
 {
-  ensure(length() + 1);
-  *(end++) = c;
-  *end = 0;
+  str.push_back(c);
+  str.push_back('\0');
+  str.pop_back();
   return *this;
 }
 

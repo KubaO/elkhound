@@ -96,9 +96,10 @@ void Flatten::xferString(string& str)
       return;
     }
 
-    str.realloc(len + 1);
+    str.resize(len + 1);
     xferSimple(&str[0], len + 1);
     formatAssert(str[len] == '\0');
+    str.pop_back();
   }
 }
 
