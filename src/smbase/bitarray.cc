@@ -229,8 +229,7 @@ void testIter(char const *str)
 
   string s1 = toString(b);
   string s2 = toStringViaIter(b);
-  if (s1 != s2 ||
-      !s1.equals(str)) {
+  if (s1 != s2 || s1 != str) {
     std::cout << "str: " << str << std::endl;
     std::cout << " s1: " << s1 << std::endl;
     std::cout << " s2: " << s2 << std::endl;
@@ -248,7 +247,7 @@ void testIter(char const *str)
   }
 
   string cStr = toString(c);
-  if (!inv.equals(cStr)) {
+  if (inv != cStr) {
     std::cout << " inv: " << inv << std::endl;
     std::cout << "cStr: " << cStr << std::endl;
     xbase("test inverter failed");
@@ -276,7 +275,7 @@ void testUnionIntersection(char const *s1, char const *s2)
   string uStr = toString(u);
   string iStr = toString(i);
 
-  if (!uStr.equals(expectUnion)) {
+  if (uStr != expectUnion) {
     std::cout << "         s1: " << s1 << std::endl;
     std::cout << "         s2: " << s2 << std::endl;
     std::cout << "       uStr: " << uStr << std::endl;
@@ -284,7 +283,7 @@ void testUnionIntersection(char const *s1, char const *s2)
     xbase("test union failed");
   }
 
-  if (!iStr.equals(expectIntersection)) {
+  if (iStr != expectIntersection) {
     std::cout << "                s1: " << s1 << std::endl;
     std::cout << "                s2: " << s2 << std::endl;
     std::cout << "              iStr: " << iStr << std::endl;

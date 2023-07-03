@@ -419,7 +419,7 @@ string ASTClass::classKindName() const
 bool AccessMod::hasMod(char const *mod) const
 {
   FOREACH_ASTLIST(string, mods, iter) {
-    if (iter.data()->equals(mod)) {
+    if (*iter.data() == mod) {
       return true;
     }
   }

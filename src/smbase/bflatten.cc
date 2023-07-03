@@ -154,7 +154,7 @@ void entry()
   // compare
   xassert(x == x2);
   xassert(y == y2);
-  xassert(s.equals(s2));
+  xassert(s == s2);
   xassert(px2 == &x2);
   xassert(py2 == &y2);
 

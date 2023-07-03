@@ -412,12 +412,12 @@ SourceLocManager::~SourceLocManager()
 // find it, or return NULL
 SourceLocManager::File *SourceLocManager::findFile(char const *name)
 {
-  if (recent && recent->name.equals(name)) {
+  if (recent && recent->name == name) {
     return recent;
   }
 
   FOREACH_OBJLIST_NC(File, files, iter) {
-    if (iter.data()->name.equals(name)) {
+    if (iter.data()->name == name) {
       return recent = iter.data();
     }
   }
