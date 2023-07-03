@@ -69,13 +69,6 @@ void xBase::insert(std::ostream &os) const
 }
 
 
-void xbase(rostring msg)
-{
-  xBase x(msg);
-  THROW(x);
-}
-
-
 void xBase::addContext(rostring context)
 {
   // for now, fairly simple
@@ -125,11 +118,7 @@ xFormat::~xFormat()
 {}
 
 
-void xformat(rostring condition)
-{
-  xFormat x(condition);
-  THROW(x);
-}
+
 
 void formatAssert_fail(char const *cond, char const *file, int line)
 {

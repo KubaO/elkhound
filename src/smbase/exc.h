@@ -14,6 +14,7 @@
 #include "typ.h"         // bool
 #include "xassert.h"     // xassert, for convenience for #includers
 #include "str.h"         // string
+#include "fmt/core.h"    // fmt::format
 #include <iostream>      // ostream
 
 // forward declarations
@@ -90,8 +91,12 @@ public:
 };
 
 // equivalent to THROW(xBase(msg))
-void xbase(rostring msg) NORETURN;
-
+template<typename... Args>
+void xbase(Args&&... condition) NORETURN
+{
+  xBase x(fmt::format(std::forward<Args>(condition)...));
+  THROW(x);
+}
 
 // -------------------- x_assert -----------------------
 // thrown by _xassert_fail, declared in xassert.h
@@ -128,7 +133,12 @@ public:
 };
 
 // compact way to throw an xFormat
-void xformat(rostring condition) NORETURN;
+template<typename... Args>
+void xformat(Args&&... condition) NORETURN
+{
+  xFormat x(fmt::format(std::forward<Args>(condition)...));
+  THROW(x);
+}
 
 // convenient combination of condition and human-readable message
 #define checkFormat(cond, message) \
@@ -204,8 +214,12 @@ public:
   ~XFatal();
 };
 
-void throw_XFatal(rostring msg) NORETURN;
-#define xfatal(msg) throw_XFatal(stringc << msg)
+template<typename... Args>
+void xfatal(Args&&... condition) NORETURN
+{
+  XFatal x(fmt::format(std::forward<Args>(condition)...));
+  THROW(x);
+}
 
 
 #endif // EXC_H

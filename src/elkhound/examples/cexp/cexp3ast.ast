@@ -3,7 +3,7 @@
 
 verbatim {
   inline string toString(Exp const *e) {
-    return stringc << (void*)e;
+    return fmt::format("{:p}", (void*)e);
   }
 }
 

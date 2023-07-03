@@ -6,6 +6,7 @@
 #include "ptreenode.h" // PTreeNode
 #include "ptreeact.h"  // ParseTreeLexer, ParseTreeActions
 #include "trace.h"     // traceAddSys
+#include "fmt/core.h"  // fmt::format
 
 #include <assert.h>    // assert
 
@@ -43,7 +44,7 @@ char const *toString(ArithTokenCodes code)
 string ArithLexer::tokenDesc() const
 {
   if (type == TOK_NUMBER) {
-    return stringc << "number(" << (int)sval << ")";
+    return fmt::format("number({})", (int)sval);
   }
   else {
     return toString((ArithTokenCodes)type);

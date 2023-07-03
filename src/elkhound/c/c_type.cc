@@ -3,6 +3,7 @@
 
 #include "c_type.h"     // this module
 #include "trace.h"      // tracingSys
+#include "fmt/core.h"   // fmt::format
 #include <assert.h>     // assert
 
 
@@ -31,11 +32,11 @@ MLValue mlStorage(DeclFlags df)
 string makeIdComment(int id)
 {
   if (tracingSys("type-ids")) {
-    return stringc << "/""*" << id << "*/";
-                     // ^^ this is to work around an Emacs highlighting bug
+    return fmt::format("/""*{}*/", id);
+                      // ^^ this is to work around an Emacs highlighting bug
   }
   else {
-    return "";
+    return string();
   }
 }
 
@@ -76,21 +77,21 @@ string recurseCilString(T const *type, int depth)
   xassert(depth >= 0);     // otherwise we started < 1
   if (depth == 0) {
     // just print the id
-    return stringc << "id " << type->getId();
+    return fmt::format("id {}", type->getId());
   }
   else {
     // print id in a comment but go on to print the
     // type one level deeper
-    return stringc << makeIdComment(type->getId()) << " "
-                   << type->toCilString(depth);
+    return fmt::format("{} {}", makeIdComment(type->getId()),
+      type->toCilString(depth));
   }
 }
 
 
 string AtomicType::toString(int depth) const
 {
-  return stringc << recurseCilString(this, depth+1)
-                 << " /""* " << toCString() << " */";
+  return fmt::format("{} /""* {} */",
+    recurseCilString(this, depth+1), toCString());
 }
 
 
@@ -226,7 +227,7 @@ NamedAtomicType::~NamedAtomicType()
 string NamedAtomicType::uniqueName() const
 {
   // 'a' for atomic
-  return stringc << "a" << (long)this /*id*/ << "_" << name;
+  return fmt::format("a{}_{}", (long)this /*id*/, name);
 }
 
 
@@ -292,8 +293,8 @@ STATICDEF char const *CompoundType::keywordName(Keyword k)
 
 string CompoundType::toCString() const
 {
-  return stringc << keywordName(keyword) << " "
-                 << (name? name : "(anonymous)");
+  return fmt::format("{} {}", keywordName(keyword),
+    name? name : "(anonymous)");
 }
 
 
@@ -445,7 +446,7 @@ EnumType::~EnumType()
 
 string EnumType::toCString() const
 {
-  return stringc << "enum " << (name? name : "(anonymous)");
+  return fmt::format("enum {}", name? name : "(anonymous)");
 }
 
 
@@ -558,14 +559,13 @@ string Type::idComment() const
 
 string Type::toCString() const
 {
-  return stringc << idComment() << leftString() << rightString();
+  return fmt::format("{}{}{}", idComment(), leftString(), rightString());
 }
 
 string Type::toCString(char const *name) const
 {
-  return stringc << idComment()
-                 << leftString() << " " << (name? name : "/*anon*/")
-                 << rightString();
+  return fmt::format("{}{} {}{}", idComment(),
+    leftString(), name? name : "/*anon*/", rightString());
 
   // removing the space causes wrong output:
   //   int (foo)(intz)
@@ -696,7 +696,7 @@ bool CVAtomicType::innerEquals(CVAtomicType const *obj) const
 string cvToString(CVFlags cv)
 {
   if (cv != CV_NONE) {
-    return stringc << " " << toString(cv);
+    return fmt::format(" {}", toString(cv));
   }
   else {
     return string("");
@@ -712,15 +712,15 @@ string CVAtomicType::atomicIdComment() const
 
 string CVAtomicType::leftString() const
 {
-  return stringc << atomicIdComment()
-                 << atomic->toCString() << cvToString(cv);
+  return fmt::format("{}{}{}", atomicIdComment(),
+    atomic->toCString(), cvToString(cv));
 }
 
 
 string CVAtomicType::toCilString(int depth) const
 {
-  return stringc << cvToString(cv) << " atomic "
-                 << recurseCilString(atomic, depth);
+  return fmt::format("{} atomic {}",
+    cvToString(cv), recurseCilString(atomic, depth));
 }
 
 
@@ -761,9 +761,8 @@ bool PointerType::innerEquals(PointerType const *obj) const
 
 string PointerType::leftString() const
 {
-  return stringc << atType->leftString()
-                 << (op==PO_POINTER? "*" : "&")
-                 << cvToString(cv);
+  return fmt::format("{}{}{}",
+    atType->leftString(), op==PO_POINTER? "*" : "&", cvToString(cv));
 }
 
 string PointerType::rightString() const
@@ -774,9 +773,9 @@ string PointerType::rightString() const
 
 string PointerType::toCilString(int depth) const
 {
-  return stringc << cvToString(cv)
-                 << (op==PO_POINTER? "ptrto " : "refto ")
-                 << recurseCilString(atType, depth);
+  return fmt::format("{}{}{}",
+    cvToString(cv), op==PO_POINTER? "ptrto " : "refto ",
+    recurseCilString(atType, depth));
 }
 
 
@@ -863,7 +862,7 @@ void FunctionType::addParam(Param *param)
 string FunctionType::leftString() const
 {
   // return type and start of enclosing type's description
-  return stringc << retType->leftString() << " (";
+  return fmt::format("{} (", retType->leftString());
 }
 
 string FunctionType::rightString() const

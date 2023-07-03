@@ -222,7 +222,7 @@ void decodeEscapes(ArrayStack<char> &dest, rostring origSrc,
       xformat("unescaped newline (unterminated string)");
     }
     if (*src == delim) {
-      xformat(stringc << "unescaped delimiter (" << delim << ")");
+      xformat("unescaped delimiter ({})", delim);
     }
 
     if (*src != '\\') {
@@ -310,7 +310,7 @@ string parseQuotedString(rostring text)
 {
   if (!( text[0] == '"' &&
          text[strlen(text)-1] == '"' )) {
-    xformat(stringc << "quoted string is missing quotes: " << text);
+    xformat("quoted string is missing quotes: {}", text);
   }
 
   // strip the quotes

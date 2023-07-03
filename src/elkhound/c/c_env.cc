@@ -6,6 +6,7 @@
 #include "ckheap.h"      // heapCheck
 #include "strtable.h"    // StringTable
 #include "cc_lang.h"     // CCLang
+#include "fmt/core.h"    // fmt::format
 
 
 // --------------------- CFGEnv -----------------------
@@ -94,7 +95,7 @@ void CFGEnv::resolveGotos()
       iter.value()->next = makeNextPtr(target, false);
     }
     else {
-      err(stringc << "goto to undefined label: " << iter.key());
+      err("goto to undefined label: {}", iter.key());
     }
   }
 
@@ -255,10 +256,10 @@ void Env::addVariable(StringRef name, Variable *decl)
 
     // no way we allow it if the types don't match
     if (!type->equals(prev->type)) {
-      errThrow(stringc
-        << "conflicting declaration for `" << name
-        << "'; previous type was `" << prev->type->toString()
-        << "', this type is `" << type->toString() << "'");
+      errThrow(
+        "conflicting declaration for `{}'; "
+        "previous type was `{}', this type is `{}",
+        name, prev->type->toString(), type->toString());
     }
 
     // TODO: this is all wrong.. I didn't want more than one Variable
@@ -306,7 +307,7 @@ void Env::addVariable(StringRef name, Variable *decl)
       }
     }
     else {
-      err(stringc << "duplicate variable decl: " << name);
+      err("duplicate variable decl: {}", name);
     }
   }
 
@@ -354,11 +355,9 @@ void Env::addTypedef(StringRef name, Type const *type)
       return;
     }
     else {
-      errThrow(stringc <<
-        "conflicting typedef for `" << name <<
-        "' as type `" << type->toCString() <<
-        "'; previous type was `" << prev->toCString() <<
-        "'");
+      errThrow(
+        "conflicting typedef for `{}' as type `{}'; previous type was `{}'",
+        name, type->toCString(), prev->toCString());
     }
   }
   typedefs.add(name, const_cast<Type*>(type));
@@ -381,7 +380,7 @@ Type const *Env::getTypedef(StringRef name)
 CompoundType *Env::addCompound(StringRef name, CompoundType::Keyword keyword)
 {
   if (name && compounds.isMapped(name)) {
-    errThrow(stringc << "compound already declared: " << name);
+    errThrow("compound already declared: {}", name);
   }
 
   CompoundType *ret = new CompoundType(keyword, name);
@@ -397,7 +396,7 @@ CompoundType *Env::addCompound(StringRef name, CompoundType::Keyword keyword)
 void Env::addCompoundField(CompoundType *ct, Variable *decl)
 {
   if (ct->getNamedField(decl->name)) {
-    errThrow(stringc << "field already declared: " << decl->name);
+    errThrow("field already declared: {}", decl->name);
   }
 
   ct->addField(decl->name, decl->type, decl);
@@ -425,7 +424,7 @@ CompoundType *Env::getOrAddCompound(StringRef name, CompoundType::Keyword keywor
   }
   else {
     if (ret->keyword != keyword) {
-      errThrow(stringc << "keyword mismatch for compound " << name);
+      errThrow("keyword mismatch for compound {}", name);
     }
     return ret;
   }
@@ -436,7 +435,7 @@ CompoundType *Env::getOrAddCompound(StringRef name, CompoundType::Keyword keywor
 EnumType *Env::addEnum(StringRef name)
 {
   if (name && enums.isMapped(name)) {
-    errThrow(stringc << "enum already declared: " << name);
+    errThrow("enum already declared: {}", name);
   }
 
   EnumType *ret = new EnumType(name);
@@ -476,7 +475,7 @@ EnumType::Value *Env::addEnumerator(StringRef name, EnumType *et, int value,
                                     Variable *decl)
 {
   if (enumerators.isMapped(name)) {
-    errThrow(stringc << "duplicate enumerator: " << name);
+    errThrow("duplicate enumerator: {}", name);
   }
 
   EnumType::Value *ret = et->addValue(name, value, decl);
@@ -643,9 +642,7 @@ void Env::checkCoercible(Type const *src, Type const *dest)
     // can only assign owners into owner owners (whereas it's
     // ok to assign an owner into a serf)
     if (!src->asRval()->isOwnerPtr()) {
-      err(stringc
-        << "cannot convert `" << src->toString()
-        << "' to `" << dest->toString());
+      err("cannot convert `{}' to `{}'", src->toString(), dest->toString());
     }
   }
 
@@ -660,13 +657,12 @@ Type const *Env::promoteTypes(BinaryOp op, Type const *t1, Type const *t2)
 
 
 // --------------------- error/warning reporting ------------------
-Type const *Env::err(char const *str)
+Type const *Env::errOut(char const *str)
 {
   std::cout << ::toString(currentLoc()) << ": error: " << str << std::endl;
   errors++;
   return fixed(ST_ERROR);
 }
-
 
 void Env::warn(char const *str)
 {
@@ -687,21 +683,6 @@ void Env::warnLoc(SourceLoc loc, char const *str)
   pushLocation(loc);
   warn(str);
   popLocation();
-}
-
-
-void Env::errThrow(char const *str)
-{
-  err(str);
-  THROW(XError(str));
-}
-
-
-void Env::errIf(bool condition, char const *str)
-{
-  if (condition) {
-    errThrow(str);
-  }
 }
 
 

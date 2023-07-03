@@ -357,6 +357,5 @@ AssocKind whichKind(LocString * /*owner*/ kind)
   CHECK("assoc_split", AK_SPLIT);
   #undef CHECK
 
-  xbase(stringc << kind->locString()
-                << ": invalid associativity kind: " << *kind);
+  xbase("{}: invalid associativity kind: {}", kind->locString(), kind->strref());
 }

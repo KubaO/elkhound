@@ -270,7 +270,7 @@ void Test::feed(ML &ml, char const *src, bool allowErrors)
 
   if (!allowErrors &&
       origErrors != simpleReportError.errors) {
-    xfailure(stringc << "caused error: " << src);
+    xfailure("caused error: {}", src);
   }
 }
 
@@ -295,7 +295,7 @@ void Test::test(char const *src, ML::State state, int nesting,
          ml.nesting() == nesting &&
          ml.comNesting == comNesting &&
          ml.prev == prev )) {
-    xfailure(stringc << "failed on src: " << src);
+    xfailure("failed on src: {}", src);
   }
 }
 
@@ -362,7 +362,7 @@ void Test::bad(char const *body)
   feed(ml, body, true /*allowErrors*/);
 
   if (origErrors == simpleReportError.errors) {
-    xbase(stringc << "should have caused an error: " << body);
+    xbase("should have caused an error: {}", body);
   }
 }
 
@@ -380,16 +380,16 @@ int Test::main(int argc, char *argv[])
       silentFeed(ml, text.c_str());
 
       if (ml.state != ML::ST_NORMAL) {
-        xbase(stringc << argv[i] << ": ended in state " << (int)ml.state);
+        xbase("{}: ended in state {}", argv[i], (int)ml.state);
       }
       if (ml.nesting() != 0) {
-        xbase(stringc << argv[i] << ": ended with nesting " << ml.nesting());
+        xbase("{}: ended with nesting {}", argv[i], ml.nesting());
       }
       if (ml.inComment()) {
-        xbase(stringc << argv[i] << ": ended in a comment");
+        xbase("{}: ended in a comment", argv[i]);
       }
       if (simpleReportError.errors != 0) {
-        xbase(stringc << argv[i] << ": caused errors");
+        xbase("{}: caused errors", argv[i]);
       }
 
       std::cout << argv[i] << ": ok\n";

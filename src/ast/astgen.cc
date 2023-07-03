@@ -3247,7 +3247,7 @@ void checkUnusedCustoms(ASTClass const *c)
 void grabOptionName(rostring opname, string &oparg, TF_option const *op)
 {
   if (op->args.count() != 1) {
-    xfatal("'" << opname << "' option requires one argument");
+    xfatal("'{}' option requires one argument", opname);
   }
 
   if (oparg.length() > 0) {
@@ -3256,9 +3256,9 @@ void grabOptionName(rostring opname, string &oparg, TF_option const *op)
     // simply changes the name, then the resulting error messages
     // (compilation errors from parts of the system using the
     // old name) are not obvious to diagnose.
-    xfatal("there is already " << a_or_an(opname) <<
-           " class, called " << oparg << ";\n" <<
-           "you should use (subclass) that one");
+    xfatal("there is already {} class, called {};\n"
+           "you should use (subclass) that one",
+           a_or_an(opname), oparg);
   }
 
   // name of the visitor interface class
@@ -3306,7 +3306,7 @@ void entry(int argc, char **argv)
       nocvr = true;
     }
     else {
-      xfatal("unknown option: " << argv[0]);
+      xfatal("unknown option: {}", argv[0]);
     }
     argv++;
   }
@@ -3364,7 +3364,7 @@ void entry(int argc, char **argv)
           wantGDB = true;
         }
         else {
-          xfatal("unknown option: " << op->name);
+          xfatal("unknown option: {}", op->name);
         }
       }
 

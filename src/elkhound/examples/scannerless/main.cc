@@ -7,6 +7,7 @@
 #include "strutil.h"   // quoted
 #include "ptreenode.h" // PTreeNode
 #include "ptreeact.h"  // ParseTreeLexer, ParseTreeActions
+#include "fmt/core.h"    // fmt::format
 
 #include <stdio.h>     // getchar
 #include <iostream>    // std::cout
@@ -45,8 +46,7 @@ string Lexer::tokenDesc() const
 
 string Lexer::tokenKindDesc(int kind) const
 {
-  string k = quoted(stringc << (char)kind);
-  return stringf("%s (%d)", k.c_str(), kind);
+  return fmt::format("{:c} {}", kind, kind);
 }
 
 

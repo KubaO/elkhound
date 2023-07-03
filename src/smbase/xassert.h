@@ -7,6 +7,7 @@
 #define XASSERT_H
 
 #include "macros.h"     // NORETURN
+#include "fmt/core.h"   // fmt::format
 
 // linkdepend: exc.cpp
 
@@ -37,6 +38,13 @@ void x_assert_fail(char const *cond, char const *file, int line) NORETURN;
 
 // call when state is known to be bad; will *not* return
 #define xfailure(why) x_assert_fail(why, __FILE__, __LINE__)
+
+// failure function, declared in xassert.h
+template<typename...Args>
+void x_assert_fail(Args&&... cond, char const* file, int line) NORETURN
+{
+  THROW(x_assert(fmt::format(std::forward<Args>(cond)...), file, line));
+}
 
 
 // Quick note: one prominent book on writing code recommends that

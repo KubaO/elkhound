@@ -1238,7 +1238,7 @@ void GrammarAnalysis::computeIndexedTerms()
        !sym.isDone(); sym.adv()) {
     int index = sym.data()->termIndex;   // map: symbol to index
     if (indexedTerms[index] != NULL) {
-      xfailure(stringc << "terminal index collision at index " << index);
+      xfailure("terminal index collision at index {}", index);
     }
     indexedTerms[index] = sym.data();    // map: index to symbol
   }
@@ -1540,7 +1540,7 @@ void GrammarAnalysis::computeSupersets()
 
       // for now, only handle 'super' as a partial function
       if (sub->superset != NULL) {
-        xfailure(stringc << sub->name << " has more than one superset");
+        xfailure("{} has more than one superset", sub->name);
       }
       sub->superset = super;
     }
@@ -4247,6 +4247,7 @@ void emitActionCode(GrammarAnalysis const &g, rostring hFname,
   out << "#include \"" << sm_basename(hFname) << "\"     // " << g.actionClassName << "\n";
   out << "#include \"parsetables.h\" // ParseTables\n";
   out << "#include \"srcloc.h\"      // SourceLoc\n";
+  out << "#include \"fmt/core.h\"    // fmt::format\n";
   out << "\n";
   out << "#include <assert.h>      // assert\n";
   out << "#include <iostream>      // std::cout\n";
@@ -4341,8 +4342,8 @@ char const *notVoid(char const *type)
 char const *typeString(char const *type, LocString const &tag)
 {
   if (!type) {
-    xbase(stringc << tag.locString() << ": Production tag \"" << tag
-                  << "\" on a symbol with no type.\n");
+    xbase("{}: Production tag \"{}\" on a symbol with no type.\n",
+      tag.locString(), tag.strref());
     return NULL;     // silence warning
   }
   else {
@@ -4386,8 +4387,7 @@ void emitDescriptions(GrammarAnalysis const &g, EmitCode &out)
   out << "string " << g.actionClassName
       << "::terminalDescription(int termId, SemanticValue sval)\n"
       << "{\n"
-      << "  return stringc << termNames[termId]\n"
-      << "                 << \"(\" << (sval % 100000) << \")\";\n"
+      << "  return fmt::format(\"{}({})\", termNames[termId], sval % 100000);\n"
       << "}\n"
       << "\n"
       << "\n"
@@ -4414,8 +4414,7 @@ void emitDescriptions(GrammarAnalysis const &g, EmitCode &out)
   out << "string " << g.actionClassName
       << "::nonterminalDescription(int nontermId, SemanticValue sval)\n"
       << "{\n"
-      << "  return stringc << nontermNames[nontermId]\n"
-      << "                 << \"(\" << (sval % 100000) << \")\";\n"
+      << "  return fmt::format(\"{}({})\", nontermNames[nontermId], sval % 100000);\n"
       << "}\n"
       << "\n"
       << "\n"

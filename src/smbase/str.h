@@ -179,16 +179,6 @@ using SBHex = stringBuilder::Hex;
 std::istream& operator>> (std::istream& is, stringBuilder& sb) = delete;
 
 // ---------------------- misc utils ------------------------
-// the real strength of this entire module: construct strings in-place
-// using the same syntax as C++ iostreams.  e.g.:
-//   puts(stringb("x=" << x << ", y=" << y));
-#define stringb(expr) (stringBuilder() << expr)
-
-// experimenting with dropping the () in favor of <<
-// (the "c" can be interpreted as "constructor", or maybe just
-// the successor to "b" above)
-#define stringc stringBuilder()
-
 
 // experimenting with using toString as a general method for datatypes
 string toString(int i);

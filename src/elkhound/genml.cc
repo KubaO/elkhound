@@ -150,6 +150,7 @@ void emitMLActionCode(GrammarAnalysis const &g, rostring mliFname,
     out << "#include \"" << hFname << "\"     // " << g.actionClassName << "\n";
     out << "#include \"parsetables.h\" // ParseTables\n";
     out << "#include \"srcloc.h\"      // SourceLoc\n";
+    out << "#include \"fmt/core.h\"    // fmt::format\n";
     out << "\n";
     out << "#include <assert.h>      // assert\n";
     out << "#include <iostream>      // std::cout\n";

@@ -15,6 +15,7 @@
 #include "c.ast.gen.h"    // C ast components
 #include "c_variable.h"   // Variable (r)
 #include "array.h"        // ArrayStack
+#include "fmt/core.h"     // fmt::format
 
 class StringTable;        // strtable.h
 class CCLang;             // cc_lang.h
@@ -74,7 +75,12 @@ public:     // funcs
   virtual ~CFGEnv();
 
   // must be defined in child class
-  virtual Type const *err(char const *str)=0;
+  virtual Type const *errOut(char const *str)=0;
+
+  template <typename...Args>
+  Type const* err(Args&&... args) {
+    return errOut(fmt::format(std::forward<Args>(args)...).c_str());
+  }
 
   // manipulate a stack of lists of nodes whose 'next' link
   // needs to be set
@@ -238,7 +244,8 @@ public:     // funcs
 
   // ------------------ error/warning reporting -----------------
   // report an error ('str' should *not* have a newline)
-  virtual Type const *err(char const *str);    // returns fixed(ST_ERROR)
+  Type const *errOut(char const *str) override;    // returns fixed(ST_ERROR)
+
   void warn(char const *str);
 
   // versions which explicitly specify a location
@@ -246,10 +253,22 @@ public:     // funcs
   void warnLoc(SourceLoc loc, char const *str);
 
   // report an error, and throw an exception
-  void errThrow(char const *str);
+  template <typename...Args>
+  void errThrow(Args&&... args)
+  {
+    string msg = fmt::format(std::forward<Args>(args)...);
+    errOut(msg.c_str());
+    THROW(XError(msg.c_str()));
+  }
 
   // if 'condition' is true, report error 'str' and also throw an exception
-  void errIf(bool condition, char const *str);
+  template <typename...Args>
+  void errIf(bool condition, Args&&... args)
+  {
+    if (condition)
+      errThrow(std::forward<Args>(args)...);
+
+  }
 
   // # reported errors
   int getErrors() const { return errors; }
