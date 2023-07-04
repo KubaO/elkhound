@@ -29,6 +29,7 @@
 
 #include "str.h"      // string
 #include "objlist.h"  // ObjList
+#include "fmt/core.h" // fmt::
 
 class HashLineMap;    // hashline.h
 
@@ -79,8 +80,7 @@ private:     // types
     Marker() {}      // for creation in arrays
     Marker(int c, int L, int a)
       : charOffset(c), lineOffset(L), arrayOffset(a) {}
-    Marker(Marker const &obj)
-      : DMEMB(charOffset), DMEMB(lineOffset), DMEMB(arrayOffset) {}
+    Marker(Marker const& obj) = default;
   };
 
 public:      // types
@@ -175,8 +175,7 @@ public:      // types
   public:
     StaticLoc(char const *n, int o, int L, int c)
       : name(n), offset(o), line(L), col(c) {}
-    StaticLoc(StaticLoc const &obj)
-      : DMEMB(name), DMEMB(offset), DMEMB(line), DMEMB(col) {}
+    StaticLoc(StaticLoc const& obj) = default;
     ~StaticLoc();
   };
 
@@ -294,23 +293,18 @@ public:
     { return getFile(fname); }
 
   // render as string in "file:line:col" format
-  string getString(SourceLoc loc);
+  fmt::format_context::iterator format(SourceLoc loc, fmt::format_context& ctx);
 
   // "line:col" format
   string getLCString(SourceLoc loc);
 };
 
-
-// dsw: So that gdb can find it please DO NOT inline this; also the
-// unique public name is intentional: I don't want gdb doing
-// overloading and sometimes getting it wrong, which it does
-string locToStr(SourceLoc sl);
-
-inline string toString(SourceLoc sl)
-  { return locToStr(sl); }
-
-inline stringBuilder& operator<< (stringBuilder &sb, SourceLoc sl)
-  { return sb << toString(sl); }
+template <> struct fmt::formatter<SourceLoc> {
+  constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }
+  auto format(SourceLoc loc, format_context& ctx) const -> format_context::iterator {
+    return SourceLocManager::instance()->format(loc, ctx);
+  }
+};
 
 inline string toLCString(SourceLoc sl)
   { return SourceLocManager::instance()->getLCString(sl); }

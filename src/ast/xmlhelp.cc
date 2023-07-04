@@ -1,4 +1,5 @@
 #include "xmlhelp.h"            // this module
+#include "fmt/format.h"         // fmt::to_string
 #include <stdlib.h>             // atof, atol
 
 string toXml_bool(bool b) {
@@ -61,7 +62,7 @@ void fromXml_double(double &x, rostring str) {
 
 
 string toXml_SourceLoc(SourceLoc loc) {
-  return SourceLocManager::instance()->getString(loc);
+  return fmt::to_string(loc);
 }
 
 void fromXml_SourceLoc(SourceLoc &loc, rostring str) {

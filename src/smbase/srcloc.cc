@@ -7,7 +7,6 @@
 #include "syserr.h"     // xsyserror
 #include "trace.h"      // traceProgress
 #include "hashline.h"   // HashLineMap
-#include "fmt/core.h"   // fmt::format
 
 #include <stdio.h>      // fprintf
 #include <string.h>     // memcpy
@@ -635,13 +634,13 @@ int SourceLocManager::getCol(SourceLoc loc)
 }
 
 
-string SourceLocManager::getString(SourceLoc loc)
+fmt::format_context::iterator SourceLocManager::format(SourceLoc loc, fmt::format_context& ctx)
 {
-  char const *name;
+  char const* name;
   int line, col;
   decodeLineCol(loc, name, line, col);
 
-  return fmt::format("{}:{}:{}", name, line, col);
+  return fmt::format_to(ctx.out(), "{}:{}:{}", name, line, col);
 }
 
 string SourceLocManager::getLCString(SourceLoc loc)
@@ -651,12 +650,6 @@ string SourceLocManager::getLCString(SourceLoc loc)
   decodeLineCol(loc, name, line, col);
 
   return fmt::format("{}:{}", line, col);
-}
-
-
-string locToStr(SourceLoc sl)
-{
-  return SourceLocManager::instance()->getString(sl);
 }
 
 // this code simply defeats the xml serialization of SourceLoc-s
