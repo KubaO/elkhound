@@ -6,6 +6,7 @@
 #define __POINT_H
 
 #include "typ.h"          // bool, min, max
+#include "fmt/core.h"
 
 // point defined over arbitrary underlying types
 template <class num>
@@ -86,11 +87,15 @@ public:
 typedef TPoint<int> point;
 typedef TPoint<double> fpoint;
 
-
-// and we can then define stringBuilder output ops for them
-class stringBuilder;
-stringBuilder& operator<< (stringBuilder &sb, point const &pt);
-stringBuilder& operator<< (stringBuilder &sb, fpoint const &pt);
+// string output
+template <typename T>
+struct fmt::formatter<TPoint<T>> {
+  constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }
+  format_context::iterator format(const TPoint<T>& pt, format_context& ctx) const
+  {
+    return fmt::format_to(ctx.out(), "({}, {})", pt.x, pt.y);
+  }
+};
 
 
 // iterate: 0,0    1,0    2,0    ... x-1,0    and then

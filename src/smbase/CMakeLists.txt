@@ -21,7 +21,6 @@ add_library(smbase STATIC
     hashtbl.cc
     mysig.cc
     nonport.cpp
-    point.cc
     srcloc.cc
     str.cpp
     strdict.cc
