@@ -14,6 +14,7 @@
 #include "xassert.h"    // xassert
 #include "typ.h"        // MUTABLE
 #include "strhash.h"    // StringHash
+#include "format.h"
 
 
 // constness: for this class, 'const' means the *mapping* from string
@@ -178,10 +179,12 @@ public:
 
   // ------------ misc --------------
   INSERT_OSTREAM(StringVoidDict)
-  string toString() const;
+  fmt::format_context::iterator format(fmt::format_context& ctx) const;
 
   // debugging...
   long private_getTopAddr() const { return (long)top; }
 };
+
+template<> struct fmt::formatter<StringVoidDict> : DelegatingFormatter<StringVoidDict> {};
 
 #endif // __SVDICT_H

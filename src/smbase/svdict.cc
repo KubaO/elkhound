@@ -369,19 +369,17 @@ void StringVoidDict::insertOstream(std::ostream &os) const
 }
 
 
-string StringVoidDict::toString() const
+fmt::format_context::iterator StringVoidDict::format(fmt::format_context& ctx) const
 {
-  stringBuilder sb;
-  sb << "{";
+  auto it = ctx.out();
+  *it++ = '{';
   int count=0;
   FOREACH_ITERC(*this, entry) {
-    if (count++ > 0) {
-      sb << ",";
-    }
-    sb << " " << entry.key() << "=\"" << entry.value() << "\"";
+    if (count++ > 0)
+      *it++ = ',';
+    it = fmt::format_to(it, " {}=\"{}\"", entry.key(), entry.value());
   }
-  sb << " }";
-  return sb;
+  return fmt::format_to(it, " }");
 }
 
 
@@ -400,9 +398,10 @@ char randChar()
 
 string randString(int len)
 {
-  stringBuilder str;
+  string str;
+  str.reserve(len);
   loopj(len) {
-    str << randChar();
+    str.push_back(randChar());
   }
   return str;
 }
