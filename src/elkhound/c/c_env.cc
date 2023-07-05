@@ -712,23 +712,16 @@ SourceLoc Env::currentLoc() const
 
 
 // ---------------------- debugging ---------------------
-string Env::toString() const
-{
-  stringBuilder sb;
 
+fmt::format_context::iterator Env::format(fmt::format_context& ctx) const
+{
   // for now, just the variables
+  fmt::format_context::iterator it = ctx.out();
   FOREACH_OBJLIST(ScopedEnv, scopes, sc) {
     StringSObjDict<Variable>::IterC iter(sc.data()->variables);
     for (; !iter.isDone(); iter.next()) {
-      sb << iter.value()->toString() << " ";
+      it = fmt::format_to(it, "{} ", *iter.value());
     }
   }
-
-  return sb;
+  return it;
 }
-
-
-void Env::selfCheck() const
-{}
-
-

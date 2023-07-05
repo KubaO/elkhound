@@ -15,7 +15,7 @@
 #include "c.ast.gen.h"    // C ast components
 #include "c_variable.h"   // Variable (r)
 #include "array.h"        // ArrayStack
-#include "fmt/core.h"     // fmt::format
+#include "format.h"       // DelegatingFormatter
 
 class StringTable;        // strtable.h
 class CCLang;             // cc_lang.h
@@ -341,10 +341,10 @@ public:     // funcs
 
 
   // -------------- debugging -------------
-  string toString() const;
-  void selfCheck() const;
+  fmt::format_context::iterator format(fmt::format_context& ctx) const;
 };
 
+template<> struct fmt::formatter<Env> : DelegatingFormatter<Env> {};
 
 #if 0
 // --------------------- TypeEnv ------------------

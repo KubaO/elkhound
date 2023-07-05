@@ -19,7 +19,7 @@ Variable::~Variable()
 {}
 
 
-string Variable::toString() const
+fmt::format_context::iterator Variable::format(fmt::format_context& ctx) const
 {
   // The purpose of this method is to print the name and type
   // of this Variable object, in a debugging context.  It is
@@ -28,5 +28,8 @@ string Variable::toString() const
   // If more specialized printing is desired, do that specialized
   // printing from outside (by directly accessing 'name', 'type',
   // 'flags', etc.).
-  return type->toCString(name? name : "");
+  if (name)
+    return fmt::format_to(ctx.out(), name);
+  else
+    return ctx.out();
 }

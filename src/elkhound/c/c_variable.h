@@ -26,6 +26,7 @@
 #include "strtable.h"     // StringRef
 #include "cc_flags.h"     // DeclFlags
 #include "sobjlist.h"     // SObjList
+#include "format.h"       // DelegatingFormatter
 
 class Type;               // c_type.h
 
@@ -55,11 +56,9 @@ public:    // funcs
   bool hasAddrTaken() const { return flags & DF_ADDRTAKEN; }
   bool isGlobal() const { return flags & DF_GLOBAL; }
 
-  // some ad-hoc thing
-  string toString() const;
+  fmt::format_context::iterator format(fmt::format_context& ctx) const;
 };
 
-inline string toString(Variable const *v) { return v->toString(); }
-
+template<> struct fmt::formatter<Variable> : DelegatingFormatter<Variable> {};
 
 #endif // C_VARIABLE_H
