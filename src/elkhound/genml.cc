@@ -537,7 +537,7 @@ void emitMLDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
 
   if (sym.dupCode) {
     emitMLFuncDecl(g, out, dcl, sym.type,
-      fmt::format("dup_{} ({}: {}) ", sym.name.strref(),
+      fmt::format("dup_{} ({}: {}) ", sym.name,
                   sym.dupParam, sym.type).c_str());
     emitMLUserCode(out, sym.dupCode);
     out << "\n";
@@ -545,7 +545,7 @@ void emitMLDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
 
   if (sym.delCode) {
     emitMLFuncDecl(g, out, dcl, "unit",
-      fmt::format("del_{} ({}: {}) ", sym.name.strref(),
+      fmt::format("del_{} ({}: {}) ", sym.name,
                   (sym.delParam? sym.delParam : "_"),
                   sym.type).c_str());
     emitMLUserCode(out, sym.delCode);
@@ -554,7 +554,7 @@ void emitMLDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
 
   if (nonterm && nonterm->mergeCode) {
     emitMLFuncDecl(g, out, dcl, notVoid(sym.type),
-      fmt::format("merge_{} ({}: {}) ({}: {}) ", sym.name.strref(),
+      fmt::format("merge_{} ({}: {}) ({}: {}) ", sym.name,
                   nonterm->mergeParam1, notVoid(sym.type),
                   nonterm->mergeParam2, notVoid(sym.type)).c_str());
     emitMLUserCode(out, nonterm->mergeCode);
@@ -563,7 +563,7 @@ void emitMLDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
 
   if (nonterm && nonterm->keepCode) {
     emitMLFuncDecl(g, out, dcl, "bool",
-      fmt::format("keep_{} ({}: {}) ", sym.name.strref(),
+      fmt::format("keep_{} ({}: {}) ", sym.name,
                   nonterm->keepParam, sym.type).c_str());
     emitMLUserCode(out, nonterm->keepCode);
     out << "\n";
@@ -571,7 +571,7 @@ void emitMLDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
 
   if (term && term->classifyCode) {
     emitMLFuncDecl(g, out, dcl, "int",
-      fmt::format("classify_{} ({}: {}) ", sym.name.strref(),
+      fmt::format("classify_{} ({}: {}) ", sym.name,
                   term->classifyParam, sym.type).c_str());
     emitMLUserCode(out, term->classifyCode);
     out << "\n";

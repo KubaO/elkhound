@@ -49,7 +49,7 @@ STATICDEF string XASTParse::
 {
   if (tok.validLoc()) {
     if (tok.isNonNull()) {
-      return fmt::format("{}: near {}, {}", tok.locString(), tok.strref(), msg);
+      return fmt::format("{}: near {}, {}", tok.locString(), tok, msg);
     }
     else {
       return fmt::format("{}: {}", tok.locString(), msg);
@@ -460,7 +460,7 @@ void astParseTerminals(Environment &env, TF_terminals const &terms)
         Terminal *t = astParseToken(env, tokName);
         if (t->precedence) {
           astParseError(tokName,
-            fmt::format("{} already has a specified precedence", tokName.strref()));
+            fmt::format("{} already has a specified precedence", tokName));
         }
 
         if (spec.prec == 0) {
@@ -584,7 +584,7 @@ void astParseDDM(Environment &env, Symbol *sym,
 
     else {
       astParseError(func.name,
-        fmt::format("unrecognized spec function \"{}\"", func.name.strref()));
+        fmt::format("unrecognized spec function \"{}\"", func.name));
     }
   }
 }

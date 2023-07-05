@@ -4150,7 +4150,7 @@ void emitSwitchCode(Grammar const &g, EmitCode &out,
 // design motivated by desire to make debugging easier
 string actionFuncName(Production const &prod)
 {
-  return fmt::format("action{}_{}", prod.prodIndex, prod.left->name.strref());
+  return fmt::format("action{}_{}", prod.prodIndex, prod.left->name);
 }
 
 
@@ -4343,7 +4343,7 @@ char const *typeString(char const *type, LocString const &tag)
 {
   if (!type) {
     xbase("{}: Production tag \"{}\" on a symbol with no type.\n",
-      tag.locString(), tag.strref());
+      tag.locString(), tag);
     return NULL;     // silence warning
   }
   else {
@@ -4683,21 +4683,21 @@ void emitDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
 
   if (sym.dupCode) {
     emitFuncDecl(g, out, dcl, symType,
-      fmt::format("dup_{}({} {}) ", sym.name.strref(),
+      fmt::format("dup_{}({} {}) ", sym.name,
                   symType, sym.dupParam).c_str());
     emitUserCode(out, sym.dupCode);
   }
 
   if (sym.delCode) {
     emitFuncDecl(g, out, dcl, "void",
-      fmt::format("del_{}({} {}) ", sym.name.strref(),
+      fmt::format("del_{}({} {}) ", sym.name,
                   symType, sym.delParam? sym.delParam : "").c_str());
     emitUserCode(out, sym.delCode);
   }
 
   if (nonterm && nonterm->mergeCode) {
     emitFuncDecl(g, out, dcl, symType,
-      fmt::format("merge_{}({} {}, {} {}) ", sym.name.strref(),
+      fmt::format("merge_{}({} {}, {} {}) ", sym.name,
                   symType, nonterm->mergeParam1,
                   symType, nonterm->mergeParam2).c_str());
     emitUserCode(out, nonterm->mergeCode);
@@ -4705,14 +4705,14 @@ void emitDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
 
   if (nonterm && nonterm->keepCode) {
     emitFuncDecl(g, out, dcl, "bool",
-      fmt::format("keep_{}({} {}) ", sym.name.strref(),
+      fmt::format("keep_{}({} {}) ", sym.name,
                   symType, nonterm->keepParam).c_str());
     emitUserCode(out, nonterm->keepCode);
   }
 
   if (term && term->classifyCode) {
     emitFuncDecl(g, out, dcl, "int",
-      fmt::format("classify_{}({} {}) ", sym.name.strref(),
+      fmt::format("classify_{}({} {}) ", sym.name,
                   symType, term->classifyParam).c_str());
     emitUserCode(out, term->classifyCode);
   }

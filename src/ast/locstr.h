@@ -9,6 +9,8 @@
 
 #include "strtable.h"    // StringRef
 #include "srcloc.h"      // SourceLoc
+#include "str.h"         // string_view
+#include "fmt/format.h"
 
 class LocString {
 public:    // data
@@ -39,9 +41,7 @@ public:    // funcs
   // (read-only) string-like behavior
   friend std::ostream& operator<< (std::ostream &os, LocString const &loc)
     { return os << loc.str; }
-  friend stringBuilder& operator<< (stringBuilder &sb, LocString const &loc)
-    { return sb << loc.str; }
-  StringRef strref() const { return str; }
+  string_view strref_() const { return str; }
   operator StringRef () const { return str; }
   char operator [] (int index) const { return str[index]; }
   bool equals(char const *other) const;    // string comparison
@@ -55,8 +55,12 @@ public:    // funcs
   bool validLoc() const { return loc != SL_UNKNOWN; }
 };
 
-// yields simply the string, no location info
-string toString(LocString const &s);
+template<> struct fmt::formatter<LocString> : fmt::formatter<nonstd::string_view> {
+  format_context::iterator format(const LocString& loc, format_context& ctx)
+  {
+    return formatter<nonstd::string_view>::format(loc.strref_(), ctx);
+  }
+};
 
 // xml stuff...
 string toXml(LocString op);

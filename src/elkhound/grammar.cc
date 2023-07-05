@@ -808,7 +808,7 @@ string Production::toStringMore(bool printCode) const
   sb << toString();
 
   if (printCode && !action.isNull()) {
-    sb << "\t\t[" << action.strref() << "]";
+    sb << "\t\t[" << action << "]";
   }
 
   sb << "\n";
