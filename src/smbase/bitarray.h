@@ -5,7 +5,7 @@
 #define BITARRAY_H
 
 #include "xassert.h"      // xassert
-#include "str.h"          // string
+#include "format.h"
 
 class Flatten;            // flatten.h
 
@@ -121,11 +121,12 @@ public:     // types
     void adv();
   };
   friend class Iter;
+
+  fmt::format_context::iterator format(fmt::format_context& ctx) const;
 };
 
-
-BitArray stringToBitArray(char const *src);
-string toString(BitArray const &b);
+BitArray stringToBitArray(nonstd::string_view src);
+template<> struct fmt::formatter<BitArray> : DelegatingFormatter<BitArray> {};
 
 
 #endif // BITARRAY_H

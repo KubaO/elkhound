@@ -3,6 +3,8 @@
 
 #include "bitarray.h"     // this module
 #include "flatten.h"      // Flatten
+#include "str.h"          // string
+#include "fmt/format.h"   // fmt::to_string
 
 #include <string.h>       // memset
 
@@ -141,9 +143,9 @@ bool BitArray::anyEvenOddBitPair() const
 }
 
 
-BitArray stringToBitArray(char const *src)
+BitArray stringToBitArray(nonstd::string_view src)
 {
-  int len = strlen(src);
+  int len = src.size();
   BitArray ret(len);
   for (int i=0; i<len; i++) {
     if (src[i]=='1') {
@@ -153,14 +155,12 @@ BitArray stringToBitArray(char const *src)
   return ret;
 }
 
-string toString(BitArray const &b)
+fmt::format_context::iterator BitArray::format(fmt::format_context& ctx) const
 {
-  int len = b.length();
-  stringBuilder ret(len);
-  for (int i=0; i<len; i++) {
-    ret[size_t(i)] = b.test(i)? '1' : '0';
+  for (int i=0; i<numBits; i++) {
+    *ctx.out()++ = test(i)? '1' : '0';
   }
-  return ret;
+  return ctx.out();
 }
 
 
@@ -227,7 +227,7 @@ void testIter(char const *str)
   BitArray b = stringToBitArray(str);
   b.selfCheck();
 
-  string s1 = toString(b);
+  string s1 = fmt::to_string(b);
   string s2 = toStringViaIter(b);
   if (s1 != s2 || s1 != str) {
     std::cout << "str: " << str << std::endl;
@@ -246,7 +246,7 @@ void testIter(char const *str)
     inv << (str[i]=='0'? '1' : '0');
   }
 
-  string cStr = toString(c);
+  string cStr = fmt::to_string(c);
   if (inv != cStr) {
     std::cout << " inv: " << inv << std::endl;
     std::cout << "cStr: " << cStr << std::endl;
@@ -272,8 +272,8 @@ void testUnionIntersection(char const *s1, char const *s2)
   BitArray u = b1 | b2;
   BitArray i = b1 & b2;
 
-  string uStr = toString(u);
-  string iStr = toString(i);
+  string uStr = fmt::to_string(u);
+  string iStr = fmt::to_string(i);
 
   if (uStr != expectUnion) {
     std::cout << "         s1: " << s1 << std::endl;
