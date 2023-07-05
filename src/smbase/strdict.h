@@ -7,11 +7,9 @@
 #ifndef __STRDICT_H
 #define __STRDICT_H
 
-#include <iostream>     // ostream
 #include "str.h"        // string
-#include "macros.h"     // DMEMB
 #include "xassert.h"    // xassert
-#include "typ.h"        // MUTABLE
+#include "format.h"
 
 class StringDict {
 private:    // types
@@ -37,14 +35,14 @@ public:     // types
   public:
     Iter(Node *n) : current(n) {}
     Iter(StringDict &dict) { operator=(dict.getIter()); }
-    Iter(Iter const &obj) : DMEMB(current) {}
-    Iter& operator= (Iter const &obj) { CMEMB(current); return *this; }
+    Iter(Iter const& obj) = default;
+    Iter& operator= (Iter const& obj) = default;
 
     bool isDone() const { return current == NULL; }
     Iter& next() { xassert(current); current = current->next; return *this; }
       // 'next' returns a value primarily to allow use in for-loop comma exprs
 
-    string& key() const { return current->key; }
+    string const& key() const { return current->key; }
     string& value() const { return current->value; }
   };
   friend class Iter;
@@ -60,9 +58,9 @@ public:     // types
     // some operations can be made available unchanged
     using Iter::isDone;
     using Iter::next;
+    using Iter::key;
 
     // others must be const-ified
-    string const &key() const { return Iter::key(); }
     string const &value() const { return Iter::value(); }
   };
 
@@ -137,9 +135,9 @@ public:
     // return an iterator pointing to 'key', or an iterator
     // that isDone() if 'key' isn't mapped
 
-  // ------------ misc --------------
-  INSERT_OSTREAM(StringDict)
-  string toString() const;
+  fmt::format_context::iterator format(fmt::format_context& ctx) const;
 };
+
+template<> struct fmt::formatter<StringDict> : DelegatingFormatter<StringDict> {};
 
 #endif // __STRDICT_H
