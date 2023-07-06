@@ -72,7 +72,7 @@ void EmitCode::flush()
     os << p;
   #endif
 
-  setlength(0);
+  clear();
 }
 
 

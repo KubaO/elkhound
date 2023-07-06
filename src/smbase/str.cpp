@@ -123,14 +123,6 @@ stringBuilder::stringBuilder(char const *str, int len)
 }
 
 
-stringBuilder& stringBuilder::setlength(int newlen)
-{
-  clear();
-  init(newlen);
-  return *this;
-}
-
-
 void stringBuilder::adjustend(char* newend)
 {
   char* s = &operator[](0);

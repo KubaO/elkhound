@@ -24,7 +24,7 @@ void CCSubstrate::reset(int initNest)
   nesting = initNest;
   backslash = false;
   star = false;
-  text.setlength(0);
+  text.clear();
 }
 
 

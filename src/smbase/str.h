@@ -116,8 +116,6 @@ public:
   // (namely stringBuilder) when I use this functionality
   operator char const * () const { return c_str(); }
 
-  stringBuilder& setlength(int newlen);    // change length, forget current data
-
   // make sure we can store 'someLength' non-null chars; grow if necessary
   void ensure(int someLength) { if (someLength >= capacity()) { grow(someLength); } }
 
