@@ -31,7 +31,7 @@
       "inheritEnvironments": [ "msvc_x64_x64", "vcpkg" ],
       "buildRoot": "${env.BuildDir}\\${name}",
       "cmakeCommandArgs": "",
-      "buildCommandArgs": "-v"
+      "buildCommandArgs": "-v -k 0"
     },
     {
       "name": "x64-Release",
