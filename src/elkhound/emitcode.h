@@ -25,15 +25,14 @@ public:      // funcs
 
   // flush data in stringBuffer to 'os'
   void flush();
+
+  // emit a #line directive to restore reporting to the
+  // EmitCode file itself
+  void restoreLine();
 };
 
 
 // return a #line directive for the given location
 string lineDirective(SourceLoc loc);
-
-// emit a #line directive to restore reporting to the
-// EmitCode file itself (the 'sb' argument must be an EmitFile object)
-stringBuilder &restoreLine(stringBuilder &sb);
-
 
 #endif // EMITCODE_H

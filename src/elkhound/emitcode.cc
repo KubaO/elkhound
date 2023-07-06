@@ -107,13 +107,11 @@ string lineDirective(SourceLoc loc)
   return fmt::format("{}{} \"{}\"\n", hashLine(), line, cfname);
 }
 
-stringBuilder &restoreLine(stringBuilder &sb)
+void EmitCode::restoreLine()
 {
-  // little hack..
-  EmitCode &os = (EmitCode&)sb;
-
   // +1 because we specify what line will be *next*
-  int line = os.getLine()+1;
-  return os << hashLine() << line
-            << " \"" << os.getFname() << "\"\n";
+  int line = getLine() + 1;
+
+  fmt::format_to(std::back_inserter(*this), "{}{} \"{}\"\n",
+    hashLine(), line, fname);
 }
