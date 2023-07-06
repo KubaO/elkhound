@@ -23,6 +23,8 @@ enum StateId { STATE_INVALID=-1 };
 inline std::ostream& operator<< (std::ostream &os, StateId id)
   { return os << (int)id; }
 
+template<> struct fmt::formatter<StateId> : fmt::formatter<int> {};
+
 
 // encodes an action in 'action' table; see 'actionTable'
 #if ENABLE_CRS_COMPRESSION
