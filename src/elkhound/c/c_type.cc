@@ -3,7 +3,7 @@
 
 #include "c_type.h"     // this module
 #include "trace.h"      // tracingSys
-#include "fmt/core.h"   // fmt::format
+#include "format.h"
 #include <assert.h>     // assert
 
 
@@ -87,10 +87,37 @@ string recurseCilString(T const *type, int depth)
 }
 
 
+string AtomicType::toCString() const
+{
+  return fmt::format("{:C@}", *this);
+}
+
+string AtomicType::toCilString(int depth) const
+{
+  return fmt::format("{:CIL@}", *this, fmt::arg("depth", depth));
+}
+
 string AtomicType::toString(int depth) const
 {
-  return fmt::format("{} /""* {} */",
-    recurseCilString(this, depth+1), toCString());
+  return fmt::format("{}", *this, fmt::arg("depth", depth));
+}
+
+fmt::format_context::iterator AtomicType::format(fmt::format_context& ctx, fmt::string_view opts) const
+{
+  if (inFormat)
+    return ctx.out(); // avoid infinite recursion
+  struct Guard {
+    bool& inFormat;
+    Guard(bool& in) : inFormat(in) { inFormat = true; }
+    ~Guard() { inFormat = false; }
+  };
+  Guard guard(inFormat);
+
+  // toString
+  auto depth = fmtGetArg(ctx, "depth", 1);
+
+  return fmt::format_to(ctx.out(), "{} /""* {:C@} */",
+    recurseCilString(this, depth + 1), *this);
 }
 
 
@@ -119,15 +146,12 @@ SimpleType const SimpleType::fixed[NUM_SIMPLE_TYPES] = {
   SimpleType(ST_DEPENDENT),
 };
 
-string SimpleType::toCString() const
-{
-  return simpleTypeName(type);
-}
 
-
-string SimpleType::toCilString(int) const
+fmt::format_context::iterator SimpleType::format(fmt::format_context& ctx, fmt::string_view opts) const
 {
-  return toCString();
+  if (opts.starts_with("C@") || opts.starts_with("CIL@"))
+    return fmt::format_to(ctx.out(), "{}", simpleTypeName(type));
+  return AtomicType::format(ctx, opts);
 }
 
 
@@ -290,37 +314,50 @@ STATICDEF char const *CompoundType::keywordName(Keyword k)
 }
 
 
-string CompoundType::toCString() const
+fmt::format_context::iterator CompoundType::format(fmt::format_context& ctx, fmt::string_view opts) const
 {
-  return fmt::format("{} {}", keywordName(keyword),
-    name? name : "(anonymous)");
+  if (opts.starts_with("C@")) {
+    if (name)
+      return fmt::format_to(ctx.out(), "{} {}", keywordName(keyword), name);
+    else
+      return fmt::format_to(ctx.out(), "{} (anonymous)", keywordName(keyword));
+  }
+  if (opts.starts_with("fields@"))
+    return formatWithFields(ctx);
+  if (opts.starts_with("CIL@"))
+    return formatCil(ctx);
+  return NamedAtomicType::format(ctx, opts);
 }
 
 
 // watch out for circular pointers (recursive types) here!
 // (already bitten once ..)
-string CompoundType::toStringWithFields() const
+fmt::format_context::iterator CompoundType::formatWithFields(fmt::format_context& ctx) const
 {
-  stringBuilder sb;
-  sb << toCString();
+  auto out = fmt::format_to(ctx.out(), "{:C@}", *this);
   if (isComplete()) {
-    sb << " { ";
+    out = fmt::format_to(out, " {{ ");
     FOREACH_OBJLIST(Field, fields, iter) {
-      Field const *f = iter.data();
-      sb << f->type->toCString(f->name) << "; ";
+      Field const* f = iter.data();
+      if (f->name)
+        out = fmt::format_to(out, "{:Cname@}; ", *f->type, fmt::arg("name", f->name));
+      else
+        out = fmt::format_to(out, "{:C@}; ", *f->type);
     }
-    sb << "};";
+    out = fmt::format_to(out, "}};");
   }
   else {
-    sb << ";";
+    *out++ = ';';
   }
-  return sb;
+  return out;
 }
 
 
-string CompoundType::toCilString(int depth) const
+fmt::format_context::iterator CompoundType::formatCil(fmt::format_context& ctx) const
 {
-  return "(todo)";
+  auto depth = fmtGetArg(ctx, "depth", 1);
+
+  return fmt::format_to(ctx.out(), "(todo)");
 
   #if 0
   if (!isComplete()) {
@@ -443,16 +480,20 @@ EnumType::~EnumType()
 {}
 
 
-string EnumType::toCString() const
+fmt::format_context::iterator EnumType::format(fmt::format_context& ctx, fmt::string_view opts) const
 {
-  return fmt::format("enum {}", name? name : "(anonymous)");
-}
+  if (opts.starts_with("C@")) {
+    if (name)
+      return fmt::format_to(ctx.out(), "enum {}", name);
+    else
+      return fmt::format_to(ctx.out(), "enum (anonymous)");
+  }
 
-
-string EnumType::toCilString(int depth) const
-{
-  // TODO2: get fields
-  return toCString();
+  if (opts.starts_with("CIL@")) {
+    // TODO2: get fields
+    return format(ctx, "C@");
+  }
+  return NamedAtomicType::format(ctx, opts);
 }
 
 
@@ -556,32 +597,64 @@ string Type::idComment() const
 }
 
 
+fmt::format_context::iterator Type::format(fmt::format_context& ctx, fmt::string_view opts) const
+{
+  if (inFormat)
+    return ctx.out();
+  struct Guard {
+    bool& inFormat;
+    Guard(bool& in) : inFormat(in) { inFormat = true; }
+    ~Guard() { inFormat = false; }
+  };
+  Guard guard(inFormat);
+
+  if (opts.starts_with("C@"))
+    return fmt::format_to(ctx.out(), "{}{}{}", idComment(), leftString(), rightString());
+
+  if (opts.starts_with("Cname@")) {
+    auto name = fmtGetArg(ctx, "name", fmt::string_view("/*anon*/"));
+    return fmt::format_to(ctx.out(), "{}{} {}{}", idComment(), leftString(), name, rightString());
+    // removing the space causes wrong output:
+    //   int (foo)(intz)
+    //               ^^
+  }
+
+  {
+    auto depth = fmtGetArg(ctx, "depth", 1);
+
+    return format(ctx, "C@");
+    //return stringc << recurseCilString(this, depth+1)
+    //               << " /""* " << toCString() << " */";
+  }
+}
+
 string Type::toCString() const
 {
-  return fmt::format("{}{}{}", idComment(), leftString(), rightString());
+  return fmt::format("{:C@}", *this);
 }
 
-string Type::toCString(char const *name) const
+string Type::toCString(fmt::string_view name) const
 {
-  return fmt::format("{}{} {}{}", idComment(),
-    leftString(), name? name : "/*anon*/", rightString());
-
-  // removing the space causes wrong output:
-  //   int (foo)(intz)
-  //               ^^
+  if (name.size())
+    return fmt::format("{:Cname@}", *this, fmt::arg("name", name));
+  else
+    return fmt::format("{:C@}", *this);
 }
+
+string Type::toCilString(int depth) const
+{
+  return fmt::format("{:CIL@}", *this, fmt::arg("depth", depth));
+}
+
+string Type::toString(int depth) const
+{
+  return fmt::format("{}", *this, fmt::arg("depth", depth));
+}
+
 
 string Type::rightString() const
 {
   return "";
-}
-
-
-string Type::toString(int depth) const
-{
-  return toCString();
-  //return stringc << recurseCilString(this, depth+1)
-  //               << " /""* " << toCString() << " */";
 }
 
 
@@ -716,11 +789,17 @@ string CVAtomicType::leftString() const
 }
 
 
-string CVAtomicType::toCilString(int depth) const
+fmt::format_context::iterator CVAtomicType::format(fmt::format_context& ctx, fmt::string_view opts) const
 {
-  return fmt::format("{} atomic {}",
-    cvToString(cv), recurseCilString(atomic, depth));
+  if (opts.starts_with("CIL@"))
+  {
+    auto depth = fmtGetArg(ctx, "depth", 1);
+    return fmt::format_to(ctx.out(), "{} atomic {}",
+      cvToString(cv), recurseCilString(atomic, depth));
+  }
+  return Type::format(ctx, opts);
 }
+
 
 
 #if 0
@@ -770,11 +849,16 @@ string PointerType::rightString() const
 }
 
 
-string PointerType::toCilString(int depth) const
+fmt::format_context::iterator PointerType::format(fmt::format_context& ctx, fmt::string_view opts) const
 {
-  return fmt::format("{}{}{}",
-    cvToString(cv), op==PO_POINTER? "ptrto " : "refto ",
-    recurseCilString(atType, depth));
+  if (opts.starts_with("CIL@")) {
+    auto depth = fmtGetArg(ctx, "depth", 1);
+
+    return fmt::format_to(ctx.out(), "{}{}{}",
+      cvToString(cv), op == PO_POINTER ? "ptrto " : "refto ",
+      recurseCilString(atType, depth));
+  }
+  return Type::format(ctx, opts);
 }
 
 
@@ -802,9 +886,12 @@ FunctionType::Param::~Param()
 {}
 
 
-string FunctionType::Param::toString() const
+fmt::format_context::iterator FunctionType::Param::format(fmt::format_context& ctx, fmt::string_view) const
 {
-  return type->toCString(name);
+  if (name)
+    return fmt::format_to(ctx.out(), "{:name@}", *type, fmt::arg("name", name));
+  else
+    return fmt::format_to(ctx.out(), "{}", *type);
 }
 
 
@@ -867,7 +954,7 @@ string FunctionType::leftString() const
 string FunctionType::rightString() const
 {
   // finish enclosing type
-  stringBuilder sb;
+  fmt::memory_buffer sb;
   sb << ")";
 
   // arguments
@@ -877,7 +964,7 @@ string FunctionType::rightString() const
     if (ct++ > 0) {
       sb << ", ";
     }
-    sb << iter.data()->toString();
+    fmt::format_to(fmt::appender(sb), "{}", *iter.data());
   }
 
   if (acceptsVarargs) {
@@ -890,36 +977,46 @@ string FunctionType::rightString() const
   sb << ")";
 
   // qualifiers
-  //sb << cvToString(cv);
+  // sb.append(cvToString(cv));
 
   // finish up the return type
-  sb << retType->rightString();
+  fmt::format_to(fmt::appender(sb), "{}", retType->rightString());
 
-  return sb;
+  return fmt::to_string(sb);
 }
 
 
-string FunctionType::toCilString(int depth) const
+fmt::format_context::iterator FunctionType::format(fmt::format_context& ctx, fmt::string_view opts) const
 {
-  stringBuilder sb;
-  sb << "func " /*<< cvToString(cv) << " "*/;
+  if (opts.starts_with("CIL@"))
+    return formatCil(ctx, opts);
+
+  return Type::format(ctx, opts);
+}
+
+fmt::format_context::iterator FunctionType::formatCil(fmt::format_context& ctx, fmt::string_view opts) const
+{
+  auto depth = fmtGetArg(ctx, "depth", 1);
+
+  auto out = fmt::format_to(ctx.out(), "func ") /*<< cvToString(cv) << " "*/ ;
   if (acceptsVarargs) {
-    sb << "varargs ";
+    out = fmt::format_to(out, "varargs ");
   }
-  sb << "(";
+  *out++ = '(';
 
   int ct=0;
   FOREACH_OBJLIST(Param, params, iter) {
     if (++ct > 1) {
-      sb << ", ";
+      out = fmt::format_to(out, ", ");
     }
-    sb << iter.data()->name << ": "
-       << recurseCilString(iter.data()->type, depth);
+    out = fmt::format_to(out, "{}: {}",
+      iter.data()->name,
+      recurseCilString(iter.data()->type, depth));
   }
 
-  sb << ") -> " << recurseCilString(retType, depth);
+  out = fmt::format_to(out, ") -> {}", recurseCilString(retType, depth));
 
-  return sb;
+  return out;
 }
 
 
@@ -976,30 +1073,28 @@ string ArrayType::leftString() const
 
 string ArrayType::rightString() const
 {
-  stringBuilder sb;
+  fmt::memory_buffer sb;
 
   if (hasSize) {
-    sb << "[" << size << "]";
+    fmt::format_to(fmt::appender(sb), "[{}]", size);
   }
   else {
     sb << "[]";
   }
 
-  sb << eltType->rightString();
+  sb.append(eltType->rightString());
 
-  return sb;
+  return fmt::to_string(sb);
 }
 
-
-string ArrayType::toCilString(int depth) const
+fmt::format_context::iterator ArrayType::format(fmt::format_context& ctx, fmt::string_view opts) const
 {
-  stringBuilder sb;
-  sb << "array [";
-  if (hasSize) {
-    sb << size;
-  }
-  sb << "] of " << recurseCilString(eltType, depth);
-  return sb;
+  auto depth = fmtGetArg(ctx, "depth", 1);
+
+  if (hasSize)
+    return fmt::format_to(ctx.out(), "array [{}] of {}", size, recurseCilString(eltType, depth));
+  else
+    return fmt::format_to(ctx.out(), "array [] of {}", recurseCilString(eltType, depth));
 }
 
 

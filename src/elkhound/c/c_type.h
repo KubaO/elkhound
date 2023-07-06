@@ -10,6 +10,7 @@
 #include "cc_flags.h"     // CVFlags, DeclFlags, SimpleTypeId
 #include "strtable.h"     // StringRef
 #include "strsobjdict.h"  // StrSObjDict
+#include "format.h"       // DECL_FMT_FORMATTER
 
 // below, the type language refers to the AST language in exactly
 // one place: function pre/post conditions; the type language treats
@@ -40,6 +41,7 @@ void cc_type_checker();
 class AtomicType {
 public:     // types
   enum Tag { T_SIMPLE, T_COMPOUND, T_ENUM, NUM_TAGS };
+  mutable bool inFormat = false;
 
 public:     // funcs
   AtomicType();
@@ -62,14 +64,17 @@ public:     // funcs
   // will allow it only if type1==type2
   bool equals(AtomicType const *obj) const;
 
-  // print in C notation
-  virtual string toCString() const = 0;
+  // general implementation of formatting; additional arguments are pass
+  virtual fmt::format_context::iterator format(fmt::format_context& ctx, fmt::string_view opts) const;
 
-  // print in a Cil notation, using integer ids
+  // print in C notation {:C@}
+  string toCString() const;
+
+  // print in a Cil notation, using integer ids {:CIL@}
   // for all references to other types
-  virtual string toCilString(int depth=1) const = 0;
+  string toCilString(int depth=1) const;
 
-  // print in Cil with C notation in comments
+  // print in Cil with C notation in comments {}
   string toString(int depth=1) const;
 
   // name of this type for references in Cil output
@@ -80,6 +85,8 @@ public:     // funcs
 
   ALLOC_STATS_DECLARE
 };
+
+template <> struct fmt::formatter<AtomicType> : PolymorphicFormatter<AtomicType> {};
 
 
 // represents one of C's built-in types;
@@ -94,11 +101,10 @@ public:     // data
 public:     // funcs
   SimpleType(SimpleTypeId t) : type(t) {}
 
-  virtual Tag getTag() const { return T_SIMPLE; }
-  virtual string toCString() const;
-  virtual string toCilString(int depth) const;
-  virtual string uniqueName() const;
-  virtual int reprSize() const;
+  Tag getTag() const override { return T_SIMPLE; }
+  string uniqueName() const override;
+  int reprSize() const override;
+  fmt::format_context::iterator format(fmt::format_context& ctx, fmt::string_view opts) const override;
 };
 
 
@@ -168,12 +174,10 @@ public:      // funcs
 
   static char const *keywordName(Keyword k);
 
-  virtual Tag getTag() const { return T_COMPOUND; }
-  virtual string toCString() const;
-  virtual string toCilString(int depth) const;
-  virtual int reprSize() const;
+  Tag getTag() const override { return T_COMPOUND; }
+  int reprSize() const override;
+  fmt::format_context::iterator format(fmt::format_context& ctx, fmt::string_view opts) const override;
 
-  string toStringWithFields() const;
   string keywordAndName() const { return toCString(); }
 
   int numFields() const;
@@ -182,8 +186,14 @@ public:      // funcs
 
   Field *addField(StringRef name, Type const *type,
                   /*nullable*/ Variable *d);
+
+  // {:fields@}
+  fmt::format_context::iterator formatWithFields(fmt::format_context& ctx) const;
+  // {:CIL@}
+  fmt::format_context::iterator formatCil(fmt::format_context& ctx) const;
 };
 
+template <> struct fmt::formatter<CompoundType> : PolymorphicFormatter<CompoundType> {};
 
 // represent an enumerated type
 class EnumType : public NamedAtomicType {
@@ -212,10 +222,9 @@ public:     // funcs
   EnumType(StringRef n) : NamedAtomicType(n), nextValue(0) {}
   ~EnumType();
 
-  virtual Tag getTag() const { return T_ENUM; }
-  virtual string toCString() const;
-  virtual string toCilString(int depth) const;
-  virtual int reprSize() const;
+  Tag getTag() const override { return T_ENUM; }
+  int reprSize() const override;
+  fmt::format_context::iterator format(fmt::format_context& ctx, fmt::string_view opts) const override;
 
   Value *addValue(StringRef name, int value, /*nullable*/ Variable *d);
   Value const *getValue(StringRef name) const;
@@ -229,6 +238,7 @@ public:     // types
   enum Tag { T_ATOMIC, T_POINTER, T_FUNCTION, T_ARRAY };
 
 private:    // funcs
+  mutable bool inFormat = false;
   string idComment() const;
 
 public:     // funcs
@@ -253,10 +263,12 @@ public:     // funcs
   // objects, once their tags have been established to be equal
   bool equals(Type const *obj) const;
 
+  virtual fmt::format_context::iterator format(fmt::format_context& ctx, fmt::string_view opts) const;
+
   // print the type, with an optional name like it was a declaration
   // for a variable of that type
   string toCString() const;
-  string toCString(char const *name) const;
+  string toCString(fmt::string_view name) const;
 
   // the left/right business is to allow us to print function
   // and array types in C's syntax
@@ -264,7 +276,7 @@ public:     // funcs
   virtual string rightString() const;    // default: returns ""
 
   // same alternate syntaxes as AtomicType
-  virtual string toCilString(int depth=1) const = 0;
+  string toCilString(int depth=1) const;
   string toString(int depth=1) const;
 
   // size of representation
@@ -292,6 +304,8 @@ public:     // funcs
   ALLOC_STATS_DECLARE
 };
 
+template <> struct fmt::formatter<Type> : PolymorphicFormatter<Type> {};
+
 
 // essentially just a wrapper around an atomic type, but
 // also with optional const/volatile flags
@@ -314,10 +328,11 @@ public:     // funcs
 
   bool innerEquals(CVAtomicType const *obj) const;
 
-  virtual Tag getTag() const { return T_ATOMIC; }
-  virtual string leftString() const;
-  virtual string toCilString(int depth) const;
-  virtual int reprSize() const;
+  Tag getTag() const override { return T_ATOMIC; }
+  string leftString() const override;
+  int reprSize() const override;
+
+  fmt::format_context::iterator format(fmt::format_context& ctx, fmt::string_view opts) const override;
 };
 
 inline Type const *fixed(SimpleTypeId id)
@@ -343,11 +358,12 @@ public:
 
   bool innerEquals(PointerType const *obj) const;
 
-  virtual Tag getTag() const { return T_POINTER; }
-  virtual string leftString() const;
-  virtual string rightString() const;
-  virtual string toCilString(int depth) const;
-  virtual int reprSize() const;
+  Tag getTag() const override { return T_POINTER; }
+  string leftString() const override;
+  string rightString() const override;
+  int reprSize() const override;
+
+  fmt::format_context::iterator format(fmt::format_context& ctx, fmt::string_view opts) const override;
 };
 
 
@@ -369,7 +385,7 @@ public:     // types
       : name(n), type(t), decl(d) {}
     ~Param();
 
-    string toString() const;
+    fmt::format_context::iterator format(fmt::format_context& ctx, fmt::string_view opts) const;
   };
 
 public:     // data
@@ -392,13 +408,16 @@ public:     // funcs
   // append a parameter to the parameters list
   void addParam(Param *param);
 
-  virtual Tag getTag() const { return T_FUNCTION; }
-  virtual string leftString() const;
-  virtual string rightString() const;
-  virtual string toCilString(int depth) const;
-  virtual int reprSize() const;
+  Tag getTag() const override { return T_FUNCTION; }
+  string leftString() const override;
+  string rightString() const override;
+  int reprSize() const override;
+
+  fmt::format_context::iterator format(fmt::format_context& ctx, fmt::string_view opts) const override;
+  fmt::format_context::iterator formatCil(fmt::format_context& ctx, fmt::string_view opts) const;
 };
 
+template <> struct fmt::formatter<FunctionType::Param> : PolymorphicFormatter<FunctionType::Param> {};
 
 // type of an array
 class ArrayType : public Type {
@@ -415,11 +434,12 @@ public:
 
   bool innerEquals(ArrayType const *obj) const;
 
-  virtual Tag getTag() const { return T_ARRAY; }
-  virtual string leftString() const;
-  virtual string rightString() const;
-  virtual string toCilString(int depth) const;
-  virtual int reprSize() const;
+  Tag getTag() const override { return T_ARRAY; }
+  string leftString() const override;
+  string rightString() const override;
+  int reprSize() const override;
+
+  fmt::format_context::iterator format(fmt::format_context& ctx, fmt::string_view opts) const override;
 };
 
 

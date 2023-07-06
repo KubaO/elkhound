@@ -357,7 +357,7 @@ void Env::addTypedef(StringRef name, Type const *type)
     else {
       errThrow(
         "conflicting typedef for `{}' as type `{}'; previous type was `{}'",
-        name, type->toCString(), prev->toCString());
+        name, *type, *prev);
     }
   }
   typedefs.add(name, const_cast<Type*>(type));

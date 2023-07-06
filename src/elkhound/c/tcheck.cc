@@ -8,7 +8,7 @@
 #include "trace.h"          // trace
 #include "paths.h"          // printPaths
 #include "cc_lang.h"        // CCLang
-#include "fmt/core.h"  // fmt::format
+#include "format.h"
 
 #define IN_PREDICATE(env) Restorer<bool> restorer(env.inPredicate, true)
 
@@ -432,7 +432,7 @@ void /*Type const * */D_name::itcheck(Env &env, Type const *base,
 {
   trace("tcheck")
     << "found declarator name: " << (name? name : "(null)")
-    << ", type is " << base->toCString() << std::endl;
+    << ", type is " << fmt::to_string(*base) << std::endl;
 
   // construct a Variable: this is a binding introduction
   Variable *var = new Variable(loc, name, base, dflags);
@@ -943,7 +943,7 @@ string Statement::successorsToString() const
   VoidList succYesCont;
   getSuccessors(succYesCont, true);
 
-  stringBuilder sb;
+  fmt::memory_buffer sb;
   sb << "{";
 
   for (VoidListIter iter(succYesCont); !iter.isDone(); iter.adv()) {
@@ -954,13 +954,14 @@ string Statement::successorsToString() const
     // successor is itself a continue edge; the algorithm assumes
     // that 'succYesCont' is a superset of 'succNoCont'
     Statement const *next = nextPtrStmt(np);
-    sb << (succNoCont.contains(np)? " " : " (c)")
-       << stmtLoc(next)
-       << (nextPtrContinue(np)? "(c)" : "");
+    fmt::format_to(fmt::appender(sb), " {}{}{}",
+      (succNoCont.contains(np) ? "" : "(c)"),
+      stmtLoc(next),
+      (nextPtrContinue(np)? "(c)" : ""));
   }
 
-  sb << " }";
-  return sb;
+  sb << "}";
+  return fmt::to_string(sb);
 }
 
 
@@ -1341,7 +1342,7 @@ Type const *E_deref::itcheck(Env &env)
   }
 
   if (!t->isPointer()) {
-    env.err("can only dereference pointers, not {]}", t->toCString());
+    env.err("can only dereference pointers, not {}", *t);
     return fixed(ST_ERROR);
   }
 
@@ -1470,16 +1471,13 @@ Type const *E_quantifier::itcheck(Env &env)
 
 string Expression::extrasToString() const
 {
-  stringBuilder sb;
-  sb << "paths=" << numPaths << ", type: ";
   if (type) {
-    sb << type->toCString();
+    return fmt::format("paths={}, type: {}", numPaths, *type);
   }
   else {
     // for when we print a tree before/during typechecking
-    sb << "(null)";
+    return fmt::format("paths={}, type: (null)", numPaths);
   }
-  return sb;
 }
 
 
@@ -1612,18 +1610,18 @@ string E_variable::toString() const
 
 string E_funCall::toString() const
 {
-  stringBuilder sb;
-  sb << func->toString() << "(";
+  fmt::memory_buffer sb;
+  fmt::format_to(fmt::appender(sb), "{}(", func->toString());
 
   int count=0;
   FOREACH_ASTLIST(Expression, args, iter) {
     if (count++) {
       sb << ", ";
     }
-    sb << iter.data()->toString();
+    fmt::format_to(fmt::appender(sb), "{}", iter.data()->toString());
   }
   sb << ")";
-  return sb;
+  return fmt::to_string(sb);
 }
 
 string E_fieldAcc::toString() const
@@ -1650,7 +1648,7 @@ string E_addrOf::toString() const
 string E_deref::toString() const
   { return fmt::format("*({})", ptr->toString()); }
 string E_cast::toString() const
-  { return fmt::format("({}){}", type->toCString(), expr->toString()); }
+  { return fmt::format("({}){}", *type, expr->toString()); }
 string E_cond::toString() const
   { return fmt::format("{}?{}:{}", cond->toString(), th->toString(), el->toString()); }
 //string E_gnuCond::toString() const
@@ -1678,19 +1676,22 @@ string E_assign::toString() const
 
 string E_quantifier::toString() const
 {
-  stringBuilder sb;
-  sb << (forall? "thmprv_forall(" : "thmprv_exists(");
+  fmt::memory_buffer sb;
+  if (forall)
+  	sb << "thmprv_forall(";
+  else
+    sb << "thmprv_exists(";
 
   FOREACH_ASTLIST(Declaration, decls, outer) {
     FOREACH_ASTLIST(Declarator, outer.data()->decllist, inner) {
       Variable *var = inner.data()->var;
 
-      sb << var->type->toCString(var->name) << "; ";
+      fmt::format_to(fmt::appender(sb), "{:name@}; ",
+        *var->type, fmt::arg("name", var->name));
     }
   }
-
-  sb << pred->toString() << ")";
-  return sb;
+  fmt::format_to(fmt::appender(sb), "{})", pred->toString());
+  return fmt::to_string(sb);
 }
 
 
