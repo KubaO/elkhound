@@ -17,19 +17,30 @@
 #include <iostream>      // istream, ostream
 #include <stdarg.h>      // va_list
 #include <string.h>      // strcmp, etc.
-#include "fmt/format.h"  // fmt::to_string
+#include "fmt/format.h"  // fmt::string_view, memory_buffer
 
 #include <nonstd/string_view.hpp>
 #include <string>
 #include <type_traits>
 
 
+// ------------------------- common declarations ---------------------
+
+using string = std::string;
+using string_view = nonstd::string_view;
+
+template<> struct fmt::formatter<fmt::memory_buffer> : formatter<fmt::string_view>
+{
+  using Base = formatter<fmt::string_view>;
+  format_context::iterator format(const memory_buffer &buf, format_context& ctx)
+  {
+    return Base::format(fmt::string_view(buf.data(), buf.size()), ctx);
+  }
+};
 
 // ------------------------- string ---------------------
 
-using string = std::string;
-
-// concatenation (properly handles string growth)
+// concatenation
 // uses '&' instead of '+' to avoid char* coercion problems
 string operator&(string const& head, string const& tail);
 string& operator&=(string& head, string const& tail);
@@ -155,6 +166,7 @@ public:
   stringBuilder& operator << (unsigned short i) { return operator<<((long)i); }
   stringBuilder& operator << (double d);
   stringBuilder& operator << (void *ptr);     // inserts address in hex
+  stringBuilder& operator << (string_view str);
   #ifndef LACKS_BOOL
     stringBuilder& operator << (bool b) { return operator<<((long)b); }
   #endif // LACKS_BOOL

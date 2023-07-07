@@ -221,6 +221,11 @@ MAKE_LSHIFT(uintptr_type, PRIuPTR)
 
 #undef MAKE_LSHIFT
 
+stringBuilder& stringBuilder::operator<<(string_view str)
+{
+  append(str.data(), str.size());
+  return *this;
+}
 
 stringBuilder& stringBuilder::operator<< (
   stringBuilder::Hex const &h)
