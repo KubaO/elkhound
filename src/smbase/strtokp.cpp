@@ -84,19 +84,18 @@ string StrtokParse::
 }
 
 
-string StrtokParse::
-  join(int firstTok, int lastTok, rostring separator) const
+string StrtokParse::join(int firstTok, int lastTok, rostring separator) const
 {
-  stringBuilder sb;
+  fmt::memory_buffer sb;
 
   for (int i=firstTok; i<=lastTok; i++) {
     if (i > firstTok) {
-      sb << separator;
+      sb.append(separator);
     }
-    sb << tokv(i);
+    sb.append(string_view(tokv(i)));
   }
 
-  return sb;
+  return fmt::to_string(sb);
 }
 
 
