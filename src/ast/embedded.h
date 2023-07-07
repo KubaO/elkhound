@@ -4,7 +4,6 @@
 #ifndef EMBEDDED_H
 #define EMBEDDED_H
 
-#include "str.h"        // stringBuilder
 #include "reporterr.h"  // ReportError
 
 class EmbeddedLang {
@@ -16,7 +15,7 @@ public:
   // embedded code; clients will call 'handle' a
   // bunch of times and then expect to retrieve
   // the text from here
-  stringBuilder text;
+  string text;
 
   // when true (set by the lexer), the 'text' is to
   // be interpreted as an expression, rather than a
