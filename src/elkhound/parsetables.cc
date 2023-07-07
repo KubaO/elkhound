@@ -7,7 +7,7 @@
 #include "crc.h"            // crc32
 #include "emitcode.h"       // EmitCode
 #include "bit2d.h"          // Bit2d
-#include "fmt/core.h"       // fmt::format
+#include "format.h"         // fmt::, format_to
 
 #include <string.h>         // memset
 #include <stdlib.h>         // qsort, system
@@ -1061,7 +1061,7 @@ void emitTable(EmitCode &out, EltType const *table, int size, int rowLength,
                rostring typeName, rostring tableName)
 {
   if (!table || !size) {
-    out << "  " << typeName << " *" << tableName << " = NULL;\n";
+    format_to(out, "  {} *{} = NULL;\n", typeName, tableName);
     return;
   }
 
@@ -1071,13 +1071,13 @@ void emitTable(EmitCode &out, EltType const *table, int size, int rowLength,
   bool needCast = 0==strcmp(typeName, "StateId");
 
   if (size * sizeof(*table) > 50) {    // suppress small ones
-    out << "  // storage size: " << size * sizeof(*table) << " bytes\n";
+    format_to(out, "  // storage size: {} bytes\n", size * sizeof(*table));
     if (size % rowLength == 0) {
-      out << "  // rows: " << (size/rowLength) << "  cols: " << rowLength << "\n";
+      format_to(out, "  // rows: {}  cols: {}\n", size / rowLength, rowLength);
     }
   }
 
-  int rowNumWidth = stringf("%d", size / rowLength /*round down*/).length();
+  int rowNumWidth = fmt::formatted_size("{}", size / rowLength /*round down*/);
 
   // I make tables 'const' because that way the OS loader might be
   // smart enough to share them (on a read-only basis) across multiple
@@ -1086,42 +1086,50 @@ void emitTable(EmitCode &out, EltType const *table, int size, int rowLength,
   // pointers-to-const (since it also has methods to modify the tables
   // at parser generation time).
 
-  out << "  static " << typeName << " const " << tableName << "[" << size << "] = {";
+  format_to(out, "  static {} const {}[{}] = {{", typeName, tableName, size);
   int row = 0;
   for (int i=0; i<size; i++) {
     if (i % rowLength == 0) {    // one row per state
-      out << stringf("\n    /""*%*d*""/ ", rowNumWidth, row++);
+      format_to(out, "\n    /*{1:{0}}*/ ", rowNumWidth, row++);
     }
 
     if (needCast) {
-      out << "(" << typeName << ")";
+      format_to(out, "({})", typeName);
     }
 
     if (printHex) {
-      out << stringf("0x%02X, ", table[i]);
+      format_to(out, "0x{:02X}, ", table[i]);
     }
     else if (sizeof(table[i]) == 1) {
       // little bit of a hack to make sure 'unsigned char' gets
       // printed as an int; the casts are necessary because this
       // code gets compiled even when EltType is ProdInfo
-      out << (int)(*((unsigned char*)(table+i))) << ", ";
+      format_to(out, "{}, ", (int)(*((unsigned char*)(table + i))));
     }
     else {
       // print the other int-sized things, or ProdInfo using
       // the overloaded '<<' below
-      out << table[i] << ", ";
+      format_to(out, "{}, ", table[i]);
     }
   }
-  out << "\n"
-      << "  };\n";
+  out.append(
+    "\n"
+    "  };\n"
+  );
 }
 
 // used to emit the elements of the prodInfo table
-stringBuilder& operator<< (stringBuilder &sb, ParseTables::ProdInfo const &info)
+template<> struct fmt::formatter<ParseTables::ProdInfo>
 {
-  sb << "{" << (int)info.rhsLen << "," << (int)info.lhsIndex << "}";
-  return sb;
-}
+  constexpr format_parse_context::iterator parse(format_parse_context& ctx)
+  {
+    return ctx.begin();
+  }
+  format_context::iterator format(const ParseTables::ProdInfo& info, format_context& ctx) const
+  {
+    return format_to(ctx.out(), "{{{},{}}}", (int)info.rhsLen, (int)info.lhsIndex);
+  }
+};
 
 
 // like 'emitTable', but also set a local called 'tableName'
@@ -1131,8 +1139,8 @@ void emitTable2(EmitCode &out, EltType const *table, int size, int rowLength,
 {
   string tempName = fmt::format("{}_static", tableName);
   emitTable(out, table, size, rowLength, typeName, tempName);
-  out << "  " << tableName << " = const_cast<" << typeName << "*>("
-      << tempName << ");\n\n";
+  format_to(out,
+    "  {} = const_cast<{}*>({});\n\n", tableName, typeName, tempName);
 }
 
 
@@ -1141,7 +1149,8 @@ void emitOffsetTable(EmitCode &out, EltType **table, EltType *base, int size,
                      rostring typeName, rostring tableName, rostring baseName)
 {
   if (!table) {
-    out << "  " << tableName << " = NULL;\n\n";
+    format_to(out,
+      "  {} = NULL;\n\n", tableName);
     return;
   }
 
@@ -1164,24 +1173,31 @@ void emitOffsetTable(EmitCode &out, EltType **table, EltType *base, int size,
   }
 
   if (size > 0) {
-    out << "  " << tableName << " = new " << typeName << " [" << size << "];\n";
+    format_to(out,
+      "  {} = new {} [{}];\n", out, tableName, typeName, size);
 
     emitTable(out, (int*)offsets, size, 16, "int", fmt::format("{}_offsets", tableName));
 
     // at run time, interpret the offsets table
-    out << "  for (int i=0; i < " << size << "; i++) {\n"
-        << "    int ofs = " << tableName << "_offsets[i];\n"
-        << "    if (ofs >= 0) {\n"
-        << "      " << tableName << "[i] = " << baseName << " + ofs;\n"
-        << "    }\n"
-        << "    else {\n"
-        << "      " << tableName << "[i] = NULL;\n"
-        << "    }\n"
-        << "  }\n\n";
+    format_to(out,
+      "  for (int i=0; i < {size}; i++) {{\n"
+      "    int ofs = {tableName}_offsets[i];\n"
+      "    if (ofs >= 0) {{\n"
+      "      {tableName}[i] = {baseName} + ofs;\n"
+      "    }}\n"
+      "    else {{\n"
+      "      {tableName}[i] = NULL;\n"
+      "    }}\n"
+      "  }}\n\n",
+      fmt::arg("size", size),
+      fmt::arg("tableName", tableName),
+      fmt::arg("baseName", baseName)
+    );
   }
   else {
-    out << "  // offset table is empty\n"
-        << "  " << tableName << " = NULL;\n\n";
+    format_to(out,
+      "  // offset table is empty\n"
+      "  {} = NULL;\n\n", tableName);
   }
 }
 
@@ -1213,22 +1229,23 @@ void ParseTables::emitConstructionCode(EmitCode &out,
   // must have already called 'finishTables'
   xassert(!temp);
 
-  out << "// this makes a ParseTables from some literal data;\n"
-      << "// the code is written by ParseTables::emitConstructionCode()\n"
-      << "// in " << __FILE__ << "\n"
-      << "class " << className << "_ParseTables : public ParseTables {\n"
-      << "public:\n"
-      << "  " << className << "_ParseTables();\n"
-      << "};\n"
-      << "\n"
-      << className << "_ParseTables::" << className << "_ParseTables()\n"
-      << "  : ParseTables(false /*owning*/)\n"
-      << "{\n"
-      ;
+  auto oit = format_to(out,
+    "// this makes a ParseTables from some literal data;\n"
+    "// the code is written by ParseTables::emitConstructionCode()\n"
+    "// in " __FILE__ "\n"
+    "class {className}_ParseTables : public ParseTables {{\n"
+    "public:\n"
+    "  {className}_ParseTables();\n"
+    "}};\n"
+    "\n"
+    "{className}_ParseTables::{className}_ParseTables()\n"
+    "  : ParseTables(false /*owning*/)\n"
+    "{{\n",
+    fmt::arg("className", className));
 
   // set all the integer-like variables
   #define SET_VAR(var) \
-    out << "  " #var " = " << var << ";\n";
+    oit = fmt::format_to(oit, "  " #var " = {};\n", var);
   SET_VAR(numTerms);
   SET_VAR(numNonterms);
   SET_VAR(numStates);
@@ -1238,13 +1255,13 @@ void ParseTables::emitConstructionCode(EmitCode &out,
   SET_VAR(gotoCols);
   SET_VAR(gotoRows);
   SET_VAR(ambigTableSize);
-  out << "  startState = (StateId)" << (int)startState << ";\n";
+  oit = fmt::format_to(oit, "  startState = (StateId){};\n", (int)startState);
   SET_VAR(finalProductionIndex);
   SET_VAR(bigProductionListSize);
   SET_VAR(errorBitsRowSize);
   SET_VAR(uniqueErrorRows);
   #undef SET_VAR
-  out << "\n";
+  * oit++ = '\n';
 
   // action table, one row per state
   emitTable2(out, actionTable, actionTableSize(), actionCols,
@@ -1307,23 +1324,27 @@ void ParseTables::emitConstructionCode(EmitCode &out,
                     "ActionEntry*", "ambigStateTable", "ambigTable");
   }
   else {
-    out << "  firstWithTerminal = NULL;\n"
-        << "  firstWithNonterminal = NULL;\n"
-        << "  bigProductionList = NULL;\n"
-        << "  productionsForState = NULL;\n"
-        << "  ambigStateTable = NULL;\n"
-        ;
+    out.append(
+      "  firstWithTerminal = NULL;\n"
+      "  firstWithNonterminal = NULL;\n"
+      "  bigProductionList = NULL;\n"
+      "  productionsForState = NULL;\n"
+      "  ambigStateTable = NULL;\n"
+    );
   }
 
-  out << "}\n"
-      << "\n"
-      << "\n"
-      << "ParseTables *" << className << "::" << funcName << "()\n"
-      << "{\n"
-      << "  return new " << className << "_ParseTables;\n"
-      << "}\n"
-      << "\n"
-      ;
+  format_to(out,
+    "}}\n"
+    "\n"
+    "\n"
+    "ParseTables *{className}::{funcName}()\n"
+    "{{\n"
+    "  return new {className}_ParseTables;\n"
+    "}}\n"
+    "\n",
+    fmt::arg("className", className),
+    fmt::arg("funcName", funcName)
+  );
 }
 
 

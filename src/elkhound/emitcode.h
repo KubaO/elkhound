@@ -4,21 +4,27 @@
 #ifndef EMITCODE_H
 #define EMITCODE_H
 
-#include <fstream>        // std::ofstream
-#include "str.h"          // stringBuffer
+#include <cstdio>         // FILE*
+#include "str.h"          // string, string_view
 #include "srcloc.h"       // SourceLoc
 
-class EmitCode : public stringBuilder {
+class EmitCode : public string {
+  // This is a bit of an unnecessary hack.
+  // Data to be emitted is buffered in the string.
+  // Then, any time a line number is needed, the string is
+  // scanned for newlines, and then flushed to output stream.
+  // This adds a 2nd layer of buffering on top of what the
+  // C runtime provides. In the long run, something simpler
+  // or with less overhead should be used instead.
+
 private:     // data
-  std::ofstream os;    // stream to write to
+  FILE* file;          // stream to write to
   string fname;        // filename for emitting #line
   int line;            // current line number
 
 public:      // funcs
-  EmitCode(rostring fname);
+  EmitCode(string_view fname);
   ~EmitCode();
-
-  string const &getFname() const { return fname; }
 
   // get current line number; flushes internally
   int getLine();

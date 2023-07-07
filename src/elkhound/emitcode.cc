@@ -1,19 +1,19 @@
 // emitcode.cc            see license.txt for copyright and terms of use
 // code for emitcode.h
 
+#include <algorithm>       // std::count
 #include "emitcode.h"      // this module
 #include "syserr.h"        // xsyserror
-#include "srcloc.h"        // SourceLoc
 #include "trace.h"         // tracingSys
-#include "fmt/core.h"      // fmt::format
-#include <string.h>        // memcpy
+#include "fmt/format.h"    // fmt::format
 
-EmitCode::EmitCode(rostring f)
-  : os(f.c_str()),
+EmitCode::EmitCode(string_view f)
+  : file(NULL),
     fname(f),
     line(1)
 {
-  if (!os) {
+  file = ::fopen(fname.c_str(), "w");
+  if (!file) {
     xsyserror("open", fname);
   }
 }
@@ -21,6 +21,8 @@ EmitCode::EmitCode(rostring f)
 EmitCode::~EmitCode()
 {
   flush();
+  if (file)
+    ::fclose(file);
 }
 
 
@@ -34,48 +36,15 @@ int EmitCode::getLine()
 void EmitCode::flush()
 {
   // count newlines
-  char const *p = c_str();
-  while (*p) {
-    if (*p == '\n') {
-      line++;
-    }
-    p++;
-  }
-
-  #if 0
-    // this is the original code
-    os << *this;
-  #else
-    // 2005-06-28: There is a bug in the cygwin implementation of
-    // std::ofstream::operator<< that causes a stack overflow segfault
-    // when writing strings longer than about 2MB.  So, I will
-    // manually break up the string into little chunks to write it.
-
-    // how long is the string?
-    int len = p - c_str();
-
-    enum { SZ = 0x1000 };       // write in 4k chunks
-    p = c_str();
-
-    while (len >= SZ) {
-      char buf[SZ+1];
-      memcpy(buf, p, SZ);
-      buf[SZ] = 0;
-
-      os << buf;
-
-      p += SZ;
-      len -= SZ;
-    }
-
-    os << p;
-  #endif
-
+  line += std::count(begin(), end(), '\n');
+  // write out the data
+  if (::fwrite(data(), 1, size(), file) != size())
+    xsyserror("fwrite", fname);
   clear();
 }
 
 
-char const *hashLine()
+static string_view hashLine()
 {
   if (tracingSys("nolines")) {
     // emit with comment to disable its effect
@@ -94,23 +63,25 @@ string lineDirective(SourceLoc loc)
   int line, col;
   SourceLocManager::instance()->decodeLineCol(loc, fname, line, col);
 
-  std::string cfname;
+  fmt::memory_buffer buf;
   for (const char* p = fname; *p; p++)
   {
     char c = *p;
-    if (c == '\\')
-      cfname.append("\\\\");
+    if (c == '\\') {
+      buf.push_back('\\');
+      buf.push_back('\\');
+    }
     else
-      cfname.push_back(c);
+      buf.push_back(c);
   }
 
-  return fmt::format("{}{} \"{}\"\n", hashLine(), line, cfname);
+  return fmt::format("{}{} \"{}\"\n", hashLine(), line, buf);
 }
 
 void EmitCode::restoreLine()
 {
   // +1 because we specify what line will be *next*
-  int line = getLine() + 1;
+  int line = getLine()+1;
 
   fmt::format_to(std::back_inserter(*this), "{}{} \"{}\"\n",
     hashLine(), line, fname);
