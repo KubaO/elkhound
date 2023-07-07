@@ -464,12 +464,19 @@ void HGen::emitFile()
         FOREACH_ASTLIST(string, e->enumerators, iter) {
           out << "  " << *(iter.data()) << ",\n";
         }
-        out << "};\n"
-            << "\n"
-            << "char const *toString(" << e->name << ");\n"
-            << "\n"
-            << "\n"
-            ;
+        out <<
+          "};\n"
+          "\n"
+          "char const *toString(" << e->name << ");\n"
+          "\n"
+          "#ifdef FMT_VERSION\n"
+          "template <> struct fmt::formatter<" << e->name << "> : fmt::formatter<fmt::string_view> {\n"
+          "  format_context::iterator parse(" << e->name << ", format_context&);\n"
+          "};\n"
+          "#endif\n"
+          "\n"
+          "\n"
+          ;
       }
     }
   }
@@ -1057,19 +1064,39 @@ void CGen::emitFile()
         emitTFClass(*c);
       }
       ASTNEXTC(TF_enum, e) {
-        out << "char const *toString(" << e->name << " x)\n"
-            << "{\n"
-            << "  static char const * const map[] = {\n";
+        out <<
+          "static char const * const map_" << e->name << "[] = {\n";
         FOREACH_ASTLIST(string, e->enumerators, iter) {
-          out << "    \"" << *(iter.data()) << "\",\n";
+          out << "  \"" << *(iter.data()) << "\",\n";
         }
-        out << "  };\n"
-            << "  xassert((unsigned)x < TABLESIZE(map));\n"
-            << "  return map[x];\n"
-            << "};\n"
-            << "\n"
-            << "\n"
-            ;
+        out <<
+          "};\n"
+          "\n"
+          "char const *toString(" << e->name << " x)\n"
+          "\n"
+          "{\n"
+          "  xassert((unsigned)x < TABLESIZE(map_" << e->name << "));\n"
+          "  return map_" << e->name << "[x];\n"
+          "};\n"
+          "\n"
+          "#ifdef FMT_VERSION\n"
+          "  static constexpr unsigned char map_" << e->name << "_len [] = {\n"
+          "    ";
+        FOREACH_ASTLIST(string, e->enumerators, iter) {
+          out << int(iter.data()->size()) << ", ";
+        }
+        out <<
+          "\n"
+          "  };\n"
+          "  fmt::format_context::iterator fmt::formatter<" << e->name << ">::parse(" << e->name << " val, format_context& ctx)\n"
+          "  {\n"
+          "    xassert((unsigned)val < TABLESIZE(map_" << e->name << "));\n"
+          "    return formatter<fmt::string_view>::format({ map_" << e->name << "[val], map_" << e->name << "_len[val] }, ctx);\n"
+          "  }\n"
+          "#endif\n"
+          "\n"
+          "\n"
+          ;
         break;
       }
       ASTENDCASECD
