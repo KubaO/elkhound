@@ -5,6 +5,7 @@
 #include "macros.h"       // STATIC_ASSERT
 #include "xassert.h"      // xassert
 #include "trace.h"        // tracingSys
+#include "format.h"       // fmt::...
 
 
 // -------------------- TypeIntr -------------------------
@@ -58,7 +59,7 @@ char const * const cvFlagNames[NUM_CVFLAGS] = {
 
 string bitmapString(int bitmap, char const * const *names, int numflags)
 {
-  stringBuilder sb;
+  fmt::memory_buffer sb;
   int count=0;
   for (int i=0; i<numflags; i++) {
     if (bitmap & (1 << i)) {
@@ -69,7 +70,7 @@ string bitmapString(int bitmap, char const * const *names, int numflags)
     }
   }
 
-  return sb;
+  return fmt::to_string(sb);
 }
 
 string toString(CVFlags cv)
