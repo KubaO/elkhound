@@ -201,20 +201,20 @@ void BitArray::Iter::adv()
 
 string toStringViaIter(BitArray const &b)
 {
-  stringBuilder sb;
+  string sb;
   int index = 0;
 
   for (BitArray::Iter iter(b); !iter.isDone(); iter.adv()) {
     while (index < iter.data()) {
-      sb << "0";
+      sb.push_back('0');
       index++;
     }
-    sb << "1";
+    sb.push_back('1');
     index++;
   }
 
   while (index < b.length()) {
-    sb << "0";
+    sb.push_back('0');
     index++;
   }
 
@@ -240,10 +240,10 @@ void testIter(char const *str)
   BitArray c = ~b;
   c.selfCheck();
 
-  stringBuilder inv;
+  string inv;
   int len = strlen(str);
   for (int i=0; i<len; i++) {
-    inv << (str[i]=='0'? '1' : '0');
+    inv.push_back(str[i]=='0' ? '1' : '0');
   }
 
   string cStr = fmt::to_string(c);
@@ -263,10 +263,10 @@ void testUnionIntersection(char const *s1, char const *s2)
   BitArray b1 = stringToBitArray(s1);
   BitArray b2 = stringToBitArray(s2);
 
-  stringBuilder expectUnion, expectIntersection;
+  string expectUnion, expectIntersection;
   for (int i=0; i<len; i++) {
-    expectUnion        << ((s1[i]=='1' || s2[i]=='1')? '1' : '0');
-    expectIntersection << ((s1[i]=='1' && s2[i]=='1')? '1' : '0');
+    expectUnion.push_back       ((s1[i]=='1' || s2[i]=='1')? '1' : '0');
+    expectIntersection.push_back((s1[i]=='1' && s2[i]=='1')? '1' : '0');
   }
 
   BitArray u = b1 | b2;
