@@ -246,19 +246,21 @@ stringBuilder& stringBuilder::operator<< (Manipulator manip)
 
 
 // ---------------------- toString ---------------------
-#define TOSTRING(type)          \
-  string toString(type val)     \
-  {                             \
-    return std::to_string(val); \
-  }
+#ifndef FMT_VERSION
+  #define TOSTRING(type)          \
+    string toString(type val)     \
+    {                             \
+      return std::to_string(val); \
+    }
 
-TOSTRING(int)
-TOSTRING(unsigned)
-TOSTRING(char)
-TOSTRING(long)
-TOSTRING(float)
+  TOSTRING(int)
+  TOSTRING(unsigned)
+  TOSTRING(char)
+  TOSTRING(long)
+  TOSTRING(float)
 
-#undef TOSTRING
+  #undef TOSTRING
+#endif // FMT_VERSION
 
 // this one is more liberal than 'stringc << null' because it gets
 // used by the PRINT_GENERIC macro in my astgen tool

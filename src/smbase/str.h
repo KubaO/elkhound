@@ -17,6 +17,7 @@
 #include <iostream>      // istream, ostream
 #include <stdarg.h>      // va_list
 #include <string.h>      // strcmp, etc.
+#include "fmt/format.h"  // fmt::to_string
 
 #include <nonstd/string_view.hpp>
 #include <string>
@@ -181,12 +182,23 @@ std::istream& operator>> (std::istream& is, stringBuilder& sb) = delete;
 // ---------------------- misc utils ------------------------
 
 // experimenting with using toString as a general method for datatypes
-string toString(int i);
-string toString(unsigned i);
-string toString(char c);
-string toString(long i);
-string toString(char const *str);
-string toString(float f);
+#ifdef FMT_VERSION
+  template <typename T, class en =
+    std::enable_if_t<!std::is_pointer_v<T>>>
+  string toString(const T& val)
+  {
+    return fmt::to_string(val);
+  }
+#else
+  string toString(int i);
+  string toString(unsigned i);
+  string toString(char c);
+  string toString(long i);
+  string toString(char const *str);
+  string toString(float f);
+#endif
+
+string toString(char const* str);
 
 
 // printf-like construction of a string; often very convenient, since
