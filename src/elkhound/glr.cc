@@ -115,7 +115,7 @@
 #include "cyctimer.h"    // CycleTimer
 #include "sobjlist.h"    // SObjList
 #include "owner.h"       // Owner
-#include "fmt/core.h"    // fmt::format
+#include "format.h"      // fmt::format, format_to, ...
 
 #include <stdio.h>       // FILE
 #include <stdlib.h>      // getenv
@@ -1621,27 +1621,27 @@ void GLR::dumpGSSEdge(FILE *dest, StackNode const *src,
 // alternative to above: stack info in a single string
 string GLR::stackSummary() const
 {
-  stringBuilder sb;
+  fmt::memory_buffer sb;
 
   // list of nodes we've already printed, to avoid printing any
   // node more than once
   SObjList<StackNode const> printed;
 
   for (int i=0; i < topmostParsers.length(); i++) {
-    sb << " (" << i << ": ";
+    format_to(sb, " ({}: ", i);
     innerStackSummary(sb, printed, topmostParsers[i]);
-    sb << ")";
+    sb.push_back(')');
   }
 
-  return sb;
+  return fmt::to_string(sb);
 }
 
-void GLR::nodeSummary(stringBuilder &sb, StackNode const *node) const
+void GLR::nodeSummary(fmt::memory_buffer& sb, StackNode const *node) const
 {
-  sb << node->state << "[" << node->referenceCount << "]";
+  format_to(sb, "{}[{}]", node->state, node->referenceCount);
 }
 
-void GLR::innerStackSummary(stringBuilder &sb, SObjList<StackNode const> &printed,
+void GLR::innerStackSummary(fmt::memory_buffer &sb, SObjList<StackNode const> &printed,
                             StackNode const *node) const
 {
   if (printed.contains(node)) {

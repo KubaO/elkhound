@@ -437,8 +437,8 @@ private:    // funcs
   void configCheck(char const *option, bool core, bool table);
 
   string stackSummary() const;
-  void nodeSummary(stringBuilder &sb, StackNode const *node) const;
-  void innerStackSummary(stringBuilder &sb,
+  void nodeSummary(fmt::memory_buffer &sb, StackNode const *node) const;
+  void innerStackSummary(fmt::memory_buffer &sb,
                          SObjList<StackNode const> &printed,
                          StackNode const *node) const;
 
