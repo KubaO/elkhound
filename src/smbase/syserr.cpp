@@ -3,6 +3,7 @@
 // Scott McPeak, 1999-2000  This file is public domain.
 
 #include "syserr.h"       // this module
+#include "format.h"       // operator<< for memory_buffer
 
 // ---------------- portable code ----------------
 char const * const xSysError::reasonStrings[] = {
@@ -62,7 +63,7 @@ STATICDEF string xSysError::
                      rostring syscall, rostring ctx)
 {
   // build string; start with syscall that failed
-  stringBuilder sb;
+  fmt::memory_buffer sb;
   sb << syscall << ": ";
 
   // now a failure reason string
@@ -82,7 +83,7 @@ STATICDEF string xSysError::
     sb << ", " << ctx;
   }
 
-  return sb;
+  return fmt::to_string(sb);
 }
 
 
