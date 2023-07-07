@@ -9,7 +9,7 @@
 #include "strutil.h"   // quoted, parseQuotedString
 #include "flatten.h"   // Flatten
 #include "flatutil.h"  // various xfer helpers
-#include "fmt/core.h"      // fmt::format
+#include "format.h"    // fmt::...
 
 #include <stdarg.h>    // variable-args stuff
 #include <stdio.h>     // FILE, etc.
@@ -741,28 +741,28 @@ void Production::print(std::ostream &os) const
 string Production::toString(bool printType, bool printIndex) const
 {
   // LHS "->" RHS
-  stringBuilder sb;
+  fmt::memory_buffer sb;
   if (printIndex) {
-    sb << "[" << prodIndex << "] ";
+    format_to(sb, "[{}] ", prodIndex);
   }
 
-  sb << left->name;
+  sb << left->name.strref_();
   if (printType && left->type) {
-    sb << "[" << left->type << "]";
+    format_to(sb, "[{}]", left->type);
   }
   sb << " -> " << rhsString();
 
   if (printType && precedence) {
     // take this as licence to print prec too
-    sb << " %prec(" << precedence << ")";
+    format_to(sb, " %prec({})", precedence);
   }
-  return sb;
+  return fmt::to_string(sb);
 }
 
 
 string Production::rhsString(bool printTags, bool quoteAliases) const
 {
-  stringBuilder sb;
+  fmt::memory_buffer sb;
 
   if (right.isNotEmpty()) {
     // print the RHS symbols
@@ -798,22 +798,22 @@ string Production::rhsString(bool printTags, bool quoteAliases) const
     sb << "empty";
   }
 
-  return sb;
+  return fmt::to_string(sb);
 }
 
 
 string Production::toStringMore(bool printCode) const
 {
-  stringBuilder sb;
+  fmt::memory_buffer sb;
   sb << toString();
 
   if (printCode && !action.isNull()) {
-    sb << "\t\t[" << action << "]";
+    sb << "\t\t[" << action.strref_() << "]";
   }
 
   sb << "\n";
 
-  return sb;
+  return fmt::to_string(sb);
 }
 
 
@@ -1235,7 +1235,7 @@ int Grammar::getProductionIndex(Production const *prod) const
 
 string symbolSequenceToString(SymbolList const &list)
 {
-  stringBuilder sb;   // collects output
+  fmt::memory_buffer sb;   // collects output
 
   bool first = true;
   SFOREACH_SYMBOL(list, sym) {
@@ -1247,12 +1247,12 @@ string symbolSequenceToString(SymbolList const &list)
       sb << sym.data()->asTerminalC().toString();
     }
     else {
-      sb << sym.data()->name;
+      sb << sym.data()->name.strref_();
     }
     first = false;
   }
 
-  return sb;
+  return fmt::to_string(sb);
 }
 
 

@@ -3844,11 +3844,10 @@ void GrammarAnalysis::addTreebuildingActions()
     Production *p = prodIter.data();
 
     // build up the code
-    stringBuilder code;
-    code << "return new PTreeNode(\"" << p->left->name << " -> "
-         << encodeWithEscapes(p->rhsString(false /*printTags*/,
-                                           true /*quoteAliases*/))
-         << "\"";
+    fmt::memory_buffer code;
+    format_to(code, "return new PTreeNode(\"{} -> {}\"",
+      p->left->name,
+      encodeWithEscapes(p->rhsString(false /*printTags*/, true /*quoteAliases*/)));
 
     int ct=1;
     MUTATE_EACH_OBJLIST(Production::RHSElt, p->right, rIter) {
@@ -3868,7 +3867,7 @@ void GrammarAnalysis::addTreebuildingActions()
 
     // insert the code into the production
     p->action = LocString(SL_UNKNOWN,
-                          grammarStringTable.add(code));
+                          grammarStringTable.add(fmt::to_string(code)));
   }
 
   #undef STR
