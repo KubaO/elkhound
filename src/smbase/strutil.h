@@ -13,7 +13,7 @@
 
 // direct string replacement, replacing instances of oldstr with newstr
 // (newstr may be "")
-string replace(rostring src, rostring oldstr, rostring newstr);
+string replace(string_view src, string_view oldstr, string_view newstr);
 
 // works like unix "tr": the source string is translated character-by-character,
 // with occurrences of 'srcchars' replaced by corresponding characters from

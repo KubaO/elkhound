@@ -5,7 +5,7 @@
 #include "exc.h"         // xformat
 #include "autofile.h"    // AutoFILE
 #include "array.h"       // Array
-#include "fmt/core.h"    // fmt::format
+#include "format.h"      // fmt::format, format_to, ...
 
 #include <ctype.h>       // isspace
 #include <string.h>      // strstr, memcmp
@@ -15,35 +15,29 @@
 
 
 // replace all instances of oldstr in src with newstr, return result
-string replace(rostring origSrc, rostring oldstr, rostring newstr)
+string replace(string_view src, string_view oldstr, string_view newstr)
 {
-  stringBuilder ret;
-  char const *src = toCStr(origSrc);
+  fmt::memory_buffer ret;
 
-  while (*src) {
-    char const *next = strstr(src, toCStr(oldstr));
-    if (!next) {
-      ret << src;
+  size_t from = 0;
+  while(true) {
+    size_t to = src.find(oldstr, from);
+    if (to == string_view::npos) {
+      ret.append(src.substr(from));
       break;
     }
-
-    // add the characters between src and next
-    ret << substring(src, next-src);
-
-    // add the replace-with string
-    ret << newstr;
-
-    // move src to beyond replaced substring
-    src += (next-src) + strlen(oldstr);
+    ret.append(src.substr(from, to - from));
+    ret.append(newstr);
+    from = to + oldstr.size();
   }
 
-  return ret;
+  return fmt::to_string(ret);
 }
 
 
 string expandRanges(char const *chars)
 {
-  stringBuilder ret;
+  fmt::memory_buffer ret;
 
   while (*chars) {
     if (chars[1] == '-' && chars[2] != 0) {
@@ -53,18 +47,18 @@ string expandRanges(char const *chars)
       }
 
       for (char c = chars[0]; c <= chars[2]; c++) {
-        ret << c;
+        ret.push_back(c);
       }
       chars += 3;
     }
     else {
       // simple character specification
-      ret << chars[0];
+      ret.push_back(chars[0]);
       chars++;
     }
   }
 
-  return ret;
+  return fmt::to_string(ret);
 }
 
 
@@ -169,14 +163,15 @@ static struct Escape {
 
 string encodeWithEscapes(char const *p, int len)
 {
-  stringBuilder sb;
+  fmt::memory_buffer sb;
 
   for (; len>0; len--, p++) {
     // look for an escape code
     unsigned i;
     for (i=0; i<TABLESIZE(escapes); i++) {
       if (escapes[i].actual == *p) {
-        sb << '\\' << escapes[i].escape;
+        sb.push_back('\\');
+        sb.push_back(escapes[i].escape);
         break;
       }
     }
@@ -186,17 +181,15 @@ string encodeWithEscapes(char const *p, int len)
 
     // try itself
     if (isprint(*p)) {
-      sb << *p;
+      sb.push_back(*p);
       continue;
     }
 
     // use the most general notation
-    char tmp[5];
-    sprintf(tmp, "\\x%02X", (unsigned char)(*p));
-    sb << tmp;
+    format_to(sb, "\\x{:02X}", (unsigned char)(*p));
   }
 
-  return sb;
+  return fmt::to_string(sb);
 }
 
 
@@ -472,19 +465,20 @@ string readStringFromFile(rostring fname)
 {
   AutoFILE fp(toCStr(fname), "r");
 
-  stringBuilder sb;
+  string sb;
 
-  char buf[4096];
   for (;;) {
-    int len = fread(buf, 1, 4096, fp);
+    constexpr size_t chunk = 16384;
+    size_t prevSize = sb.size();
+    sb.resize(prevSize + chunk);
+    int len = fread(&sb[prevSize], 1, chunk, fp);
     if (len < 0) {
       xbase("fread failed");
     }
+    sb.resize(prevSize + len);
     if (len == 0) {
       break;
     }
-
-    sb.append(buf, len);
   }
 
   return sb;
@@ -493,30 +487,33 @@ string readStringFromFile(rostring fname)
 
 bool readLine(string &dest, FILE *fp)
 {
-  char buf[80];
+  fmt::memory_buffer buf;
 
-  if (!fgets(buf, 80, fp)) {
+  if (!fgets(buf.data(), buf.capacity(), fp)) {
     return false;
   }
+  size_t len = strlen(buf.data());
+  buf.resize(len+1);
 
-  if (buf[strlen(buf)-1] == '\n') {
+  if (buf[len-1] == '\n') {
     // read a newline, we got the whole line
-    dest = buf;
+    dest.assign(buf.data(), buf.size());
     return true;
   }
 
   // only got part of the string; need to iteratively construct
-  stringBuilder sb;
-  while (buf[strlen(buf)-1] != '\n') {
-    sb << buf;
-    if (!fgets(buf, 80, fp)) {
+  do {
+    buf.reserve(buf.capacity() + buf.capacity() / 2);
+    if (!fgets(buf.data() + len, buf.capacity() - len, fp)) {
       // found eof after partial; return partial *without* eof
       // indication, since we did in fact read something
       break;
     }
-  }
+    len += strlen(buf.data() + len);
+    buf.resize(len + 1);
+  } while (buf[len - 1] != '\n');
 
-  dest = sb;
+  dest.assign(buf.data(), buf.size());
   return true;
 }
 
