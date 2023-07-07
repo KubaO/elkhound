@@ -7,7 +7,7 @@
 #include "exc.h"         // xformat
 #include "cc_lang.h"     // CCLang
 #include "glrconfig.h"   // SOURCELOC
-#include "fmt/core.h"    // fmt::format
+#include "format.h"      // fmt::...
 
 #include <stdlib.h>      // strtoul
 #include <string.h>      // strlen, strcmp
@@ -480,15 +480,15 @@ void lexer2_lex(Lexer2 &dest, Lexer1 const &src, char const *fname)
         prevToken != NULL                     &&
         prevToken->type == L2_STRING_LITERAL) {
       // coalesce adjacent strings (this is not efficient code..)
-      stringBuilder sb;
+      fmt::memory_buffer sb;
       sb << prevToken->strValue;
 
       ArrayStack<char> tempString;
       quotedUnescape(tempString, L1->text, '"',
                      src.allowMultilineStrings);
-      sb.append(tempString.getArray(), tempString.length());
+      sb << string_view(tempString.getArray(), tempString.length());
 
-      prevToken->strValue = dest.idTable.add(sb);
+      prevToken->strValue = dest.idTable.add(fmt::to_string(sb));
       continue;
     }
 
