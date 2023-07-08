@@ -36,13 +36,6 @@ template<> struct fmt::formatter<fmt::memory_buffer> : formatter<fmt::string_vie
   }
 };
 
-// ------------------------- string ---------------------
-
-// concatenation
-// uses '&' instead of '+' to avoid char* coercion problems
-string operator&(string const& head, string const& tail);
-string& operator&=(string& head, string const& tail);
-
 
 // ------------------------ rostring ----------------------
 // My plan is to use this in places I currently use 'char const *'.

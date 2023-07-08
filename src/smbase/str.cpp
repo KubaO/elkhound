@@ -24,26 +24,6 @@
 #include "array.h"          // Array
 #include "fmt/core.h"       // fmt::format
 
-// ----------------------- string ---------------------
-
-
-string operator&(string const& head, string const &tail)
-{
-  string dest(head);
-  dest &= tail;
-  return dest;
-}
-
-string& operator&=(string& head, string const &tail)
-{
-  int headLen = head.length();
-  int tailLen = tail.length();
-  head.reserve(headLen + tailLen + 1);
-  head.append(tail);
-  head.push_back('\0');
-  head.pop_back();
-  return head;
-}
 
 
 // ----------------------- rostring ---------------------
