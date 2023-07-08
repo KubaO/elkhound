@@ -161,10 +161,10 @@ bool isSubclassTreeNodePtr(rostring type)
 string extractNodeType(rostring type);
 string getSuperTypeOf(rostring sub);
 
-bool isListType(rostring type);
-bool isFakeListType(rostring type);
-bool isTreeListType(rostring type);
-string extractListType(rostring type);
+bool isListType(string_view type);
+bool isFakeListType(string_view type);
+bool isTreeListType(string_view type);
+string extractListType(string_view type);
 
 
 // dsw: I just need to know if the thing is an object or not
@@ -242,28 +242,28 @@ string extractNodeType(rostring type)
   while (isalnum(*end) || *end=='_') {
     end++;
   }
-  return substring(type, end-type.c_str());
+  return string(type, end-type.c_str());
 }
 
 
 // is this type a use of my ASTList template?
-bool isListType(rostring type)
+bool isListType(string_view type)
 {
   // do a fairly coarse analysis.. (the space before "<" is
   // there because the type string is actually parsed by the
   // grammar, and as it assembles it back into a string it
   // inserts a space after every name-like token)
-  return prefixEquals(type, "ASTList <");
+  return type.starts_with("ASTList <");
 }
 
 // similar for FakeList
-bool isFakeListType(rostring type)
+bool isFakeListType(string_view type)
 {
-  return prefixEquals(type, "FakeList <");
+  return type.starts_with("FakeList <");
 }
 
 // is it a list type, with the elements being tree nodes?
-bool isTreeListType(rostring type)
+bool isTreeListType(string_view type)
 {
   return isListType(type) && isTreeNode(extractListType(type));
 }
@@ -272,13 +272,13 @@ bool isTreeListType(rostring type)
 // the type in the template argument angle brackets; this is used
 // to get the name of the type so we can pass it to the macros
 // which print list contents
-string extractListType(rostring type)
+string extractListType(string_view type)
 {
   xassert(isListType(type) || isFakeListType(type));
-  char const *langle = strchr(type.c_str(), '<');
-  char const *rangle = strchr(type.c_str(), '>');
-  xassert(langle && rangle);
-  return trimWhitespace(substring(langle+1, rangle-langle-1));
+  size_t langle = type.find_first_of('<');
+  size_t rangle = type.find_first_of('>', langle);
+  xassert(langle != string_view::npos && rangle != string_view::npos);
+  return trimWhitespace(type.substr(langle + 1, rangle - langle - 1));
 }
 
 

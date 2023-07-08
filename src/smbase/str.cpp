@@ -4,17 +4,6 @@
 
 #include "str.h"            // this module
 
-#include <stdlib.h>         // atoi
-#include <iostream>         // ostream << char*
-
-
-// ----------------------- rostring ---------------------
-
-string substring(char const *p, int n)
-{
-  return string(p, n);
-}
-
 
 // ---------------------- toString ---------------------
 #ifndef FMT_VERSION

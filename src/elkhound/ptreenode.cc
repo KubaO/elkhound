@@ -74,7 +74,7 @@ void PTreeNode::innerPrintTree(std::ostream &out, int indentation,
       LHS = type;     // no space, use whole thing
     }
     else {
-      LHS = substring(type, firstSpace-type);
+      LHS = string(type, firstSpace-type);
     }
 
     indentation += INDENT_INC;

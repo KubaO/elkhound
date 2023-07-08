@@ -45,12 +45,6 @@ inline int strcmp(string_view s1, string_view s2) { return s1.compare(s2); }
 
 inline bool streq(string_view s1, string_view s2) { return s1 == s2; }
 
-// construct a string out of characters from 'p' up to 'p+n-1',
-// inclusive; resulting string length is 'n'
-string substring(char const *p, int n);
-inline string substring(rostring p, int n)
-  { return substring(p.c_str(), n); }
-
 
 // ---------------------- misc utils ------------------------
 

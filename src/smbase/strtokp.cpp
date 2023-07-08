@@ -79,7 +79,7 @@ string StrtokParse::
   int left = offset(firstTok);
   int right = offset(lastTok) + strlen(tokv(lastTok));
 
-  return substring(original.c_str() + left, right-left);
+  return string(original.c_str() + left, right-left);
 }
 
 

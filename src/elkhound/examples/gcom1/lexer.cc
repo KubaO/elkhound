@@ -98,7 +98,7 @@ string Lexer::tokenKindDesc(int kind) const
     case TOK_IDENTIFIER:   return "id";
     default: {
       static char const map[] = "+-*()";
-      return substring(&map[kind-TOK_PLUS], 1);
+      return string(&map[kind-TOK_PLUS], 1);
     }
   }
 }

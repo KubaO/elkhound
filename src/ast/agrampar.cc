@@ -74,8 +74,8 @@ CtorArg *parseCtorArg(rostring origStr)
   }
   p++;
 
-  ret->type = trimWhitespace(substring(start, p-start));
-  ret->name = trimWhitespace(string(p));
+  ret->type = trimWhitespace(string_view(start, p-start));
+  ret->name = trimWhitespace(p);
 
   return ret;
 }

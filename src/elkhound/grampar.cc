@@ -183,7 +183,7 @@ LocString extractActionClassName(LocString const &body)
 
   // yield that, with the same source location
   return LocString(body.loc, grammarStringTable.add(
-    substring(start, p-start).c_str()));
+    string(start, p-start).c_str()));
 }
 
 
