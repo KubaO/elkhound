@@ -46,36 +46,7 @@ string& operator&=(string& head, string const &tail)
 }
 
 
-void readall(std::istream& is, string &into)
-{
-  const int block = 4096;
-  into.clear();
-  while (!is.fail())
-  {
-    int head = into.size();
-    into.resize(head + block);
-    is.read(&into[head], block);
-    int read = is.gcount();
-    xassert(read >= 0 && read <= block);
-    if (read < block)
-      into.resize(head + read);
-  }
-}
-
-
 // ----------------------- rostring ---------------------
-int strcmp(rostring s1, rostring s2)
-  { return strcmp(s1.c_str(), s2.c_str()); }
-int strcmp(rostring s1, char const *s2)
-  { return strcmp(s1.c_str(), s2); }
-int strcmp(char const *s1, rostring s2)
-  { return strcmp(s1, s2.c_str()); }
-
-
-char const *strstr(rostring haystack, char const *needle)
-{
-  return strstr(haystack.c_str(), needle);
-}
 
 
 int atoi(rostring s)
