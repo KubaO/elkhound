@@ -168,9 +168,9 @@ string extractListType(rostring type);
 
 
 // dsw: I just need to know if the thing is an object or not
-bool isPtrKind(rostring type)
+bool isPtrKind(string_view type)
 {
-  return type[strlen(type)-1] == '*';
+  return type.ends_with('*');
 }
 
 
@@ -181,7 +181,8 @@ TreeNodeKind getTreeNodePtrKind(rostring type)
     // wrong; you might want to consider the same replacement in other
     // places where trimWhitespace() is used.
 //      string base = trimWhitespace(substring(type, strlen(type)-1));
-    string base = firstAlphanumToken(substring(type, strlen(type)-1));
+    string_view typev(type.c_str(), type.length() - 1);
+    string base = firstAlphanumToken(type);
 
     return getTreeNodeKind(base);
   }

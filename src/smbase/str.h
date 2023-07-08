@@ -41,8 +41,6 @@ template<> struct fmt::formatter<fmt::memory_buffer> : formatter<fmt::string_vie
 typedef string const &rostring;
 
 // I need some compatibility functions
-inline int strlen(string_view s) { return s.length(); }
-
 inline int strcmp(string_view s1, string_view s2) { return s1.compare(s2); }
 
 inline bool streq(string_view s1, string_view s2) { return s1 == s2; }
