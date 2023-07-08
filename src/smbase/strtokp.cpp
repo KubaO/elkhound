@@ -4,28 +4,27 @@
 
 #include "strtokp.h"    // this module
 #include "exc.h"        // xassert
-#include <string.h>     // strtok
+#include <string.h>     // strlen, strtok
 
 
-StrtokParse::StrtokParse(rostring origStr, rostring origDelim)
-  : buf(strlen(origStr)+1)
+StrtokParse::StrtokParse(const char* origStr, rostring origDelim)
 {
-  char const *str = toCStr(origStr);
+  size_t len = strlen(origStr); // take origStr till the first nul
   char const *delim = toCStr(origDelim);
 
   // make local copy
-  strcpy(buf, str);
+  buf.assign(origStr, len);
 
   // parse it first time to count # of tokens
   int ct=0;
-  char *tok = strtok(buf.ptr(), delim);
+  char *tok = strtok(&buf[0], delim);
   while (tok) {
     ct++;
     tok = strtok(NULL, delim);
   }
 
   // restore buf
-  strcpy(buf, str);
+  buf.assign(origStr, len);
 
   // allocate storage
   _tokc = ct;
@@ -39,7 +38,7 @@ StrtokParse::StrtokParse(rostring origStr, rostring origDelim)
 
   // parse it again, this time saving the values
   ct=0;
-  tok = strtok(buf.ptr(), delim);
+  tok = strtok(&buf[0], delim);
   while (tok) {
     _tokv[ct] = tok;
     ct++;
@@ -101,5 +100,11 @@ string StrtokParse::join(int firstTok, int lastTok, rostring separator) const
 
 int StrtokParse::offset(int which) const
 {
-  return tokv(which) - (char const*)buf;
+  return tokv(which) - buf.c_str();
+}
+
+
+int StrtokParse::offsetAfter(int which) const
+{
+  return offset(which) + strlen(tokv(which));
 }

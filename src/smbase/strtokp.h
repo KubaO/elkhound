@@ -6,11 +6,9 @@
 #define __STRTOKP_H
 
 #include "str.h"       // string
-#include "array.h"     // Array
-#include <string.h>    // strlen
 
 class StrtokParse {
-  Array<char> buf;     // locally allocated storage; NUL terminated
+  string buf;          // locally allocated storage; NUL terminated
   int _tokc;           // # of tokens found
   char **_tokv;        // array of tokens themselves; NULL terminated
 
@@ -19,7 +17,7 @@ private:
     // throw an exception if which is invalid token
 
 public:
-  StrtokParse(rostring str, rostring delim);
+  StrtokParse(const char* str, rostring delim);
     // parse 'str' into tokens delimited by chars from 'delim'
 
   ~StrtokParse();
@@ -47,8 +45,7 @@ public:
     // return a value that, when added to the original 'str' parameter,
     // yields a pointer to where tokv(which) is, as a substring, in that string
 
-  int offsetAfter(int which) const
-    { return offset(which) + strlen(tokv(which)); }
+  int offsetAfter(int which) const;
     // offset for character just beyond last one in tokv (should be either
     // a delimiter character, or 0)
 
