@@ -45,10 +45,6 @@ inline int strcmp(string_view s1, string_view s2) { return s1.compare(s2); }
 
 inline bool streq(string_view s1, string_view s2) { return s1 == s2; }
 
-// there is no wrapper for 'strchr'; use string::contains
-
-int atoi(rostring s);
-
 // construct a string out of characters from 'p' up to 'p+n-1',
 // inclusive; resulting string length is 'n'
 string substring(char const *p, int n);

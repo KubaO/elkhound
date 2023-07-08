@@ -10,12 +10,6 @@
 
 // ----------------------- rostring ---------------------
 
-
-int atoi(rostring s)
-{
-  return atoi(s.c_str());
-}
-
 string substring(char const *p, int n)
 {
   return string(p, n);
