@@ -45,7 +45,7 @@ SourceLocManager::File::File(char const *n, SourceLoc aStartLoc)
   // the lower level (e.g. cygwin) will do CRLF translation,
   // and whether that will be done consistently, if text mode
   // is requested
-  AutoFILE fp(toCStr(name), "rb");
+  AutoFILE fp(name.c_str(), "rb");
 
   // the buffering that FILE would do would be wasted, so
   // make it unbuffered (if this causes a problem on some

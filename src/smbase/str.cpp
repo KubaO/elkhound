@@ -13,7 +13,7 @@
 
 int atoi(rostring s)
 {
-  return atoi(toCStr(s));
+  return atoi(s.c_str());
 }
 
 string substring(char const *p, int n)

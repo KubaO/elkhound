@@ -10,7 +10,7 @@
 StrtokParse::StrtokParse(const char* origStr, rostring origDelim)
 {
   size_t len = strlen(origStr); // take origStr till the first nul
-  char const *delim = toCStr(origDelim);
+  char const* delim = origDelim.c_str();
 
   // make local copy
   buf.assign(origStr, len);
@@ -79,7 +79,7 @@ string StrtokParse::
   int left = offset(firstTok);
   int right = offset(lastTok) + strlen(tokv(lastTok));
 
-  return substring(toCStr(original) + left, right-left);
+  return substring(original.c_str() + left, right-left);
 }
 
 
