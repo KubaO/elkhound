@@ -81,7 +81,7 @@ string Lexer::tokenDesc() const
 {
   switch (type) {
     // for two kinds of tokens, interpret their semantic value
-    case TOK_LITERAL:      return stringf("%d", (int)sval);
+    case TOK_LITERAL:      return std::to_string((int)sval);
     case TOK_IDENTIFIER:   return string((char*)sval);
 
     // otherwise, just return the token kind description

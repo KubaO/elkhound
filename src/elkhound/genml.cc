@@ -704,7 +704,7 @@ void emitMLTable(EmitCode &out, EltType const *table, int size, int rowLength,
     }
   }
 
-  int rowNumWidth = stringf("%d", size / rowLength /*round down*/).length();
+  int rowNumWidth = fmt::formatted_size("{}", size / rowLength /*round down*/);
 
   format_to(out, "  {} = [|           (* {} elements *)", tableName, size);
   int row = 0;

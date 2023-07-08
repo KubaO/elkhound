@@ -14,7 +14,6 @@
 #define STR_H
 
 #include <istream>       // istream
-#include <stdarg.h>      // va_list
 #include "fmt/format.h"  // fmt::string_view, memory_buffer
 
 #include <nonstd/string_view.hpp>
@@ -87,13 +86,6 @@ inline string substring(rostring p, int n)
 #endif
 
 string toString(char const* str);
-
-
-// printf-like construction of a string; often very convenient, since
-// you can use any of the formatting characters (like %X) that your
-// libc's sprintf knows about
-string stringf(char const *format, ...);
-string vstringf(char const *format, va_list args);
 
 
 #endif // STR_H
