@@ -56,9 +56,9 @@ void Lexer1Token::print() const
   int line, col;
   SourceLocManager::instance()->decodeLineCol(loc, fname, line, col);
 
-  printf("[L1] Token at line %d, col %d: %s \"%s\"\n",
+  fmt::println("[L1] Token at line {}, col {}: {} \"{}\"\n",
          line, col, l1Tok2String(type),
-         encodeWithEscapes(text.c_str(), length).c_str());
+         encodeWithEscapes(string_view(text.c_str(), length)));
 }
 
 
