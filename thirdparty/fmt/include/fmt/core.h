@@ -212,6 +212,9 @@
 #elif FMT_HAS_INCLUDE("experimental/string_view") && FMT_CPLUSPLUS >= 201402L
 #  include <experimental/string_view>
 #  define FMT_USE_EXPERIMENTAL_STRING_VIEW
+#elif FMT_HAS_INCLUDE("nonstd/string_view.hpp")
+#  include <nonstd/string_view.hpp>
+#  define FMT_USE_NONSTD_STRING_VIEW
 #endif
 
 #ifndef FMT_UNICODE
@@ -344,7 +347,10 @@ FMT_NORETURN FMT_API void assert_fail(const char* file, int line,
 template <typename Char> using std_string_view = std::basic_string_view<Char>;
 #elif defined(FMT_USE_EXPERIMENTAL_STRING_VIEW)
 template <typename Char>
-using std_string_view = std::experimental::basic_string_view<Char>;
+using std_string_view = std::experimentasl::basic_string_view<Char>;
+#elif defined(FMT_USE_NONSTD_STRING_VIEW)
+template <typename Char>
+using std_string_view = nonstd::basic_string_view<Char>;
 #else
 template <typename T> struct std_string_view {};
 #endif
