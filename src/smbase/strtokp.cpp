@@ -8,7 +8,7 @@
 
 
 StrtokParse::StrtokParse(rostring origStr, rostring origDelim)
-  : buf(strlen(origStr)+1)
+  : buf(origStr.length()+1)
 {
   char const *str = origStr.c_str();
   char const *delim = origDelim.c_str();

@@ -120,8 +120,6 @@ std::istream& operator>> (std::istream& is, string& obj) = delete;
 typedef string const &rostring;
 
 // I need some compatibility functions
-inline int strlen(rostring s) { return s.length(); }
-
 int strcmp(rostring s1, rostring s2);
 int strcmp(rostring s1, char const *s2);
 int strcmp(char const *s1, rostring s2);

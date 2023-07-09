@@ -15,6 +15,7 @@
 
 // internal use only - will be removed as strutil dwindles
 inline static char const* toCStr(rostring s) { return s.c_str(); }
+inline int strlen(rostring s) { return s.length(); }
 
 // replace all instances of oldstr in src with newstr, return result
 string replace(rostring origSrc, rostring oldstr, rostring newstr)

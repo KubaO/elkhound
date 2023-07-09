@@ -438,7 +438,7 @@ void quotedUnescape(ArrayStack<char> &dest, rostring src,
                     char delim, bool allowNewlines)
 {
   // strip quotes or ticks
-  decodeEscapes(dest, substring(src.c_str()+1, strlen(src)-2),
+  decodeEscapes(dest, substring(src.c_str()+1, src.length()-2),
                 delim, allowNewlines);
 }
 

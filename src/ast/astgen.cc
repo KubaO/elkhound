@@ -169,7 +169,7 @@ string extractListType(rostring type);
 // dsw: I just need to know if the thing is an object or not
 bool isPtrKind(rostring type)
 {
-  return type[strlen(type)-1] == '*';
+  return type[type.length() - 1] == '*';
 }
 
 
@@ -180,7 +180,7 @@ TreeNodeKind getTreeNodePtrKind(rostring type)
     // wrong; you might want to consider the same replacement in other
     // places where trimWhitespace() is used.
 //      string base = trimWhitespace(substring(type, strlen(type)-1));
-    string base = firstAlphanumToken(substring(type, strlen(type)-1));
+    string base = firstAlphanumToken(substring(type, type.length()-1));
 
     return getTreeNodeKind(base);
   }
