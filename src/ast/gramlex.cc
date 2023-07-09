@@ -40,7 +40,7 @@ void GrammarLexer::AltReportError::reportWarning(rostring msg)
 
 // ----------------- GrammarLexer::FileState --------------------
 GrammarLexer::FileState::FileState(rostring filename, std::istream *src)
-  : loc(SourceLocManager::instance()->encodeBegin(toCStr(filename))),
+  : loc(SourceLocManager::instance()->encodeBegin(filename.c_str())),
     source(src),
     bufstate(NULL)
 {}

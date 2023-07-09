@@ -119,16 +119,6 @@ std::istream& operator>> (std::istream& is, string& obj) = delete;
 // My plan is to use this in places I currently use 'char const *'.
 typedef string const &rostring;
 
-// I have the modest hope that the transition to 'rostring' might be
-// reversible, so this function converts to 'char const *' but with a
-// syntax that could just as easily apply to 'char const *' itself
-// (and in that case would be the identity function).
-inline char const *toCStr(rostring s) { return s.c_str(); }
-
-// at the moment, if I do this it is a mistake, so catch it; this
-// function is not implemented anywhere
-void/*unusable*/ toCStr(char const *s);
-
 // I need some compatibility functions
 inline int strlen(rostring s) { return s.length(); }
 

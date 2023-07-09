@@ -128,7 +128,7 @@ Gen::Gen(rostring srcfn, ObjList<string> const &mods,
   : srcFname(srcfn),
     modules(mods),
     destFname(destfn),
-    out(toCStr(destfn)),
+    out(destfn.c_str()),
     file(f)
 {
   if (!out) {
@@ -236,11 +236,11 @@ string getSuperTypeOf(rostring sub)
 // get just the first alphanumeric word
 string extractNodeType(rostring type)
 {
-  char const *end = toCStr(type);
+  char const* end = type.c_str();
   while (isalnum(*end) || *end=='_') {
     end++;
   }
-  return substring(type, end-toCStr(type));
+  return substring(type, end-type.c_str());
 }
 
 
@@ -273,8 +273,8 @@ bool isTreeListType(rostring type)
 string extractListType(rostring type)
 {
   xassert(isListType(type) || isFakeListType(type));
-  char const *langle = strchr(toCStr(type), '<');
-  char const *rangle = strchr(toCStr(type), '>');
+  char const *langle = strchr(type.c_str(), '<');
+  char const *rangle = strchr(type.c_str(), '>');
   xassert(langle && rangle);
   return trimWhitespace(substring(langle+1, rangle-langle-1));
 }
@@ -296,7 +296,7 @@ void parseFieldDecl(string &type, string &name, rostring decl)
 
   // extract the parts
   type = trimWhitespace(substring(decl, ofs));
-  name = trimWhitespace(toCStr(decl)+ofs);
+  name = trimWhitespace(decl.c_str()+ofs);
 }
 
 string extractFieldType(rostring decl)

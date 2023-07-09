@@ -217,7 +217,7 @@ public:
 
 void Test::feed(CC &cc, rostring origSrc)
 {
-  char const *src = toCStr(origSrc);
+  char const *src = origSrc.c_str();
 
   //std::cout << "trying: " << src << std::endl;
   while (*src) {
