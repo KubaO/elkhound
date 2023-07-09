@@ -13,33 +13,12 @@
 #ifndef STR_H
 #define STR_H
 
-#include "typ.h"         // bool
 #include <iostream>      // istream, ostream
 #include <stdarg.h>      // va_list
 #include <string.h>      // strcmp, etc.
 #include <type_traits>
 
 class Flatten;           // flatten.h
-
-// certain unfortunate implementation decisions by some compilers
-// necessitate avoiding the name 'string'
-//
-// 9/19/04: I originally made this definition to work around a problem
-// with Borland C++ 4.5.  It causes a problem when using the new
-// standard library, since the name clashes with std::string.  A
-// simple solution is to remove the #definition and let namespaces do
-// their job.  Since Intel's headers are the only ones that provoke
-// the problem I'll confine it to that case for now.  Eventually I
-// will do the same for gcc.
-//
-// 2005-02-28: Let's try getting rid of this.
-//
-// 2005-03-15: There were some problems on Redhat due to flex-2.5.4a-29.
-//             I have solved them differently, but it is worth noting
-//             that re-enabling this #define also fixed the problem.
-#if 0   //!defined(__INTEL_COMPILER)
-  #define string mystring
-#endif
 
 
 // ------------------------- string ---------------------
@@ -77,16 +56,13 @@ public:        // funcs
   //     the length passed to its constructor!
   string(int length, SmbaseStringFunc) { s=emptyString; setlength(length); }
 
-  string(Flatten&);
+  string(Flatten&) = delete;
   void xfer(Flatten &flat);
 
   // simple queries
   int length() const;           // returns number of non-null chars in the string; length of "" is 0
-  bool isempty() const { return s[0]==0; }
+  bool empty() const { return s[0] == 0; }
   bool contains(char c) const;
-
-  // std::string has this instead; I will begin using slowly
-  bool empty() const { return isempty(); }
 
   // array-like access
   char& operator[] (int i) { return s[i]; }
@@ -96,14 +72,7 @@ public:        // funcs
   string substring(int startIndex, int length) const;
 
   // conversions
-  #if 0    // removing these for more standard compliace
-    //operator char* () { return s; }      // ambiguities...
-    operator char const* () const { return s; }
-    char *pchar() { return s; }
-    char const *pcharc() const { return s; }
-  #else
-    char const *c_str() const { return s; }
-  #endif
+  char const *c_str() const { return s; }
 
   // assignment
   string& operator=(string const &src)
@@ -135,37 +104,16 @@ public:        // funcs
   // concatenation (properly handles string growth)
   // uses '&' instead of '+' to avoid char* coercion problems
   string operator& (string const &tail) const;
-  string& operator&= (string const &tail);
 
   // input/output
-  friend std::istream& operator>> (std::istream &is, string &obj)
-    { obj.readline(is); return is; }
-  friend std::ostream& operator<< (std::ostream &os, string const &obj)
-    { obj.write(os); return os; }
-
-  // note: the read* functions are currently implemented in a fairly
-  // inefficient manner (one char at a time)
-
-  void readdelim(std::istream &is, char const *delim);
-    // read from is until any character in delim is encountered; consumes that
-    // character, but does not put it into the string; if delim is null or
-    // empty, reads until EOF
-
-  void readall(std::istream &is) { readdelim(is, NULL); }
-    // read all remaining chars of is into this
-
-  void readline(std::istream &is) { readdelim(is, "\n"); }
-    // read a line from input stream; consumes the \n, but doesn't put it into
-    // the string
-
-  void write(std::ostream &os) const;
-    // writes all stored characters (but not '\0')
+  friend std::ostream& operator<< (std::ostream& os, string const& obj) { return os << obj.s; }
 
   // debugging
   void selfCheck() const;
     // fail an assertion if there is a problem
 };
 
+std::istream& operator>> (std::istream& is, string& obj) = delete;
 
 // ------------------------ rostring ----------------------
 // My plan is to use this in places I currently use 'char const *'.
@@ -201,13 +149,10 @@ char const *strstr(rostring haystack, char const *needle);
 
 // there is no wrapper for 'strchr'; use string::contains
 
-int atoi(rostring s);
-
 // construct a string out of characters from 'p' up to 'p+n-1',
 // inclusive; resulting string length is 'n'
 string substring(char const *p, int n);
-inline string substring(rostring p, int n)
-  { return substring(p.c_str(), n); }
+inline string substring(rostring p, int n) { return p.substring(0, n); }
 
 
 // --------------------- stringBuilder --------------------
@@ -235,7 +180,7 @@ public:
   stringBuilder& operator= (stringBuilder const &s) { return operator= (s.c_str()); }
 
   int length() const { return end-s; }
-  bool isempty() const { return length()==0; }
+  bool empty() const { return length()==0; }
 
   // unlike 'string' above, I will allow stringBuilder to convert to
   // char const * so I can continue to use 'stringc' to build strings
@@ -244,7 +189,9 @@ public:
   // (namely stringBuilder) when I use this functionality
   operator char const * () const { return c_str(); }
 
-  stringBuilder& setlength(int newlen);    // change length, forget current data
+private:
+  using string::setlength; // hide it
+public:
 
   // make sure we can store 'someLength' non-null chars; grow if necessary
   void ensure(int someLength) { if (someLength >= size) { grow(someLength); } }
@@ -257,16 +204,9 @@ public:
   // it's not really the intent of this class, though
   void adjustend(char* newend);
 
-  // remove characters from the end of the string; 'newLength' must
-  // be at least 0, and less than or equal to current length
-  void truncate(int newLength);
-
   // make the string be the empty string, but don't change the
   // allocated space
   void clear() { adjustend(s); }
-
-  // concatenation, which is the purpose of this class
-  stringBuilder& operator&= (char const *tail);
 
   // useful for appending substrings or strings with NUL in them
   void append(char const *tail, int length);
@@ -279,8 +219,8 @@ public:
   enum class _disabled2 {};
 
   // sort of a mixture of Java compositing and C++ i/o strstream
-  stringBuilder& operator << (rostring text) { return operator&=(text.c_str()); }
-  stringBuilder& operator << (char const *text) { return operator&=(text); }
+  stringBuilder& operator << (rostring text) { append(text.c_str(), text.length()); return *this;  }
+  stringBuilder& operator << (char const* text) { append(text, strlen(text)); return *this;  }
   stringBuilder& operator << (char c);
   stringBuilder& operator << (unsigned char c) { return operator<<((char)c); }
   stringBuilder& operator << (long i);
@@ -293,20 +233,12 @@ public:
   stringBuilder& operator << (unsigned short i) { return operator<<((long)i); }
   stringBuilder& operator << (double d);
   stringBuilder& operator << (void *ptr);     // inserts address in hex
-  #ifndef LACKS_BOOL
-    stringBuilder& operator << (bool b) { return operator<<((long)b); }
-  #endif // LACKS_BOOL
+  stringBuilder& operator << (bool b) { return operator<<((long)b); }
 
   // useful in places where long << expressions make it hard to
   // know when arguments will be evaluated, but order does matter
   typedef stringBuilder& (*Manipulator)(stringBuilder &sb);
   stringBuilder& operator<< (Manipulator manip);
-
-  // stream readers
-  friend std::istream& operator>> (std::istream &is, stringBuilder &sb)
-    { sb.readline(is); return is; }
-  void readall(std::istream &is) { readdelim(is, NULL); }
-  void readline(std::istream &is) { readdelim(is, "\n"); }
 
   void readdelim(std::istream &is, char const *delim);
 
@@ -322,6 +254,8 @@ public:
   stringBuilder& operator<< (Hex const &h);
   #define SBHex stringBuilder::Hex
 };
+
+std::istream& operator>> (std::istream& is, stringBuilder& sb) = delete;
 
 
 // ---------------------- misc utils ------------------------
