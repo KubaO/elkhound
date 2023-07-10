@@ -171,7 +171,7 @@ void test(unsigned long val)
 {
   //std::cout << stringb(val << " in hex: 0x" << stringBuilder::Hex(val)) << std::endl;
 
-  std::cout << stringb(val << " in hex: " << SBHex(val)) << std::endl;
+  std::cout << (stringc << val << " in hex: " << SBHex(val)) << std::endl;
 }
 
 int main()

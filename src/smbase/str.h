@@ -106,14 +106,8 @@ string& operator<< (string& str, SBHex);
 
 
 // ---------------------- misc utils ------------------------
-// the real strength of this entire module: construct strings in-place
-// using the same syntax as C++ iostreams.  e.g.:
-//   puts(stringb("x=" << x << ", y=" << y));
-#define stringb(expr) (string() << expr)
 
-// experimenting with dropping the () in favor of <<
-// (the "c" can be interpreted as "constructor", or maybe just
-// the successor to "b" above)
+// The "c" can be interpreted as "constructor".
 #define stringc string()
 
 

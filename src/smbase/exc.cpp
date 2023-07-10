@@ -84,10 +84,10 @@ void xBase::addContext(rostring context)
 
 // ------------------- x_assert -----------------
 x_assert::x_assert(rostring cond, rostring fname, int line)
-  : xBase(stringb(
+  : xBase(stringc <<
       "Assertion failed: " << cond <<
       ", file " << fname <<
-      " line " << line)),
+      " line " << line),
     condition(cond),
     filename(fname),
     lineno(line)
@@ -113,7 +113,7 @@ void x_assert_fail(char const *cond, char const *file, int line)
 
 // --------------- xFormat ------------------
 xFormat::xFormat(rostring cond)
-  : xBase(stringb("Formatting error: " << cond)),
+  : xBase(stringc << "Formatting error: " << cond),
     condition(cond)
 {}
 

@@ -681,7 +681,7 @@ string taggedName(rostring name, char const *tag)
     return string(name);
   }
   else {
-    return stringb(tag << ":" << name);
+    return stringc << tag << ":" << name;
   }
 }
 
