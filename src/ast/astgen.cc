@@ -169,7 +169,7 @@ string extractListType(rostring type);
 // dsw: I just need to know if the thing is an object or not
 bool isPtrKind(rostring type)
 {
-  return type[type.length() - 1] == '*';
+  return !type.empty() && (type[type.length() - 1] == '*');
 }
 
 
