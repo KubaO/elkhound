@@ -4159,9 +4159,6 @@ void emitActionCode(GrammarAnalysis const &g, rostring hFname,
                     rostring ccFname, rostring srcFname)
 {
   EmitCode dcl(hFname);
-  if (!dcl) {
-    throw_XOpen(hFname);
-  }
 
   string latchName = replace(replace(replace(
                        stringToupper(hFname),
@@ -4225,9 +4222,6 @@ void emitActionCode(GrammarAnalysis const &g, rostring hFname,
       ;
 
   EmitCode out(ccFname);
-  if (!out) {
-    throw_XOpen(ccFname);
-  }
 
   out << "// " << ccFname << "\n";
   out << "// *** DO NOT EDIT BY HAND ***\n";

@@ -53,9 +53,6 @@ void emitMLActionCode(GrammarAnalysis const &g, rostring mliFname,
                       rostring mlFname, rostring srcFname)
 {
   EmitCode dcl(mliFname);
-  if (!dcl) {
-    throw_XOpen(mliFname);
-  }
 
   // prologue
   dcl << "(* " << mliFname << " *)\n"
@@ -115,9 +112,6 @@ void emitMLActionCode(GrammarAnalysis const &g, rostring mliFname,
   dcl << "val " << g.actionClassName << "UserActions: Useract.tUserActions\n";
 
   EmitCode out(mlFname);
-  if (!out) {
-    throw_XOpen(mlFname);
-  }
 
   out << "(* " << mlFname << " *)\n";
   out << "(* *** DO NOT EDIT BY HAND *** *)\n";
