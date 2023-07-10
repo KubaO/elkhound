@@ -278,7 +278,7 @@ void Test::name(rostring body, rostring n)
 {
   CC cc(&silentReportError);
   feed(cc, body);
-  xassert(cc.getDeclName().equals(n));
+  xassert(cc.getDeclName() == n);
 }
 
 void Test::badname(rostring body)

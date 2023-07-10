@@ -340,7 +340,7 @@ void Test::name(char const *body, char const *n)
 {
   ML ml;
   feed(ml, body);
-  xassert(ml.getDeclName().equals(n));
+  xassert(ml.getDeclName() == n);
 }
 
 void Test::badname(char const *body)

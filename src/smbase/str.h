@@ -89,8 +89,6 @@ public:        // funcs
   //   >0   if   *this > src
   int compareTo(string const &src) const;
   int compareTo(char const *src) const;
-  bool equals(char const *src) const { return compareTo(src) == 0; }
-  bool equals(string const &src) const { return compareTo(src) == 0; }
 
   #define MAKEOP(op)                                                             \
     bool operator op (string const &src) const { return compareTo(src) op 0; }   \

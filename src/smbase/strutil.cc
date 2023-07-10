@@ -547,14 +547,14 @@ void expRangeVector(char const *in, char const *out)
 {
   printf("expRangeVector(%s, %s)\n", in, out);
   string result = expandRanges(in);
-  xassert(result.equals(out));
+  xassert(result == out);
 }
 
 void trVector(char const *in, char const *srcSpec, char const *destSpec, char const *out)
 {
   printf("trVector(%s, %s, %s, %s)\n", in, srcSpec, destSpec, out);
   string result = translate(in, srcSpec, destSpec);
-  xassert(result.equals(out));
+  xassert(result == out);
 }
 
 void decodeVector(char const *in, char const *out, int outLen)
@@ -570,21 +570,21 @@ void basenameVector(char const *in, char const *out)
 {
   printf("basenameVector(%s, %s)\n", in, out);
   string result = sm_basename(in);
-  xassert(result.equals(out));
+  xassert(result == out);
 }
 
 void dirnameVector(char const *in, char const *out)
 {
   printf("dirnameVector(%s, %s)\n", in, out);
   string result = dirname(in);
-  xassert(result.equals(out));
+  xassert(result == out);
 }
 
 void pluralVector(int n, char const *in, char const *out)
 {
   printf("pluralVector(%d, %s, %s)\n", n, in, out);
   string result = plural(n, in);
-  xassert(result.equals(out));
+  xassert(result == out);
 }
 
 
