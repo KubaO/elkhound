@@ -11,7 +11,6 @@ project(tobjlist)
 project(tsobjlist)
 project(bit2d)
 project(growbuf)
-project(strdict)
 project(svdict)
 project(str)
 project(strutil)
@@ -69,11 +68,6 @@ add_executable(bit2d
 # files for growbuf
 add_executable(growbuf
     ../growbuf.cc
-)
-
-# files for strdict
-add_executable(strdict
-    ../strdict.cc
 )
 
 # files for svdict
@@ -167,7 +161,6 @@ target_compile_options(voidlist PRIVATE -DTEST_VOIDLIST)
 target_compile_options(vdtllist PRIVATE -DTEST_VDTLLIST)
 target_compile_options(bit2d PRIVATE -DTEST_BIT2D)
 target_compile_options(growbuf PRIVATE -DTEST_GROWBUF)
-target_compile_options(strdict PRIVATE -DTEST_STRDICT)
 target_compile_options(svdict PRIVATE -DTEST_SVDICT)
 target_compile_options(str PRIVATE -DTEST_STR)
 target_compile_options(strutil PRIVATE -DTEST_STRUTIL)
@@ -192,7 +185,6 @@ target_link_libraries(tobjlist smbase)
 target_link_libraries(tsobjlist smbase)
 target_link_libraries(bit2d smbase)
 target_link_libraries(growbuf smbase)
-target_link_libraries(strdict smbase)
 target_link_libraries(svdict smbase)
 target_link_libraries(str smbase)
 target_link_libraries(strutil smbase)

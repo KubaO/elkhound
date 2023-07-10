@@ -24,7 +24,6 @@ add_library(smbase STATIC
     point.cc
     srcloc.cc
     str.cpp
-    strdict.cc
     strhash.cc
     stringset.cc
     strtokp.cpp

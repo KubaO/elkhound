@@ -12,7 +12,6 @@
 #include "srcloc.h"        // SourceLocManager
 #include "strtokp.h"       // StrtokParse
 #include "exc.h"           // xfatal
-#include "strdict.h"       // StringDict
 
 #include <string.h>        // strncmp
 #include <fstream>         // std::ofstream
