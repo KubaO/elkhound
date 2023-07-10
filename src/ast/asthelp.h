@@ -218,7 +218,7 @@ void debugPrintList(ASTList<T> const &list, char const *name,
   {
     FOREACH_ASTLIST(T, list, iter) {
       iter.data()->debugPrint(os, indent+2,
-        stringc << name << "[" << ct++ << "]");
+        stringc << name << "[" << ct++ << "]" << c_str);
     }
   }
 }

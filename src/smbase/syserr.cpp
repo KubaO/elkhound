@@ -69,7 +69,7 @@ STATICDEF string xSysError::
   if (r != R_UNKNOWN) {
     sb << getReasonString(r);
   }
-  else if ((sysReason != NULL) && (sysReason[0] != 0)) {
+  else if (!sysReason.empty()) {
     sb << sysReason;
   }
   else {

@@ -594,7 +594,7 @@ void addDefaultTypesActions(Grammar &g, GrammarAST *ast)
 {
   // language defaults
   StringRef defaultType, defaultAction;
-  if (g.targetLang.equals("OCaml")) {
+  if (g.targetLang == "OCaml") {
     defaultType = grammarStringTable.add("unit");
     defaultAction = grammarStringTable.add("()");
   }
@@ -672,7 +672,7 @@ void synthesizeStartRule(Grammar &g, GrammarAST *ast)
   ASTList<RHSElt> *rhs = new ASTList<RHSElt>();
   rhs->append(rhs1);
   rhs->append(rhs2);
-  char const *action = g.targetLang.equals("OCaml")? " top " :
+  char const *action = g.targetLang == "OCaml"?      " top " :
                        firstNT->type.equals("void")? " return; " :
                                                      " return top; ";
   ProdDecl *startProd = new ProdDecl(SL_INIT, PDK_NEW, rhs, LIT_STR(action).clone());

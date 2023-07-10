@@ -681,7 +681,7 @@ string taggedName(rostring name, char const *tag)
     return string(name);
   }
   else {
-    return stringb(tag << ":" << name);
+    return stringc << tag << ":" << name;
   }
 }
 
@@ -852,7 +852,7 @@ void Grammar::xfer(Flatten &flat)
 
   xferObjList(flat, implVerbatim);
 
-  targetLang.xfer(flat);
+  flat.xferString(targetLang);
   flat.xferBool(useGCDefaults);
   flat.xferBool(defaultMergeAborts);
 

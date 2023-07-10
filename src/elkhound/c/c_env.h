@@ -74,7 +74,7 @@ public:     // funcs
   virtual ~CFGEnv();
 
   // must be defined in child class
-  virtual Type const *err(char const *str)=0;
+  virtual Type const *err(rostring str)=0;
 
   // manipulate a stack of lists of nodes whose 'next' link
   // needs to be set
@@ -238,7 +238,7 @@ public:     // funcs
 
   // ------------------ error/warning reporting -----------------
   // report an error ('str' should *not* have a newline)
-  virtual Type const *err(char const *str);    // returns fixed(ST_ERROR)
+  virtual Type const *err(rostring str);    // returns fixed(ST_ERROR)
   void warn(char const *str);
 
   // versions which explicitly specify a location
@@ -246,10 +246,10 @@ public:     // funcs
   void warnLoc(SourceLoc loc, char const *str);
 
   // report an error, and throw an exception
-  void errThrow(char const *str);
+  void errThrow(rostring str);
 
   // if 'condition' is true, report error 'str' and also throw an exception
-  void errIf(bool condition, char const *str);
+  void errIf(bool condition, rostring str);
 
   // # reported errors
   int getErrors() const { return errors; }

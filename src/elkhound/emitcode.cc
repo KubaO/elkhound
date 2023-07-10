@@ -8,7 +8,7 @@
 #include <string.h>        // memcpy
 
 EmitCode::EmitCode(rostring f)
-  : os(f.c_str()),
+  : os(f),
     fname(f),
     line(1)
 {
@@ -106,13 +106,10 @@ string lineDirective(SourceLoc loc)
   return stringc << hashLine() << line << " \"" << cfname.c_str() << "\"\n";
 }
 
-stringBuilder &restoreLine(stringBuilder &sb)
+void EmitCode::restoreLine()
 {
-  // little hack..
-  EmitCode &os = (EmitCode&)sb;
-
   // +1 because we specify what line will be *next*
-  int line = os.getLine()+1;
-  return os << hashLine() << line
-            << " \"" << os.getFname() << "\"\n";
+  int line = getLine()+1;
+  *this << hashLine() << line
+        << " \"" << getFname() << "\"\n";
 }

@@ -35,7 +35,7 @@ static int mult(int a, int b)
 {
   int r = a*b;
   if (a>0 && b>0 && (r < a || r < b)) {
-    xfailure(stringc << "arithmetic overflow: " << a << " * " << b);
+    xfailure(stringc << "arithmetic overflow: " << a << " * " << b << c_str);
   }
   if (r > 1000) {
     std::cout << r << " is more than 1000 paths!\n";

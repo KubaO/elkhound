@@ -16,9 +16,6 @@
 #include "str.h"         // string
 #include <iostream>      // ostream
 
-// forward declarations
-class stringBuilder;
-
 
 // by using this macro, the debugger gets a shot before the stack is unwound
 #ifdef THROW

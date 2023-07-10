@@ -169,7 +169,7 @@ string extractListType(rostring type);
 // dsw: I just need to know if the thing is an object or not
 bool isPtrKind(rostring type)
 {
-  return type[type.length() - 1] == '*';
+  return !type.empty() && (type[type.length() - 1] == '*');
 }
 
 
@@ -196,14 +196,14 @@ TreeNodeKind getTreeNodeKind(rostring base)
   SFOREACH_OBJLIST(TF_class, allClasses, iter) {
     TF_class const *c = iter.data();
 
-    if (c->super->name.equals(base)) {
+    if (c->super->name == base) {
       // found it in a superclass
       return TKN_SUPERCLASS;
     }
 
     // check the subclasses
     FOREACH_ASTLIST(ASTClass, c->ctors, ctor) {
-      if (ctor.data()->name.equals(base)) {
+      if (ctor.data()->name == base) {
         // found it in a subclass
         return TKN_SUBCLASS;
       }
@@ -221,7 +221,7 @@ string getSuperTypeOf(rostring sub)
 
     // look among the subclasses
     FOREACH_ASTLIST(ASTClass, c->ctors, ctor) {
-      if (ctor.data()->name.equals(sub)) {
+      if (ctor.data()->name == sub) {
         // found it
         return c->super->name;
       }
@@ -680,7 +680,7 @@ void HGen::emitCtorFormal(int &ct, CtorArg const *arg)
   out << type << " ";
   if (isListType(type) ||
       isTreeNode(type) ||
-      type.equals("LocString")) {
+      type == "LocString") {
     // lists and subtrees and LocStrings are constructed by passing pointers
     trace("putStar") << "putting star for " << type << std::endl;
     out << "*";
@@ -1266,7 +1266,7 @@ bool CGen::emitCustomCode(ASTList<Annotation> const &list, rostring tag)
 
   FOREACH_ASTLIST(Annotation, list, iter) {
     CustomCode const *cc = iter.data()->ifCustomCodeC();
-    if (cc && cc->qualifier.equals(tag)) {
+    if (cc && cc->qualifier == tag) {
       out << "  " << cc->code << ";\n";
       emitted = true;
 
@@ -3016,7 +3016,7 @@ void XmlParserGen::emitXmlParserImplementation()
 
 void mergeClass(ASTClass *base, ASTClass *ext)
 {
-  xassert(base->name.equals(ext->name));
+  xassert(base->name == ext->name);
   trace("merge") << "merging class: " << ext->name << std::endl;
 
   // move all ctor args to the base
@@ -3033,7 +3033,7 @@ void mergeClass(ASTClass *base, ASTClass *ext)
 
 void mergeEnum(TF_enum *base, TF_enum *ext)
 {
-  xassert(base->name.equals(ext->name));
+  xassert(base->name == ext->name);
   trace("merge") << "merging enum: " << ext->name << std::endl;
 
   while (ext->enumerators.isNotEmpty()) {
@@ -3045,7 +3045,7 @@ void mergeEnum(TF_enum *base, TF_enum *ext)
 ASTClass *findClass(TF_class *base, rostring name)
 {
   FOREACH_ASTLIST_NC(ASTClass, base->ctors, iter) {
-    if (iter.data()->name.equals(name)) {
+    if (iter.data()->name == name) {
       return iter.data();
     }
   }
@@ -3055,7 +3055,7 @@ ASTClass *findClass(TF_class *base, rostring name)
 void mergeSuperclass(TF_class *base, TF_class *ext)
 {
   // should only get here for same-named classes
-  xassert(base->super->name.equals(ext->super->name));
+  xassert(base->super->name == ext->super->name);
   trace("merge") << "merging superclass: " << ext->super->name << std::endl;
 
   // merge the superclass ctor args and annotations
@@ -3086,7 +3086,7 @@ TF_class *findSuperclass(ASTSpecFile *base, rostring name)
   FOREACH_ASTLIST_NC(ToplevelForm, base->forms, iter) {
     ToplevelForm *tf = iter.data();
     if (tf->isTF_class() &&
-        tf->asTF_class()->super->name.equals(name)) {
+        tf->asTF_class()->super->name == name) {
       return tf->asTF_class();
     }
   }
@@ -3098,7 +3098,7 @@ TF_enum *findEnum(ASTSpecFile *base, rostring name)
   FOREACH_ASTLIST_NC(ToplevelForm, base->forms, iter) {
     ToplevelForm *tf = iter.data();
     if (tf->isTF_enum() &&
-        tf->asTF_enum()->name.equals(name)) {
+        tf->asTF_enum()->name == name) {
       return tf->asTF_enum();
     }
   }
@@ -3341,25 +3341,25 @@ void entry(int argc, char **argv)
       if (iter.data()->isTF_option()) {
         TF_option const *op = iter.data()->asTF_optionC();
 
-        if (op->name.equals("visitor")) {
+        if (op->name == "visitor") {
           grabOptionName("visitor", visitorName, op);
         }
-        else if (op->name.equals("dvisitor")) {
+        else if (op->name == "dvisitor") {
           grabOptionName("dvisitor", dvisitorName, op);
         }
-        else if (op->name.equals("xmlVisitor")) {
+        else if (op->name == "xmlVisitor") {
           grabOptionName("xmlVisitor", xmlVisitorName, op);
         }
-        else if (op->name.equals("xmlParser")) {
+        else if (op->name == "xmlParser") {
           grabOptionName("xmlParser", xmlParserName, op);
         }
-        else if (op->name.equals("mvisitor")) {
+        else if (op->name == "mvisitor") {
           grabOptionName("mvisitor", mvisitorName, op);
         }
-        else if (op->name.equals("xmlPrint")) {
+        else if (op->name == "xmlPrint") {
           wantXMLPrint = true;
         }
-        else if (op->name.equals("gdb")) {
+        else if (op->name == "gdb") {
           wantGDB = true;
         }
         else {

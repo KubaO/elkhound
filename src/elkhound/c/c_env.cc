@@ -660,7 +660,7 @@ Type const *Env::promoteTypes(BinaryOp op, Type const *t1, Type const *t2)
 
 
 // --------------------- error/warning reporting ------------------
-Type const *Env::err(char const *str)
+Type const *Env::err(rostring str)
 {
   std::cout << ::toString(currentLoc()) << ": error: " << str << std::endl;
   errors++;
@@ -690,14 +690,14 @@ void Env::warnLoc(SourceLoc loc, char const *str)
 }
 
 
-void Env::errThrow(char const *str)
+void Env::errThrow(rostring str)
 {
   err(str);
-  THROW(XError(str));
+  THROW(XError(str.c_str()));
 }
 
 
-void Env::errIf(bool condition, char const *str)
+void Env::errIf(bool condition, rostring str)
 {
   if (condition) {
     errThrow(str);

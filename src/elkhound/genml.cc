@@ -27,7 +27,7 @@ void emitMLUserCode(EmitCode &out, LocString const &code, bool braces = true);
 void emitMLActions(Grammar const &g, EmitCode &out, EmitCode &dcl);
 void emitMLDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl);
 void emitMLFuncDecl(Grammar const &g, EmitCode &out, EmitCode &dcl,
-                    char const *rettype, char const *params);
+                    char const *rettype, rostring params);
 void emitMLDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
                       Symbol const &sym);
 void emitMLSwitchCode(Grammar const &g, EmitCode &out,
@@ -53,9 +53,6 @@ void emitMLActionCode(GrammarAnalysis const &g, rostring mliFname,
                       rostring mlFname, rostring srcFname)
 {
   EmitCode dcl(mliFname);
-  if (!dcl) {
-    throw_XOpen(mliFname);
-  }
 
   // prologue
   dcl << "(* " << mliFname << " *)\n"
@@ -115,9 +112,6 @@ void emitMLActionCode(GrammarAnalysis const &g, rostring mliFname,
   dcl << "val " << g.actionClassName << "UserActions: Useract.tUserActions\n";
 
   EmitCode out(mlFname);
-  if (!out) {
-    throw_XOpen(mlFname);
-  }
 
   out << "(* " << mlFname << " *)\n";
   out << "(* *** DO NOT EDIT BY HAND *** *)\n";
@@ -241,11 +235,9 @@ void emitMLUserCode(EmitCode &out, LocString const &code, bool braces)
     out << " )";
   }
 
+  out << "\n";
   if (false/*TODO:fix*/ && code.validLoc()) {
-    out << "\n" << restoreLine;
-  }
-  else {
-    out << "\n";
+    out.restoreLine();
   }
 }
 
@@ -521,7 +513,7 @@ void emitMLDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
 // emit both the function decl for the .h file, and the beginning of
 // the function definition for the .cc file
 void emitMLFuncDecl(Grammar const &g, EmitCode &out, EmitCode &dcl,
-                    char const *rettype, char const *params)
+                    char const *rettype, rostring params)
 {
   out << "(*inline*) let " << params << ": " << rettype << " =";
 }

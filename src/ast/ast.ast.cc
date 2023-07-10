@@ -419,7 +419,7 @@ string ASTClass::classKindName() const
 bool AccessMod::hasMod(char const *mod) const
 {
   FOREACH_ASTLIST(string, mods, iter) {
-    if (iter.data()->equals(mod)) {
+    if (*iter.data() == mod) {
       return true;
     }
   }
@@ -447,15 +447,15 @@ string AccessMod::getModSuffixFromPrefix(char const *mod) const
     rostring s = *iter.data();
     if (prefixEquals(s, mod0)) {
       if (found) {
-        xfailure(stringc << "two modifiers with this prefix found " << mod);
+        xfailure(stringc << "two modifiers with this prefix found " << mod << c_str);
       }
       int len = strlen(mod);
-      ret = s.substring(len, s.length()-len);
+      ret = s.substr(len, s.length()-len);
       found = true;
     }
   }
   if (!found) {
-    xfailure(stringc << "no such prefix found " << mod);
+    xfailure(stringc << "no such prefix found " << mod << c_str);
   }
   return ret;
 }

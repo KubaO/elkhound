@@ -238,7 +238,7 @@ void Test::test(rostring src, CC::State state, int nesting, bool flag)
          cc.nesting == nesting &&
          (state==CC::ST_C_COMMENT? cc.star==flag :
                                    cc.backslash==flag) )) {
-    xfailure(stringc << "failed on src: " << src);
+    xfailure(stringc << "failed on src: " << src << c_str);
   }
 }
 
@@ -278,7 +278,7 @@ void Test::name(rostring body, rostring n)
 {
   CC cc(&silentReportError);
   feed(cc, body);
-  xassert(cc.getDeclName().equals(n));
+  xassert(cc.getDeclName() == n);
 }
 
 void Test::badname(rostring body)
