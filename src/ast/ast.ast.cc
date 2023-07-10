@@ -450,7 +450,7 @@ string AccessMod::getModSuffixFromPrefix(char const *mod) const
         xfailure(stringc << "two modifiers with this prefix found " << mod);
       }
       int len = strlen(mod);
-      ret = s.substring(len, s.length()-len);
+      ret = s.substr(len, s.length()-len);
       found = true;
     }
   }

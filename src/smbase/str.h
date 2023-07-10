@@ -69,7 +69,7 @@ public:        // funcs
   char operator[] (int i) const { return s[i]; }
 
   // substring
-  string substring(int startIndex, int length) const;
+  string substr(int startIndex, int length) const;
 
   // conversions
   char const *c_str() const { return s; }
@@ -138,7 +138,7 @@ char const *strstr(rostring haystack, char const *needle);
 // construct a string out of characters from 'p' up to 'p+n-1',
 // inclusive; resulting string length is 'n'
 string substring(char const *p, int n);
-inline string substring(rostring p, int n) { return p.substring(0, n); }
+inline string substring(rostring p, int n) { return p.substr(0, n); }
 
 
 // --------------------- stringBuilder --------------------
