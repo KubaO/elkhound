@@ -238,7 +238,7 @@ void Test::test(rostring src, CC::State state, int nesting, bool flag)
          cc.nesting == nesting &&
          (state==CC::ST_C_COMMENT? cc.star==flag :
                                    cc.backslash==flag) )) {
-    xfailure(stringc << "failed on src: " << src);
+    xfailure(stringc << "failed on src: " << src << c_str);
   }
 }
 

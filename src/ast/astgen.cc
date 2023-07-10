@@ -985,14 +985,14 @@ class XmlParserGen {
 
   public:
   XmlParserGen(string &xmlParserName)
-    : tokensOutH(stringc << xmlParserName << "_tokens1_mid.gen.h")
-    , tokensOutCC(stringc << xmlParserName << "_lexer1_mid.gen.cc")
-    , lexerOut(stringc << xmlParserName << "_lexer1_mid.gen.lex")
+    : tokensOutH(stringc << xmlParserName << "_tokens1_mid.gen.h" << c_str)
+    , tokensOutCC(stringc << xmlParserName << "_lexer1_mid.gen.cc" << c_str)
+    , lexerOut(stringc << xmlParserName << "_lexer1_mid.gen.lex" << c_str)
 
-    , parser0_decls(stringc << xmlParserName << "_parse1_0decl.gen.cc")
-    , parser1_defs (stringc << xmlParserName << "_parse1_1defn.gen.cc")
-    , parser2_ctorCalls    (stringc << xmlParserName << "_parse1_2ctrc.gen.cc")
-    , parser3_registerCalls(stringc << xmlParserName << "_parse1_3regc.gen.cc")
+    , parser0_decls(stringc << xmlParserName << "_parse1_0decl.gen.cc" << c_str)
+    , parser1_defs (stringc << xmlParserName << "_parse1_1defn.gen.cc" << c_str)
+    , parser2_ctorCalls    (stringc << xmlParserName << "_parse1_2ctrc.gen.cc" << c_str)
+    , parser3_registerCalls(stringc << xmlParserName << "_parse1_3regc.gen.cc" << c_str)
   {}
 
   private:

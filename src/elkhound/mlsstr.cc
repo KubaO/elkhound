@@ -271,7 +271,7 @@ void Test::feed(ML &ml, char const *src, bool allowErrors)
 
   if (!allowErrors &&
       origErrors != simpleReportError.errors) {
-    xfailure(stringc << "caused error: " << src);
+    xfailure(stringc << "caused error: " << src << c_str);
   }
 }
 
@@ -296,7 +296,7 @@ void Test::test(char const *src, ML::State state, int nesting,
          ml.nesting() == nesting &&
          ml.comNesting == comNesting &&
          ml.prev == prev )) {
-    xfailure(stringc << "failed on src: " << src);
+    xfailure(stringc << "failed on src: " << src << c_str);
   }
 }
 

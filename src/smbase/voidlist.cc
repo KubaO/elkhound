@@ -40,7 +40,7 @@ void *VoidList::nth(int which) const
   if (p == NULL) {
     xfailure(stringc << "asked for list element "
                      << (count()+which) << " (0-based) but list only has "
-                     << count() << " elements");
+                     << count() << " elements" << c_str);
   }
   return p->data;
 }

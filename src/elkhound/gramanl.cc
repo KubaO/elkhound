@@ -1237,7 +1237,7 @@ void GrammarAnalysis::computeIndexedTerms()
        !sym.isDone(); sym.adv()) {
     int index = sym.data()->termIndex;   // map: symbol to index
     if (indexedTerms[index] != NULL) {
-      xfailure(stringc << "terminal index collision at index " << index);
+      xfailure(stringc << "terminal index collision at index " << index << c_str);
     }
     indexedTerms[index] = sym.data();    // map: index to symbol
   }
@@ -1539,7 +1539,7 @@ void GrammarAnalysis::computeSupersets()
 
       // for now, only handle 'super' as a partial function
       if (sub->superset != NULL) {
-        xfailure(stringc << sub->name << " has more than one superset");
+        xfailure(stringc << sub->name << " has more than one superset" << c_str);
       }
       sub->superset = super;
     }
@@ -4136,7 +4136,7 @@ void emitUserCode(EmitCode &out, LocString const &code, bool braces = true);
 void emitActions(Grammar const &g, EmitCode &out, EmitCode &dcl);
 void emitDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl);
 void emitFuncDecl(Grammar const &g, EmitCode &out, EmitCode &dcl,
-                  char const *rettype, char const *params);
+                  char const *rettype, rostring params);
 void emitDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
                     Symbol const &sym);
 void emitSwitchCode(Grammar const &g, EmitCode &out,
@@ -4660,7 +4660,7 @@ void emitDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
 // emit both the function decl for the .h file, and the beginning of
 // the function definition for the .cc file
 void emitFuncDecl(Grammar const &g, EmitCode &out, EmitCode &dcl,
-                  char const *rettype, char const *params)
+                  char const *rettype, rostring params)
 {
   out << "inline " << rettype << " " << g.actionClassName
       << "::" << params;

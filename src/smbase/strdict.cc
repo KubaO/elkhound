@@ -437,7 +437,7 @@ void entry()
             dict2.remove(key.c_str());
           }
           else {
-            dict2.modify(key.c_str(), stringc << value << "x");
+            dict2.modify(key.c_str(), stringc << value << "x" << c_str);
           }
           xassert(dict2 != dict);
         }

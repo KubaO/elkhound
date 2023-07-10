@@ -140,6 +140,9 @@ char const *strstr(rostring haystack, char const *needle);
 string substring(char const *p, int n);
 inline string substring(rostring p, int n) { return p.substr(0, n); }
 
+class C_Str {};
+static constexpr C_Str c_str;
+inline const char* operator << (string& str, C_Str) { return str.c_str(); }
 
 // --------------------- stringBuilder --------------------
 // this class is specifically for appending lots of things
@@ -167,13 +170,6 @@ public:
 
   int length() const { return end-s; }
   bool empty() const { return length()==0; }
-
-  // unlike 'string' above, I will allow stringBuilder to convert to
-  // char const * so I can continue to use 'stringc' to build strings
-  // for functions that accept char const *; this should not conflict
-  // with std::string, since I am explicitly using a different class
-  // (namely stringBuilder) when I use this functionality
-  operator char const * () const { return c_str(); }
 
 private:
   using string::setlength; // hide it
