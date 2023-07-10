@@ -3,26 +3,26 @@
 
 verbatim {
   class Env;       // eval.h
-
-  // binary arithmetic operators
-  enum AOp {
-    AO_PLUS,
-    AO_MINUS,
-    AO_TIMES
-  };
-
-  // binary boolean predicates over arithmetic expressions
-  enum BPred {
-    BP_EQUAL,
-    BP_LESS
-  };
-
-  // binary boolean operators
-  enum BOp {
-    BO_AND,
-    BO_OR
-  };
 }
+
+// binary arithmetic operators
+enum AOp {
+  AO_PLUS,
+  AO_MINUS,
+  AO_TIMES
+};
+
+// binary boolean predicates over arithmetic expressions
+enum BPred {
+  BP_EQUAL,
+  BP_LESS
+};
+
+// binary boolean operators
+enum BOp {
+  BO_AND,
+  BO_OR
+};
 
 
 // arithmetic expressions

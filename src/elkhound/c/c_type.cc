@@ -28,14 +28,13 @@ MLValue mlStorage(DeclFlags df)
 #endif // 0
 
 
-string makeIdComment(int id)
+string makeIdComment(uintptr_t id)
 {
   if (tracingSys("type-ids")) {
-    return stringc << "/""*" << id << "*/";
-                     // ^^ this is to work around an Emacs highlighting bug
+    return stringc << "/*" << id << "*/";
   }
   else {
-    return "";
+    return string();
   }
 }
 

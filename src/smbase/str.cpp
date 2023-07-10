@@ -4,19 +4,11 @@
 
 #include "str.h"            // this module
 
-#include <stdlib.h>         // atoi
 #include <stdio.h>          // sprintf
 #include <ctype.h>          // isspace
-#include <string.h>         // strcmp
-#include <iostream>         // ostream << char*
 #include <inttypes.h>       // string printf formats
 
 #include <assert.h>         // assert
-#ifndef _MSC_VER
-  #include <unistd.h>         // write
-#else
-  #include <windows.h>
-#endif
 #include "xassert.h"        // xassert
 #include "ckheap.h"         // checkHeapNode
 #include "flatten.h"        // Flatten
@@ -65,10 +57,6 @@ void string::kill()
   }
 }
 
-
-string::string(Flatten&)
-  : s(emptyString)
-{}
 
 void string::xfer(Flatten &flat)
 {
@@ -138,26 +126,6 @@ string string::operator&(string const &tail) const
   return dest;
 }
 
-string& string::operator&=(string const &tail)
-{
-  return *this = *this & tail;
-}
-
-
-void string::readdelim(std::istream &is, char const *delim)
-{
-  stringBuilder sb;
-  sb.readdelim(is, delim);
-  operator= (sb);
-}
-
-
-void string::write(std::ostream &os) const
-{
-  os << s;     // standard char* writing routine
-}
-
-
 void string::selfCheck() const
 {
   if (s != emptyString) {
@@ -178,12 +146,6 @@ int strcmp(char const *s1, rostring s2)
 char const *strstr(rostring haystack, char const *needle)
 {
   return strstr(haystack.c_str(), needle);
-}
-
-
-int atoi(rostring s)
-{
-  return atoi(toCStr(s));
 }
 
 string substring(char const *p, int n)
@@ -240,14 +202,6 @@ stringBuilder& stringBuilder::operator=(char const *src)
 }
 
 
-stringBuilder& stringBuilder::setlength(int newlen)
-{
-  kill();
-  init(newlen);
-  return *this;
-}
-
-
 void stringBuilder::adjustend(char* newend)
 {
   xassert(s <= newend  &&  newend < s + size);
@@ -256,19 +210,6 @@ void stringBuilder::adjustend(char* newend)
   *end = 0;        // sm 9/29/00: maintain invariant
 }
 
-
-void stringBuilder::truncate(int newLength)
-{
-  xassert(0 <= newLength && newLength <= length());
-  adjustend(s + newLength);
-}
-
-
-stringBuilder& stringBuilder::operator&= (char const *tail)
-{
-  append(tail, strlen(tail));
-  return *this;
-}
 
 void stringBuilder::append(char const *tail, int len)
 {
@@ -461,13 +402,8 @@ string vstringf(char const *format, va_list args)
     static char const msg[] =
       "fatal error: vnprintf failed to provide a conservative estimate,\n"
       "memory is most likely corrupted\n";
-	#ifdef _MSC_VER
-	  HANDLE stderrH = GetStdHandle(STD_ERROR_HANDLE);
-	  DWORD dontCare1;
-	  WriteFile(stderrH, msg, strlen(msg), &dontCare1, NULL);
-	#else
-      write(2 /*stderr*/, msg, strlen(msg));
-	#endif
+    fprintf(stderr, "%s", msg);
+    fflush(stderr);
     abort();
   }
 

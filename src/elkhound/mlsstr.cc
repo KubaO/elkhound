@@ -24,7 +24,7 @@ void MLSubstrate::reset(int initNest)
   nestingBias = initNest;
   comNesting = 0;
   prev = 0;
-  text.setlength(0);
+  text.clear();
 }
 
 

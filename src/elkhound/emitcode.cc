@@ -8,8 +8,7 @@
 #include <string.h>        // memcpy
 
 EmitCode::EmitCode(rostring f)
-  : stringBuilder(),
-    os(f.c_str()),
+  : os(f.c_str()),
     fname(f),
     line(1)
 {
@@ -71,7 +70,7 @@ void EmitCode::flush()
     os << p;
   #endif
 
-  setlength(0);
+  clear();
 }
 
 

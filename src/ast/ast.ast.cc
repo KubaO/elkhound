@@ -411,7 +411,7 @@ string ASTClass::classKindName() const
     // it even avoids collisions with other classes, since if they would
     // collide with this, they'd collide with themselves too, and hence
     // get an extra "KIND_" prepended..
-    ret &= "KIND_";
+    ret = ret & "KIND_";
   }
   return ret;
 }

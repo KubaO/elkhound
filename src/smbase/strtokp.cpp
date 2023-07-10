@@ -8,10 +8,10 @@
 
 
 StrtokParse::StrtokParse(rostring origStr, rostring origDelim)
-  : buf(strlen(origStr)+1)
+  : buf(origStr.length()+1)
 {
-  char const *str = toCStr(origStr);
-  char const *delim = toCStr(origDelim);
+  char const *str = origStr.c_str();
+  char const *delim = origDelim.c_str();
 
   // make local copy
   strcpy(buf, str);
@@ -80,7 +80,7 @@ string StrtokParse::
   int left = offset(firstTok);
   int right = offset(lastTok) + strlen(tokv(lastTok));
 
-  return substring(toCStr(original) + left, right-left);
+  return substring(original.c_str() + left, right-left);
 }
 
 
