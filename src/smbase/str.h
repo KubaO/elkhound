@@ -13,11 +13,12 @@
 #ifndef STR_H
 #define STR_H
 
-#include <iostream>      // istream, ostream
-#include <stdarg.h>      // va_list
-#include <string.h>      // strcmp, etc.
+#include <iostream>                // istream, ostream
+#include <stdarg.h>                // va_list
+#include <string.h>                // strcmp, etc.
 #include <type_traits>
-#include <string>        // std::string
+#include <string>                  // std::string
+#include "nonstd/string_view.hpp"  // nonstd::string_view
 
 class Flatten;           // flatten.h
 
@@ -33,6 +34,7 @@ std::string operator& (const std::string& head, const std::string& tail);
 using string = std::string;
 using rostring = const std::string&;
 using stringBuilder = std::string;
+using string_view = nonstd::string_view;
 
 // ------------------------ rostring ----------------------
 // My plan is to use this in places I currently use 'char const *'.
@@ -68,11 +70,13 @@ inline std::string& indent(std::string& str, int amt) {
   return str.append(amt, ' ');
 }
 
-enum class _disabled1 {};
-enum class _disabled2 {};
+struct _disabled1 { operator int() { return 0; } };
+struct _disabled2 { operator int() { return 0; } };
 
 // not-very-efficient compatibility stand-ins
-inline string& operator << (string& str, rostring text) { return str.append(text);  }
+inline string& operator << (string& str, string_view text) { return str.append(text.data(), text.size());  }
+// Do not remove the overload below. It's needed because there are some types that convert to char const *,
+// but other - incorrect - overloads will kick in when this one is gone.
 inline string& operator << (string& str, char const* text) { return str.append(text); }
 inline string& operator << (string& str, char c) { str.push_back(c); return str; }
 inline string& operator << (string& str, unsigned char c) { str.push_back(c); return str; }
@@ -90,7 +94,7 @@ inline string& operator << (string& str, double d) { return str.append(std::to_s
        string& operator << (string& str, void* ptr);
 inline string& operator << (string& str, bool b) { return str.append(std::to_string((int)b)); }
 template <std::size_t N>
-string& operator << (string& str, const char (&text)[N]) { return str.append((const char*)text, n - 1); }
+string& operator << (string& str, const char (&text)[N]) { return str.append((const char*)text, N - 1); }
 
 class C_Str {};
 static constexpr C_Str c_str;

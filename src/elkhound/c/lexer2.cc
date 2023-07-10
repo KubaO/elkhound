@@ -434,12 +434,10 @@ void Lexer2Token::print() const
 }
 
 
-void quotedUnescape(ArrayStack<char> &dest, rostring src,
-                    char delim, bool allowNewlines)
+static string quotedUnescape(string_view src, char delim, bool allowNewlines)
 {
   // strip quotes or ticks
-  decodeEscapes(dest, substring(src.c_str()+1, src.length()-2),
-                delim, allowNewlines);
+  return decodeEscapes(src.substr(1, src.length()-2), delim, allowNewlines);
 }
 
 
@@ -482,10 +480,8 @@ void lexer2_lex(Lexer2 &dest, Lexer1 const &src, char const *fname)
       stringBuilder sb;
       sb << prevToken->strValue;
 
-      ArrayStack<char> tempString;
-      quotedUnescape(tempString, L1->text, '"',
-                     src.allowMultilineStrings);
-      sb.append(tempString.getArray(), tempString.length());
+      string tmp = quotedUnescape(L1->text, '"', src.allowMultilineStrings);
+      sb.append(tmp);
 
       prevToken->strValue = dest.idTable.add(sb);
       continue;
@@ -523,18 +519,13 @@ void lexer2_lex(Lexer2 &dest, Lexer1 const &src, char const *fname)
           char const *srcText = L1->text.c_str();
           if (*srcText == 'L') srcText++;
 
-          ArrayStack<char> tmp;
-          quotedUnescape(tmp, srcText, '"',
-                         src.allowMultilineStrings);
+          string tmp = quotedUnescape(srcText, '"', src.allowMultilineStrings);
 
-          for (int i=0; i<tmp.length(); i++) {
-            if (tmp[i]==0) {
-              std::cout << "warning: literal string with embedded nulls not handled properly\n";
-              break;
-            }
+          if (tmp.find('\0') != string::npos) {
+            std::cout << "warning: literal string with embedded nulls not handled properly\n";
           }
 
-          L2->strValue = dest.idTable.add(tmp.getArray());
+          L2->strValue = dest.idTable.add(tmp);
           break;
         }
 
@@ -550,9 +541,7 @@ void lexer2_lex(Lexer2 &dest, Lexer1 const &src, char const *fname)
           char const *srcText = L1->text.c_str();
           if (*srcText == 'L') srcText++;
 
-          ArrayStack<char> tmp;
-          quotedUnescape(tmp, srcText, '\'',
-                         false /*allowNewlines*/);
+          string tmp = quotedUnescape(srcText, '\'', false /*allowNewlines*/);
 
           if (tmp.length() != 1) {
             xformat("character literal must have 1 char");
