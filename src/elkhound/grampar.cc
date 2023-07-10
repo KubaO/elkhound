@@ -1203,7 +1203,7 @@ GrammarAST *parseGrammarFile(rostring origFname, bool useML)
     fname = "<stdin>";
   }
   else {
-    in = new std::ifstream(fname.c_str());
+    in = new std::ifstream(fname);
     if (!*in) {
       xsyserror("open", stringc << "error opening input file " << fname);
     }

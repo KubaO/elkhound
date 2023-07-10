@@ -19,8 +19,8 @@ FILE *xfopen(char const *fname, char const *mode)
 }
 
 
-AutoFILE::AutoFILE(char const *fname, char const *mode)
-  : AutoFclose(xfopen(fname, mode))
+AutoFILE::AutoFILE(rostring fname, char const *mode)
+  : AutoFclose(xfopen(fname.c_str(), mode))
 {}
 
 AutoFILE::~AutoFILE()

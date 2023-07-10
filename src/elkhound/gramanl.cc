@@ -5016,7 +5016,7 @@ int inner_entry(int argc, char **argv)
   if (tracingSys("bison")) {
     string bisonFname = stringc << prefix << ".y";
     traceProgress() << "writing bison-compatible grammar to " << bisonFname << std::endl;
-    std::ofstream out(bisonFname.c_str());
+    std::ofstream out(bisonFname);
     g.printAsBison(out);
   }
 

@@ -148,7 +148,7 @@ int GrammarLexer::yylexInc()
     string fname = includeFileName;
 
     // 'in' will be deleted in ~GrammarLexer
-    std::ifstream *in = new std::ifstream(fname.c_str());
+    std::ifstream *in = new std::ifstream(fname);
     if (!*in) {
       err(stringc << "unable to open include file `" << fname << "'");
     }

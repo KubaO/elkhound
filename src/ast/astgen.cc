@@ -128,7 +128,7 @@ Gen::Gen(rostring srcfn, ObjList<string> const &mods,
   : srcFname(srcfn),
     modules(mods),
     destFname(destfn),
-    out(destfn.c_str()),
+    out(destfn),
     file(f)
 {
   if (!out) {
@@ -295,8 +295,8 @@ void parseFieldDecl(string &type, string &name, rostring decl)
   int ofs = tok.offset(tok.tokc()-1);
 
   // extract the parts
-  type = trimWhitespace(substring(decl, ofs));
-  name = trimWhitespace(decl.c_str()+ofs);
+  type = trimWhitespace(string_view(decl).substr(0, ofs));
+  name = trimWhitespace(string_view(decl).substr(ofs));
 }
 
 string extractFieldType(rostring decl)
@@ -2680,7 +2680,7 @@ void XmlParserGen::emitXmlParser_objCtorArgs
     CtorArg const &arg = *(argiter.data());
     if (firstTime) { firstTime = false; }
     else { parser2_ctorCalls << ", "; }
-    if (strlen(arg.defaultValue.c_str())>0) {
+    if (!arg.defaultValue.empty()) {
       parser2_ctorCalls << arg.defaultValue;
     } else {
       // dsw: this is Scott's idea of how to initialize a type that we

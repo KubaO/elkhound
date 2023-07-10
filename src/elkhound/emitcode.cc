@@ -103,7 +103,7 @@ string lineDirective(SourceLoc loc)
       cfname.push_back(c);
   }
 
-  return stringc << hashLine() << line << " \"" << cfname.c_str() << "\"\n";
+  return stringc << hashLine() << line << " \"" << cfname << "\"\n";
 }
 
 void EmitCode::restoreLine()

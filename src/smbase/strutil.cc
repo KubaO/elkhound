@@ -461,7 +461,7 @@ bool prefixEquals(string_view str, string_view prefix)
 
 void writeStringToFile(string_view str, rostring fname)
 {
-  AutoFILE fp(fname.c_str(), "w");
+  AutoFILE fp(fname, "w");
 
   if (fwrite(str.data(), 1, str.size(), fp) != str.size()) {
     xbase("fwrite: short write");
@@ -472,7 +472,7 @@ void writeStringToFile(string_view str, rostring fname)
 string readStringFromFile(rostring fname)
 {
   constexpr size_t CHUNK = 16384;
-  AutoFILE fp(fname.c_str(), "r");
+  AutoFILE fp(fname, "r");
   string ret;
 
   for (;;) {

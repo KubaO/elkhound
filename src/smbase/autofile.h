@@ -8,6 +8,7 @@
 #define AUTOFILE_H
 
 #include <stdio.h>      // FILE
+#include "str.h"        // rostring
 
 
 // fopen, but throw an XOpen exception (see exc.h) on failure instead
@@ -37,7 +38,7 @@ public:
 class AutoFILE : private AutoFclose {
 public:
   // open, throwing an XOpen exception on failure
-  AutoFILE(char const *fname, char const *mode);
+  AutoFILE(rostring fname, char const *mode);
 
   // close the file
   ~AutoFILE();
