@@ -108,14 +108,5 @@ void writeStringToFile(rostring str, rostring fname);
 string readStringFromFile(rostring fname);
 
 
-// read the next line from a FILE* (e.g. an AutoFILE); the
-// newline is returned if it is present (you can use 'chomp'
-// to remove it); returns false (and "") on EOF
-bool readLine(string &dest, FILE *fp);
-
-
-// like perl 'chomp': remove a final newline if there is one
-string chomp(rostring src);
-
 
 #endif // STRUTIL_H
