@@ -15,7 +15,7 @@
 Lexer1Token::Lexer1Token(Lexer1TokenType aType, char const *aText,
                	         int aLength, SourceLoc aLoc)
   : type(aType),
-    text(substring(aText, aLength)),           // makes a copy
+    text(aText, aLength),           // makes a copy
     length(aLength),
     loc(aLoc)
 {}

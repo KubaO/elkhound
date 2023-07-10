@@ -40,27 +40,10 @@ using string_view = nonstd::string_view;
 // My plan is to use this in places I currently use 'char const *'.
 
 // I need some compatibility functions
-int strcmp(rostring s1, rostring s2);
-int strcmp(rostring s1, char const *s2);
-int strcmp(char const *s1, rostring s2);
-// string.h, above, provides:
-// int strcmp(char const *s1, char const *s2);
+inline int strcmp(string_view s1, string_view s2) { return s1.compare(s2); }
 
-// dsw: this is what we are asking most of the time so let's special
-// case it
-inline bool streq(rostring s1, rostring s2)       {return strcmp(s1, s2) == 0;}
-inline bool streq(rostring s1, char const *s2)    {return strcmp(s1, s2) == 0;}
-inline bool streq(char const *s1, rostring s2)    {return strcmp(s1, s2) == 0;}
-inline bool streq(char const *s1, char const *s2) {return strcmp(s1, s2) == 0;}
+inline bool streq(string_view s1, string_view s2) { return s1 == s2; }
 
-char const *strstr(rostring haystack, char const *needle);
-
-// there is no wrapper for 'strchr'; use string::contains
-
-// construct a string out of characters from 'p' up to 'p+n-1',
-// inclusive; resulting string length is 'n'
-string substring(char const *p, int n);
-inline string substring(rostring p, int n) { return p.substr(0, n); }
 
 // --------------------- stringBuilder remnants --------------------
 
