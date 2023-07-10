@@ -7,6 +7,7 @@
 #define FLATTEN_H
 
 #include "trdelete.h"   // TRASHINGDELETE
+#include "str.h"
 
 class Flatten {
 public:
@@ -36,6 +37,8 @@ public:
   // read or write a null-terminated character buffer, allocated with new;
   // this works if 'str' is NULL
   virtual void xferCharString(char *&str);
+
+  virtual void xferString(string& str);
 
   // xfer a buffer allocated with 'new', of a given length
   virtual void xferHeapBuffer(void *&buf, int len);

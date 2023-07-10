@@ -4309,7 +4309,8 @@ void emitUserCode(EmitCode &out, LocString const &code, bool braces)
   }
 
   if (code.validLoc()) {
-    out << "\n" << restoreLine;
+    out << "\n";
+    out.restoreLine();
   }
   out << "\n";
 }

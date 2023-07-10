@@ -156,7 +156,7 @@ BitArray stringToBitArray(char const *src)
 string toString(BitArray const &b)
 {
   int len = b.length();
-  stringBuilder ret(len);
+  stringBuilder ret(len, '0');
   for (int i=0; i<len; i++) {
     ret[i] = b.test(i)? '1' : '0';
   }

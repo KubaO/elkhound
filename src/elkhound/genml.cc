@@ -235,11 +235,9 @@ void emitMLUserCode(EmitCode &out, LocString const &code, bool braces)
     out << " )";
   }
 
+  out << "\n";
   if (false/*TODO:fix*/ && code.validLoc()) {
-    out << "\n" << restoreLine;
-  }
-  else {
-    out << "\n";
+    out.restoreLine();
   }
 }
 

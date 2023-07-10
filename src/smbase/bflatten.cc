@@ -127,7 +127,7 @@ void entry()
     BFlatten flat("bflat.tmp", false /*reading*/);
     flat.xferInt(x);
     flat.noteOwner(&x);
-    s.xfer(flat);
+    flat.xferString(s);
     flat.xferSerf((void*&)px);
     flat.xferInt(y);
     flat.noteOwner(&y);
@@ -144,7 +144,7 @@ void entry()
     BFlatten flat("bflat.tmp", true /*reading*/);
     flat.xferInt(x2);
     flat.noteOwner(&x2);
-    s2.xfer(flat);
+    flat.xferString(s2);
     flat.xferSerf((void*&)px2);
     flat.xferInt(y2);
     flat.noteOwner(&y2);

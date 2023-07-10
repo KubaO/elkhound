@@ -852,7 +852,7 @@ void Grammar::xfer(Flatten &flat)
 
   xferObjList(flat, implVerbatim);
 
-  targetLang.xfer(flat);
+  flat.xferString(targetLang);
   flat.xferBool(useGCDefaults);
   flat.xferBool(defaultMergeAborts);
 

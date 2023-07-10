@@ -337,7 +337,7 @@ void readDataFromFile(char *inFileName) {
   std::istream in(&fb);
   while(true) {
     stringBuilder s;
-    s.readdelim(in, delim);
+    s = readdelim(in, delim);
 //      std::cout << ":" << s->pcharc() << ":" << std::endl;
     if (in.eof()) break;
 //      // don't insert 0 length strings
