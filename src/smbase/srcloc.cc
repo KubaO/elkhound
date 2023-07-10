@@ -45,7 +45,7 @@ SourceLocManager::File::File(char const *n, SourceLoc aStartLoc)
   // the lower level (e.g. cygwin) will do CRLF translation,
   // and whether that will be done consistently, if text mode
   // is requested
-  AutoFILE fp(name.c_str(), "rb");
+  AutoFILE fp(name, "rb");
 
   // the buffering that FILE would do would be wasted, so
   // make it unbuffered (if this causes a problem on some
@@ -833,7 +833,7 @@ void buildHashMap(SourceLocManager::File *pp, char const *fname, int &expanderLi
 
     int origLine = atoi(tok[1]);
     char const *tok2 = tok[2];
-    string origFname = substring(tok2+1, strlen(tok2)-2);  // remove quotes
+    string origFname(tok2+1, strlen(tok2)-2);  // remove quotes
     pp->addHashLine(ppLine, origLine, origFname.c_str());
   }
   pp->doneAdding();

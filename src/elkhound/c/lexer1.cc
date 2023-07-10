@@ -15,7 +15,7 @@
 Lexer1Token::Lexer1Token(Lexer1TokenType aType, char const *aText,
                	         int aLength, SourceLoc aLoc)
   : type(aType),
-    text(substring(aText, aLength)),           // makes a copy
+    text(aText, aLength),           // makes a copy
     length(aLength),
     loc(aLoc)
 {}
@@ -57,7 +57,7 @@ void Lexer1Token::print() const
 
   printf("[L1] Token at line %d, col %d: %s \"%s\"\n",
          line, col, l1Tok2String(type),
-         encodeWithEscapes(text.c_str(), length).c_str());
+         encodeWithEscapes(string_view(text).substr(0, length)).c_str());
 }
 
 

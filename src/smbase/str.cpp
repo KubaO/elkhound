@@ -27,26 +27,6 @@ std::string operator& (const std::string& head, const std::string& tail)
   return ret;
 }
 
-// ----------------------- rostring ---------------------
-int strcmp(rostring s1, rostring s2)
-  { return strcmp(s1.c_str(), s2.c_str()); }
-int strcmp(rostring s1, char const *s2)
-  { return strcmp(s1.c_str(), s2); }
-int strcmp(char const *s1, rostring s2)
-  { return strcmp(s1, s2.c_str()); }
-
-
-char const *strstr(rostring haystack, char const *needle)
-{
-  return strstr(haystack.c_str(), needle);
-}
-
-string substring(char const *p, int n)
-{
-  return string(p, n);
-}
-
-
 // --------------------- stringBuilder ------------------
 
 

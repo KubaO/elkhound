@@ -231,7 +231,7 @@ string MLSubstrate::getDeclName() const
   p++;    // move back to most recent legal char
 
   // done
-  return substring(p, nameEnd-p);
+  return string(p, nameEnd);
 }
 
 

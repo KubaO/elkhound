@@ -13,11 +13,12 @@
 #ifndef STR_H
 #define STR_H
 
-#include <iostream>      // istream, ostream
-#include <stdarg.h>      // va_list
-#include <string.h>      // strcmp, etc.
+#include <iostream>                // istream, ostream
+#include <stdarg.h>                // va_list
+#include <string.h>                // strcmp, etc.
 #include <type_traits>
-#include <string>        // std::string
+#include <string>                  // std::string
+#include "nonstd/string_view.hpp"  // nonstd::string_view
 
 class Flatten;           // flatten.h
 
@@ -33,32 +34,16 @@ std::string operator& (const std::string& head, const std::string& tail);
 using string = std::string;
 using rostring = const std::string&;
 using stringBuilder = std::string;
+using string_view = nonstd::string_view;
 
 // ------------------------ rostring ----------------------
 // My plan is to use this in places I currently use 'char const *'.
 
 // I need some compatibility functions
-int strcmp(rostring s1, rostring s2);
-int strcmp(rostring s1, char const *s2);
-int strcmp(char const *s1, rostring s2);
-// string.h, above, provides:
-// int strcmp(char const *s1, char const *s2);
+inline int strcmp(string_view s1, string_view s2) { return s1.compare(s2); }
 
-// dsw: this is what we are asking most of the time so let's special
-// case it
-inline bool streq(rostring s1, rostring s2)       {return strcmp(s1, s2) == 0;}
-inline bool streq(rostring s1, char const *s2)    {return strcmp(s1, s2) == 0;}
-inline bool streq(char const *s1, rostring s2)    {return strcmp(s1, s2) == 0;}
-inline bool streq(char const *s1, char const *s2) {return strcmp(s1, s2) == 0;}
+inline bool streq(string_view s1, string_view s2) { return s1 == s2; }
 
-char const *strstr(rostring haystack, char const *needle);
-
-// there is no wrapper for 'strchr'; use string::contains
-
-// construct a string out of characters from 'p' up to 'p+n-1',
-// inclusive; resulting string length is 'n'
-string substring(char const *p, int n);
-inline string substring(rostring p, int n) { return p.substr(0, n); }
 
 // --------------------- stringBuilder remnants --------------------
 
@@ -68,11 +53,13 @@ inline std::string& indent(std::string& str, int amt) {
   return str.append(amt, ' ');
 }
 
-enum class _disabled1 {};
-enum class _disabled2 {};
+struct _disabled1 { operator int() { return 0; } };
+struct _disabled2 { operator int() { return 0; } };
 
 // not-very-efficient compatibility stand-ins
-inline string& operator << (string& str, rostring text) { return str.append(text);  }
+inline string& operator << (string& str, string_view text) { return str.append(text.data(), text.size());  }
+// Do not remove the overload below. It's needed because there are some types that convert to char const *,
+// but other - incorrect - overloads will kick in when this one is gone.
 inline string& operator << (string& str, char const* text) { return str.append(text); }
 inline string& operator << (string& str, char c) { str.push_back(c); return str; }
 inline string& operator << (string& str, unsigned char c) { str.push_back(c); return str; }
@@ -90,7 +77,7 @@ inline string& operator << (string& str, double d) { return str.append(std::to_s
        string& operator << (string& str, void* ptr);
 inline string& operator << (string& str, bool b) { return str.append(std::to_string((int)b)); }
 template <std::size_t N>
-string& operator << (string& str, const char (&text)[N]) { return str.append((const char*)text, n - 1); }
+string& operator << (string& str, const char (&text)[N]) { return str.append((const char*)text, N - 1); }
 
 class C_Str {};
 static constexpr C_Str c_str;

@@ -128,7 +128,7 @@ Gen::Gen(rostring srcfn, ObjList<string> const &mods,
   : srcFname(srcfn),
     modules(mods),
     destFname(destfn),
-    out(destfn.c_str()),
+    out(destfn),
     file(f)
 {
   if (!out) {
@@ -180,7 +180,7 @@ TreeNodeKind getTreeNodePtrKind(rostring type)
     // wrong; you might want to consider the same replacement in other
     // places where trimWhitespace() is used.
 //      string base = trimWhitespace(substring(type, strlen(type)-1));
-    string base = firstAlphanumToken(substring(type, type.length()-1));
+    string base = firstAlphanumToken(string_view(type.c_str(), type.length() - 1));
 
     return getTreeNodeKind(base);
   }
@@ -236,11 +236,13 @@ string getSuperTypeOf(rostring sub)
 // get just the first alphanumeric word
 string extractNodeType(rostring type)
 {
-  char const* end = type.c_str();
-  while (isalnum(*end) || *end=='_') {
-    end++;
+  auto begin = type.begin();
+  auto p = type.begin();
+  auto end = type.end();
+  while (p != end && (isalnum(*p) || *p=='_')) {
+    p++;
   }
-  return substring(type, end-type.c_str());
+  return string(begin, p);
 }
 
 
@@ -276,7 +278,7 @@ string extractListType(rostring type)
   char const *langle = strchr(type.c_str(), '<');
   char const *rangle = strchr(type.c_str(), '>');
   xassert(langle && rangle);
-  return trimWhitespace(substring(langle+1, rangle-langle-1));
+  return trimWhitespace(string_view(langle+1, rangle-langle-1));
 }
 
 
@@ -295,8 +297,8 @@ void parseFieldDecl(string &type, string &name, rostring decl)
   int ofs = tok.offset(tok.tokc()-1);
 
   // extract the parts
-  type = trimWhitespace(substring(decl, ofs));
-  name = trimWhitespace(decl.c_str()+ofs);
+  type = trimWhitespace(string_view(decl).substr(0, ofs));
+  name = trimWhitespace(string_view(decl).substr(ofs));
 }
 
 string extractFieldType(rostring decl)
@@ -2680,7 +2682,7 @@ void XmlParserGen::emitXmlParser_objCtorArgs
     CtorArg const &arg = *(argiter.data());
     if (firstTime) { firstTime = false; }
     else { parser2_ctorCalls << ", "; }
-    if (strlen(arg.defaultValue.c_str())>0) {
+    if (!arg.defaultValue.empty()) {
       parser2_ctorCalls << arg.defaultValue;
     } else {
       // dsw: this is Scott's idea of how to initialize a type that we

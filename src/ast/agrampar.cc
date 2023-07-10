@@ -62,6 +62,7 @@ CtorArg *parseCtorArg(rostring origStr)
   // this restricts the kinds of C type syntaxes we allow, but you can use
   // typedefs to express any type within these restrictions
   char const *start = str.c_str();
+  char const *end = start + str.length();
   char const *p = start + str.length() - 1;
   while ((isalnum(*p) || *p == '_') && p > start) {
     p--;
@@ -71,8 +72,8 @@ CtorArg *parseCtorArg(rostring origStr)
   }
   p++;
 
-  ret->type = trimWhitespace(substring(start, p-start));
-  ret->name = trimWhitespace(string(p));
+  ret->type = trimWhitespace(string_view(start, p-start));
+  ret->name = trimWhitespace(string_view(p, end-p));
 
   return ret;
 }
