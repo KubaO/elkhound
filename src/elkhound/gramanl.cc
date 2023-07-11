@@ -4266,8 +4266,8 @@ void emitActionCode(GrammarAnalysis const &g, rostring hFname,
   //
   // 2005-06-23: Moved these to near the top of the file so that
   // the actions can easily refer to them.
-  FOREACH_OBJLIST(LocString, g.implVerbatim, iter) {
-    emitUserCode(out, *(iter.data()), false /*braces*/);
+  for (auto& locstr : g.implVerbatim) {
+    emitUserCode(out, locstr, false /*braces*/);
   }
 
   emitActions(g, out, dcl);

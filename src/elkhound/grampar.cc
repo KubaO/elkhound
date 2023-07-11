@@ -242,7 +242,7 @@ void astParseOptions(Grammar &g, GrammarAST *ast)
 
       ASTNEXT(TF_verbatim, v) {
         if (v->isImpl) {
-          g.implVerbatim.append(new LocString(v->code));
+          g.implVerbatim.emplace_back(v->code);
         }
         else {
           g.verbatim.append(new LocString(v->code));

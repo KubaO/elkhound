@@ -816,7 +816,7 @@ void Grammar::xfer(Flatten &flat)
   actionClassName.xfer(flat);
   xferObjList(flat, actionClasses);
 
-  xferObjList(flat, implVerbatim);
+  /* FIXME */ //xferObjList(flat, implVerbatim);
 
   flat.xferString(targetLang);
   flat.xferBool(useGCDefaults);

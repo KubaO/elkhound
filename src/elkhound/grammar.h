@@ -24,6 +24,7 @@
 #include <deque>         // std::deque
 #include <vector>        // std::vector
 #include <iostream>      // std::ostream
+#include <vector>        // std::vector
 
 #include "str.h"         // string
 #include "objlist.h"     // ObjList
@@ -464,7 +465,7 @@ public:	    // data
   ObjList<LocString> actionClasses;
 
   // code emitted into the implementation file at the end
-  ObjList<LocString> implVerbatim;
+  std::vector<LocString> implVerbatim;
 
   // ---- declarative options ----
   // name of the target language; nominally "C++"
