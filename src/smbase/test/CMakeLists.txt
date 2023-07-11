@@ -9,7 +9,6 @@ project(vdtllist)
 project(taillist_test)
 project(tobjlist)
 project(bit2d)
-project(growbuf)
 project(svdict)
 project(str)
 project(strutil)
@@ -54,11 +53,6 @@ add_executable(tobjlist
 # files for bit2d
 add_executable(bit2d
     ../bit2d.cc
-)
-
-# files for growbuf
-add_executable(growbuf
-    ../growbuf.cc
 )
 
 # files for svdict
@@ -136,7 +130,6 @@ target_compile_options(nonport PRIVATE -DTEST_NONPORT)
 target_compile_options(voidlist PRIVATE -DTEST_VOIDLIST)
 target_compile_options(vdtllist PRIVATE -DTEST_VDTLLIST)
 target_compile_options(bit2d PRIVATE -DTEST_BIT2D)
-target_compile_options(growbuf PRIVATE -DTEST_GROWBUF)
 target_compile_options(svdict PRIVATE -DTEST_SVDICT)
 target_compile_options(str PRIVATE -DTEST_STR)
 target_compile_options(strutil PRIVATE -DTEST_STRUTIL)
@@ -156,7 +149,6 @@ target_link_libraries(vdtllist smbase)
 target_link_libraries(taillist_test smbase)
 target_link_libraries(tobjlist smbase)
 target_link_libraries(bit2d smbase)
-target_link_libraries(growbuf smbase)
 target_link_libraries(svdict smbase)
 target_link_libraries(str smbase)
 target_link_libraries(strutil smbase)
@@ -176,7 +168,6 @@ add_test(NAME vdtllist COMMAND ./vdtllist)
 add_test(NAME taillist_test COMMAND ./taillist_test)
 add_test(NAME tobjlist COMMAND ./tobjlist)
 add_test(NAME bit2d COMMAND ./bit2d)
-add_test(NAME growbuf COMMAND ./growbuf)
 add_test(NAME svdict COMMAND ./svdict)
 add_test(NAME str COMMAND ./str)
 add_test(NAME strutil COMMAND ./strutil)

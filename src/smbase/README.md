@@ -60,10 +60,6 @@ The other array modules are less-used.
 
 * [arrayqueue.h](arrayqueue.h): ArrayQueue, a template class implementing a queue with an array. Supports O(1) enqueue and dequeue.
 
-* [datablok.h](datablok.h), [datablok.cpp](datablok.cpp): DataBlock, an array of characters of a given length. Useful when the data may contain NUL ('\\0') bytes.
-
-* [growbuf.h](growbuf.h), [growbuf.cc](growbuf.cc): Extension of DataBlock ([datablok.h](datablok.h)) that provides an append() function.
-
 This is obsolete.
 
 * [arraymap.h](arraymap.h): ArrayMap, a map from integers to object pointers. Obsolete.

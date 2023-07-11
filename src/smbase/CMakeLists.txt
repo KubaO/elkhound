@@ -11,11 +11,9 @@ add_library(smbase STATIC
     breaker.cpp
     crc.cpp
     cycles.c
-    datablok.cpp
     exc.cpp
     flatten.cc
     gprintf.c
-    growbuf.cc
     hashline.cc
     hashtbl.cc
     nonport.cpp
