@@ -4193,7 +4193,7 @@ void emitActionCode(GrammarAnalysis const &g, rostring hFname,
   // the action functions are inserted as methods
   {
     int ct=0;
-    FOREACH_OBJLIST(LocString, g.actionClasses, iter) {
+    for (auto const& locstr : g.actionClasses) {
       if (ct++ > 0) {
         // end the previous class; the following body will open
         // another one, and the brace following the action list
@@ -4204,7 +4204,7 @@ void emitActionCode(GrammarAnalysis const &g, rostring hFname,
       dcl << "\n"
           << "// parser context class\n"
           << "class ";
-      emitUserCode(dcl, *(iter.data()), false /*braces*/);
+      emitUserCode(dcl, locstr, false /*braces*/);
   }}
 
   // we end the context class with declarations of the action functions

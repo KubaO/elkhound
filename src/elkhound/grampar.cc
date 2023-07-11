@@ -236,8 +236,8 @@ void astParseOptions(Grammar &g, GrammarAST *ast)
         //g.actionClasses.append(new LocString(c->body));
         //
         // new:
-        g.actionClasses.deleteAll();
-        g.actionClasses.append(new LocString(c->body));
+        g.actionClasses.clear();
+        g.actionClasses.emplace_back(c->body);
       }
 
       ASTNEXT(TF_verbatim, v) {
