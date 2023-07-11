@@ -509,7 +509,7 @@ Production::Production(Flatten &flat)
 
 void Production::xfer(Flatten &flat)
 {
-  xferObjList(flat, right);
+  /*FIXME*/ //xferObjList(flat, right);
   action.xfer(flat);
   flat.xferInt(precedence);
   forbid.xfer(flat);
@@ -527,8 +527,8 @@ void Production::xferSerfs(Flatten &flat, Grammar &g)
                           g.nonterminals);
 
   // xfer right's 'sym' pointers
-  MUTATE_EACH_OBJLIST(RHSElt, right, iter) {
-    iter.data()->xferSerfs(flat, g);
+  for (auto& elt : right) {
+    elt.xferSerfs(flat, g);
   }
 
   // compute derived data
@@ -564,8 +564,8 @@ int Production::rhsLength() const
 int Production::numRHSNonterminals() const
 {
   int ct = 0;
-  FOREACH_OBJLIST(RHSElt, right, iter) {
-    if (iter.data()->sym->isNonterminal()) {
+  for (auto const& elt : right) {
+    if (elt.sym->isNonterminal()) {
       ct++;
     }
   }
@@ -575,8 +575,8 @@ int Production::numRHSNonterminals() const
 
 bool Production::rhsHasSymbol(Symbol const *sym) const
 {
-  FOREACH_OBJLIST(RHSElt, right, iter) {
-    if (iter.data()->sym == sym) {
+  for (auto const& elt : right) {
+    if (elt.sym == sym) {
       return true;
     }
   }
@@ -586,8 +586,8 @@ bool Production::rhsHasSymbol(Symbol const *sym) const
 
 void Production::getRHSSymbols(SymbolList &output) const
 {
-  FOREACH_OBJLIST(RHSElt, right, iter) {
-    output.push_back(iter.data()->sym);
+  for (auto const& elt : right) {
+    output.push_back(elt.sym);
   }
 }
 
@@ -599,7 +599,7 @@ void Production::append(Symbol *sym, LocString const &tag)
   // productions
   xassert(!sym->isEmptyString);
 
-  right.append(new RHSElt(sym, tag));
+  right.emplace_back(sym, tag);
 }
 
 
@@ -611,7 +611,7 @@ void Production::finished(int numTerms)
 
 void Production::computeDerived()
 {
-  rhsLen = right.count();
+  rhsLen = right.size();
 }
 
 
@@ -627,12 +627,12 @@ bool tagCompare(StringRef s1, StringRef s2)
 int Production::findTag(StringRef tag) const
 {
   // walk RHS list looking for a match
-  ObjListIter<RHSElt> tagIter(right);
   int index=1;
-  for(; !tagIter.isDone(); tagIter.adv(), index++) {
-    if (tagCompare(tagIter.data()->tag, tag)) {
+  for (auto const& elt : right) {
+    if (tagCompare(elt.tag, tag)) {
       return index;
     }
+    index++;
   }
 
   // not found
@@ -659,7 +659,7 @@ string Production::symbolTag(int index) const
 
   // find index in RHS list
   index--;
-  return string(right.nthC(index)->tag);
+  return string(right[index].tag);
 }
 
 
@@ -672,7 +672,7 @@ Symbol const *Production::symbolByIndexC(int index) const
 
   // find index in RHS list
   index--;
-  return right.nthC(index)->sym;
+  return right[index].sym;
 }
 
 
@@ -729,12 +729,10 @@ string Production::rhsString(bool printTags, bool quoteAliases) const
 {
   stringBuilder sb;
 
-  if (right.isNotEmpty()) {
+  if (!right.empty()) {
     // print the RHS symbols
     int ct=0;
-    FOREACH_OBJLIST(RHSElt, right, iter) {
-      RHSElt const &elt = *(iter.data());
-
+    for (auto const& elt : right) {
       if (ct++ > 0) {
         sb << " ";
       }
@@ -1040,8 +1038,8 @@ void Grammar::printAsBison(std::ostream &os) const
         }
 
         // print RHS symbols
-        FOREACH_OBJLIST(Production::RHSElt, prod.data()->right, symIter) {
-          Symbol const *sym = symIter.data()->sym;
+        for (auto const& elt : prod.data()->right) {
+          Symbol const *sym = elt.sym;
           if (sym != &emptyString) {
             if (sym->isTerminal()) {
               os << " " << bisonTokenName(&( sym->asTerminalC() ));

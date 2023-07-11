@@ -373,8 +373,7 @@ void emitMLActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
 
     // iterate over RHS elements, emitting bindings for each with a tag
     int index=-1;
-    FOREACH_OBJLIST(Production::RHSElt, prod.right, rhsIter) {
-      Production::RHSElt const &elt = *(rhsIter.data());
+    for (Production::RHSElt const& elt : prod.right) {
       index++;
       if (elt.tag.length() == 0) continue;
 

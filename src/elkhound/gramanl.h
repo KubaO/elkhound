@@ -467,13 +467,13 @@ private:    // funcs
   // private derivability interface
   bool canDerive(int leftNtIndex, int rightNtIndex) const;
   bool sequenceCanDeriveEmpty(RHSEltList const &list) const;
-  bool iterSeqCanDeriveEmpty(RHSEltListIter iter) const;
+  bool iterSeqCanDeriveEmpty(RHSEltListIter iter, RHSEltListIter end) const;
 
   // ---- First ----
   void computeFirst();
   //bool addFirst(Nonterminal *NT, Terminal *term);
   void firstOfSequence(TerminalSet &destList, RHSEltList const &sequence);
-  void firstOfIterSeq(TerminalSet &destList, RHSEltListIter sym);
+  void firstOfIterSeq(TerminalSet &destList, RHSEltListIter sym, RHSEltListIter end);
 
   // ---- Follow ----
   void computeFollow();

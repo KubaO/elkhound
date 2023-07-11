@@ -153,13 +153,13 @@ void DottedProduction::setProdAndDot(Production const *p, int d)
   // computing this each time turned out to be significant
   // according to the profiler, so we store it instead
   bool dotAtEnd = (dot == prod->rhsLength());
-  afterDot = dotAtEnd? NULL : prod->right.nthC(dot)->sym;
+  afterDot = dotAtEnd? NULL : prod->right[dot].sym;
 }
 
 Symbol const *DottedProduction::symbolBeforeDotC() const
 {
   xassert(!isDotAtStart());
-  return prod->right.nthC(dot-1)->sym;
+  return prod->right[dot-1].sym;
 }
 
 #if 0
@@ -176,12 +176,12 @@ void DottedProduction::print(std::ostream &os) const
   os << prod->left->name << " ->";
 
   int position = 0;
-  for (ObjListIter<Production::RHSElt> iter(prod->right);
-       !iter.isDone(); iter.adv(), position++) {
+  for (auto const& elt : prod->right) {
     if (position == dot) {
       os << " .";
     }
-    os << " " << iter.data()->sym->toString();
+    os << " " << elt.sym->toString();
+    position++;
   }
   if (position == dot) {
     os << " .";
@@ -1143,20 +1143,19 @@ bool GrammarAnalysis::canDeriveEmpty(Nonterminal const *nonterm) const
 
 bool GrammarAnalysis::sequenceCanDeriveEmpty(RHSEltList const &list) const
 {
-  RHSEltListIter iter(list);
-  return iterSeqCanDeriveEmpty(iter);
+  return iterSeqCanDeriveEmpty(list.begin(), list.end());
 }
 
-bool GrammarAnalysis::iterSeqCanDeriveEmpty(RHSEltListIter iter) const
+bool GrammarAnalysis::iterSeqCanDeriveEmpty(RHSEltListIter iter, RHSEltListIter end) const
 {
   // look through the sequence beginning with 'iter'; if any members cannot
   // derive emptyString, fail
-  for (; !iter.isDone(); iter.adv()) {
-    if (iter.data()->sym->isTerminal()) {
+  for (; iter != end; ++iter) {
+    if (iter->sym->isTerminal()) {
       return false;    // terminals can't derive emptyString
     }
 
-    if (!canDeriveEmpty(&( iter.data()->sym->asNonterminalC() ))) {
+    if (!canDeriveEmpty(&( iter->sym->asNonterminalC() ))) {
       return false;    // nonterminal that can't derive emptyString
     }
   }
@@ -1403,17 +1402,16 @@ void GrammarAnalysis::computeWhatCanDeriveWhat()
       // since I don't include 'empty' explicitly in my rules, I won't
       // conclude that anything can derive empty, which is a problem;
       // so I special-case it here
-      if (prod->right.isEmpty()) {
-	addDerivable(prod->left, &emptyString);
+      if (prod->right.empty()) {
+	    addDerivable(prod->left, &emptyString);
         continue;      	// no point in looping over RHS symbols since there are none
       }
 
       // iterate over RHS symbols, seeing if the LHS can derive that
       // RHS symbol (by itself)
-      for (RHSEltListIter rightSym(prod->right);
-           !rightSym.isDone(); rightSym.adv()) {
+      for (auto rightSym = prod->right.cbegin(); rightSym != prod->right.cend(); ++rightSym) {
 
-        if (rightSym.data()->sym->isTerminal()) {
+        if (rightSym->sym->isTerminal()) {
           // if prod->left derives a string containing a terminal,
           // then it can't derive any nontermial alone (using this
           // production, at least) -- empty is considered a nonterminal
@@ -1421,7 +1419,7 @@ void GrammarAnalysis::computeWhatCanDeriveWhat()
         }
 
         // otherwise, it's a nonterminal
-        Nonterminal const &rightNT = rightSym.data()->sym->asNonterminalC();
+        Nonterminal const &rightNT = rightSym->sym->asNonterminalC();
 
         // check if we already know that LHS derives rightNT
         if (canDerive(prod->left, &rightNT)) {
@@ -1434,14 +1432,14 @@ void GrammarAnalysis::computeWhatCanDeriveWhat()
           // this to be true, every symbol that comes after rightSym
           // must be able to derive emptySymbol (we've already verified
           // by now that every symbol to the *left* can derive empty)
-          RHSEltListIter afterRightSym(rightSym);
           bool restDeriveEmpty = true;
-          for (afterRightSym.adv();    // *after* right symbol
-               !afterRightSym.isDone(); afterRightSym.adv()) {
+          // *after* right symbol
+          for (auto afterRightSym = std::next(rightSym);
+               afterRightSym != prod->right.cend(); ++afterRightSym) {
 
-            if (afterRightSym.data()->sym->isTerminal()  ||
+            if (afterRightSym->sym->isTerminal()  ||
                   // if it's a terminal, it can't derive emptyString
-                !canDeriveEmpty(&( afterRightSym.data()->sym->asNonterminalC() ))) {
+                !canDeriveEmpty(&( afterRightSym->sym->asNonterminalC() ))) {
                   // this symbol can't derive empty string (or, we don't
                   // yet know that it can), so we conclude that prod->left
                   // can't derive rightSym
@@ -1616,28 +1614,27 @@ void GrammarAnalysis::computeFirst()
 void GrammarAnalysis::firstOfSequence(TerminalSet &destList,
                                       RHSEltList const &sequence)
 {
-  RHSEltListIter iter(sequence);
-  firstOfIterSeq(destList, iter);
+  firstOfIterSeq(destList, sequence.begin(), sequence.end());
 }
 
 // similar to above, 'sym' needs to be a mutator
 void GrammarAnalysis::firstOfIterSeq(TerminalSet &destList,
-                                     RHSEltListIter sym)
+                                     RHSEltListIter sym, RHSEltListIter end)
 {
   //int numTerms = numTerminals();
 
   // for each sequence member such that all
   // preceeding members can derive emptyString
-  for (; !sym.isDone(); sym.adv()) {
+  for (; sym != end; ++sym) {
     // LHS -> x alpha   means x is in First(LHS)
-    if (sym.data()->sym->isTerminal()) {
-      destList.add(sym.data()->sym->asTerminal().termIndex);
+    if (sym->sym->isTerminal()) {
+      destList.add(sym->sym->asTerminal().termIndex);
       break;    // stop considering RHS members since a terminal
                 // effectively "hides" all further symbols from First
     }
 
     // sym must be a nonterminal
-    Nonterminal const &nt = sym.data()->sym->asNonterminalC();
+    Nonterminal const &nt = sym->sym->asNonterminalC();
 
     // anything already in nt's First should be added to destList
     destList.merge(nt.first);
@@ -1661,12 +1658,13 @@ void GrammarAnalysis::computeDProdFirsts()
       DottedProduction *dprod = getDProd_nc(prodIter.data(), posn);
 
       // compute its first
-      RHSEltListIter symIter(dprod->getProd()->right, posn);
+      auto& right = dprod->getProd()->right;
+      auto symIter = std::next(right.begin(), posn);
       dprod->firstSet.reset(numTerms);
-      firstOfIterSeq(dprod->firstSet, symIter);
+      firstOfIterSeq(dprod->firstSet, symIter, right.end());
 
       // can it derive empty?
-      dprod->canDeriveEmpty = iterSeqCanDeriveEmpty(symIter);
+      dprod->canDeriveEmpty = iterSeqCanDeriveEmpty(symIter, right.end());
     }
   }
 }
@@ -1689,11 +1687,12 @@ void GrammarAnalysis::computeFollow()
       Production *prod = prodIter.data();
 
       // for each RHS nonterminal member
-      MUTATE_EACH_OBJLIST(Production::RHSElt, prod->right, rightSym) {
-        if (rightSym.data()->sym->isTerminal()) continue;
+      auto const rightEnd = prod->right.end();
+      for (auto rightSym = prod->right.begin(); rightSym != rightEnd; ++rightSym) {
+        if (rightSym->sym->isTerminal()) continue;
 
         // convenient alias
-        Nonterminal &rightNT = rightSym.data()->sym->asNonterminal();
+        Nonterminal &rightNT = rightSym->sym->asNonterminal();
 
         // I'm not sure what it means to compute Follow(emptyString),
         // so let's just not do so
@@ -1703,8 +1702,8 @@ void GrammarAnalysis::computeFollow()
 
         // an iterator pointing to the symbol just after
         // 'rightSym' will be useful below
-        RHSEltListMutator afterRightSym(rightSym);
-        afterRightSym.adv();    // NOTE: 'isDone()' may be true now
+        auto afterRightSym = std::next(rightSym);
+        // NOTE: it may be at the end now
 
         // rule 1:
         // if there is a production A -> alpha B beta, then
@@ -1712,7 +1711,7 @@ void GrammarAnalysis::computeFollow()
         {
           // compute First(beta)
           TerminalSet firstOfBeta(numTerms);
-          firstOfIterSeq(firstOfBeta, afterRightSym);
+          firstOfIterSeq(firstOfBeta, afterRightSym, rightEnd);
 
           // put those into Follow(rightNT)
           if (rightNT.follow.merge(firstOfBeta)) {
@@ -1731,7 +1730,7 @@ void GrammarAnalysis::computeFollow()
         // rule 2:
         // if there is a production A -> alpha B, or a
         // production A -> alpha B beta where beta ->* empty ...
-        if (iterSeqCanDeriveEmpty(afterRightSym)) {
+        if (iterSeqCanDeriveEmpty(afterRightSym, rightEnd)) {
           // ... then everything in Follow(A) is in Follow(B)
           if (rightNT.follow.merge(prod->left->follow)) {
             changes++;
@@ -2607,16 +2606,15 @@ void GrammarAnalysis::computeReachableDFS(Nonterminal *nt)
   // iterate over this nonterminal's rules
   for (Production const *prod : productionsByLHS[nt->ntIndex]) {
     // iterate over symbols in the rule RHS
-    FOREACH_OBJLIST(Production::RHSElt, prod->right, jter) {
-      Production::RHSElt const *elt = jter.data();
+    for (auto const& elt : prod->right) {
 
-      if (elt->sym->isNonterminal()) {
+      if (elt.sym->isNonterminal()) {
         // recursively analyze nonterminal elements
-        computeReachableDFS(elt->sym->ifNonterminal());
+        computeReachableDFS(elt.sym->ifNonterminal());
       }
       else {
         // just mark terminals
-        elt->sym->reachable = true;
+        elt.sym->reachable = true;
       }
     }
   }
@@ -3165,6 +3163,30 @@ STATICDEF int GrammarAnalysis::renumberStatesDiff
   return 0;
 }
 
+template <typename T>
+int compare(const std::vector<T>& a, const std::vector<T>& b, int (*diff)(T const* left, T const* right, void* extra), void* extra = 0)
+{
+  auto mine = a.begin(), his = b.begin();
+  auto mineEnd = a.end(), hisEnd = b.end();
+
+  while (mine != mineEnd && his != hisEnd) {
+    int cmp = diff(&*mine, &*his, extra);
+    if (cmp != 0) {
+      // unequal, return which way comparison went
+      return cmp;
+    }
+    ++mine;
+    ++his;
+  }
+
+  if (mine != mineEnd || his != hisEnd) {
+    // unequal lengths: shorter compares as less
+    return mine == mineEnd ? -1 : +1;
+  }
+
+  return 0;        // everything matches
+}
+
 STATICDEF int GrammarAnalysis::arbitraryProductionOrder
   (Production const *left, Production const *right, void*)
 {
@@ -3173,7 +3195,7 @@ STATICDEF int GrammarAnalysis::arbitraryProductionOrder
   if (ret) return ret;
 
   // RHS elts one at a time
-  return left->right.compareAsLists(right->right,
+  return compare(left->right, right->right,
     &GrammarAnalysis::arbitraryRHSEltOrder);
 }
 
@@ -3854,14 +3876,13 @@ void GrammarAnalysis::addTreebuildingActions()
          << "\"";
 
     int ct=1;
-    MUTATE_EACH_OBJLIST(Production::RHSElt, p->right, rIter) {
-      Production::RHSElt *elt = rIter.data();
+    for (auto& elt : p->right) {
 
       // connect nonterminal subtrees; drop lexemes on the floor
-      if (elt->sym->isNonterminal()) {
+      if (elt.sym->isNonterminal()) {
         // use a generic tag
         string tag = stringc << "t" << ct++;
-        elt->tag = STR(tag.c_str());
+        elt.tag = STR(tag.c_str());
 
         code << ", " << tag;
       }
@@ -4467,8 +4488,7 @@ void emitActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
     SOURCELOC( ct++ );    // if we printed the 'loc' param, count it
 
     // iterate over RHS elements, emitting formals for each with a tag
-    FOREACH_OBJLIST(Production::RHSElt, prod.right, rhsIter) {
-      Production::RHSElt const &elt = *(rhsIter.data());
+    for (auto const& elt : prod.right) {
       if (elt.tag.length() == 0) continue;
 
       if (ct++ > 0) {
@@ -4516,8 +4536,7 @@ void emitActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
     int index = -1;      // index into 'semanticValues'
     int ct=0;
     SOURCELOC( ct++ );   // count 'loc' if it is passed
-    FOREACH_OBJLIST(Production::RHSElt, prod.right, rhsIter) {
-      Production::RHSElt const &elt = *(rhsIter.data());
+    for (auto const& elt : prod.right) {
 
       // we have semantic values in the array for all RHS elements,
       // even if they didn't get a tag

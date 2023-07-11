@@ -338,7 +338,7 @@ public:     // types
 public:	    // data
   // fundamental context-free grammar (CFG) component
   Nonterminal * const left;     // (serf) left hand side; must be nonterminal
-  ObjList<RHSElt> right;        // right hand side; terminals & nonterminals
+  std::vector<RHSElt> right;    // right hand side; terminals & nonterminals
   int precedence;               // precedence level for disambiguation (0 for none specified)
   TerminalSet forbid;           // forbidden next tokens
 
@@ -429,9 +429,8 @@ using ProductionList = std::deque<Production *>;
 #define SFOREACH_PRODUCTION(list, iter) SFOREACH_OBJLIST(Production, list, iter)
 #define SMUTATE_EACH_PRODUCTION(list, iter) SMUTATE_EACH_OBJLIST(Production, list, iter)
 
-typedef ObjList<Production::RHSElt> RHSEltList;
-typedef ObjListIter<Production::RHSElt> RHSEltListIter;
-typedef ObjListMutator<Production::RHSElt> RHSEltListMutator;
+using RHSEltList = std::vector<Production::RHSElt>;
+using RHSEltListIter = std::vector<Production::RHSElt>::const_iterator;
 
 
 // ---------------- Grammar --------------------
