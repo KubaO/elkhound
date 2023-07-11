@@ -454,7 +454,7 @@ public:	    // data
 
   // sections of verbatim code emitted into the interface file, before
   // the parser context class body
-  ObjList<LocString> verbatim;
+  std::deque<LocString> verbatim;
 
   // name of the class into which the action functions are placed
   LocString actionClassName;

@@ -62,9 +62,9 @@ void emitMLActionCode(GrammarAnalysis const &g, rostring mliFname,
       ;
 
   // insert the stand-alone verbatim sections
-  {FOREACH_OBJLIST(LocString, g.verbatim, iter) {
-    emitMLUserCode(dcl, *(iter.data()), false /*braces*/);
-  }}
+  for (auto const& locstr : g.verbatim) {
+    emitMLUserCode(dcl, locstr, false /*braces*/);
+  }
 
   #if 0    // not implemented
   // insert each of the context class definitions; the last one
@@ -124,9 +124,9 @@ void emitMLActionCode(GrammarAnalysis const &g, rostring mliFname,
       ;
 
   // stand-alone verbatim sections go into .ml file *also*
-  {FOREACH_OBJLIST(LocString, g.verbatim, iter) {
-    emitMLUserCode(out, *(iter.data()), false /*braces*/);
-  }}
+  for (auto const& locstr : g.verbatim) {
+    emitMLUserCode(out, locstr, false /*braces*/);
+  }
 
   #if 0   // not implemented and/or not needed
     #ifdef NO_GLR_SOURCELOC

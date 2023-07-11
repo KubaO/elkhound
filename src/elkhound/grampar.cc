@@ -245,7 +245,7 @@ void astParseOptions(Grammar &g, GrammarAST *ast)
           g.implVerbatim.emplace_back(v->code);
         }
         else {
-          g.verbatim.append(new LocString(v->code));
+          g.verbatim.emplace_back(v->code);
         }
       }
 

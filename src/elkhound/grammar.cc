@@ -811,7 +811,7 @@ void Grammar::xfer(Flatten &flat)
 
   // emptyString is const
 
-  xferObjList(flat, verbatim);
+  /*FIXME*/ //xferObjList(flat, verbatim);
 
   actionClassName.xfer(flat);
   /*FIXME*/ //xferObjList(flat, actionClasses);

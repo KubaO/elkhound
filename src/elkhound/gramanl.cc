@@ -3811,7 +3811,7 @@ void GrammarAnalysis::addTreebuildingActions()
   {
     StringRef extra = grammarStringTable.add(
       "\n#include \"ptreenode.h\"     // PTreeNode\n");
-    verbatim.prepend(new LITERAL_LOCSTRING(extra));
+    verbatim.emplace_front(HERE_SOURCELOC, extra); // LITERAL_LOCSTRING
   }
 
   // get handles to the strings we want to emit
@@ -4184,9 +4184,9 @@ void emitActionCode(GrammarAnalysis const &g, rostring hFname,
       ;
 
   // insert the stand-alone verbatim sections
-  {FOREACH_OBJLIST(LocString, g.verbatim, iter) {
-    emitUserCode(dcl, *(iter.data()), false /*braces*/);
-  }}
+  for (auto const& locstr : g.verbatim) {
+    emitUserCode(dcl, locstr, false /*braces*/);
+  }
 
   // insert each of the context class definitions; the last one
   // is the one whose name is 'g.actionClassName' and into which
