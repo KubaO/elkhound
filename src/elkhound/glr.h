@@ -45,7 +45,6 @@
 #include "objpool.h"       // ObjectPool, GrowArray
 #include "objlist.h"       // ObjList
 #include "srcloc.h"        // SourceLoc
-#include "sobjlist.h"      // SObjList
 
 #include <stdio.h>         // FILE
 #include <iostream>        // std::ostream
@@ -437,10 +436,6 @@ private:    // funcs
   void configCheck(char const *option, bool core, bool table);
 
   string stackSummary() const;
-  void nodeSummary(stringBuilder &sb, StackNode const *node) const;
-  void innerStackSummary(stringBuilder &sb,
-                         SObjList<StackNode const> &printed,
-                         StackNode const *node) const;
 
 public:     // funcs
   GLR(UserActions *userAct, ParseTables *tables);

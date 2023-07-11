@@ -113,9 +113,10 @@
 #include "lexerint.h"    // LexerInterface
 #include "test.h"        // PVAL
 #include "cyctimer.h"    // CycleTimer
-#include "sobjlist.h"    // SObjList
 #include "owner.h"       // Owner
 
+#include <deque>         // std::deque
+#include <unordered_set> // std::unordered_set
 #include <stdio.h>       // FILE
 #include <stdlib.h>      // getenv
 
@@ -213,6 +214,10 @@ enum {
   INITIAL_RHSLEN_SIZE = 10,
 };
 
+
+// forward declarations
+void innerStackSummary(string& sb, std::unordered_set<StackNode const*>& printed,
+                       StackNode const* node);
 
 // ------------- front ends to user code ---------------
 // given a symbol id (terminal or nonterminal), and its associated
@@ -1503,23 +1508,24 @@ void GLR::dumpGSS(int tokenNumber) const
 
   // list of nodes we've already printed, to avoid printing any
   // node more than once
-  SObjList<StackNode> printed;
+  std::unordered_set<StackNode*> printed;
 
   // list of nodes to print; might intersect 'printed', in which case
   // such nodes should be discarded; initially contains all the active
   // parsers (tops of stacks)
-  SObjList<StackNode> queue;
+  std::deque<StackNode*> queue;
   for (int i=0; i < topmostParsers.length(); i++) {
-    queue.append(topmostParsers[i]);
+    queue.push_back(topmostParsers[i]);
   }
 
   // keep printing nodes while there are still some to print
-  while (queue.isNotEmpty()) {
-    StackNode *node = queue.removeFirst();
-    if (printed.contains(node)) {
+  while (!queue.empty()) {
+    StackNode *node = queue.front();
+    queue.pop_front();
+    if (printed.find(node) != printed.end()) {
       continue;
     }
-    printed.append(node);
+    printed.insert(node);
 
     // only edges actually get printed (since the node names
     // encode all the important information); so iterate over
@@ -1527,11 +1533,11 @@ void GLR::dumpGSS(int tokenNumber) const
     // nodes to the queue so we'll print them too
     if (node->firstSib.sib != NULL) {
       dumpGSSEdge(dest, node, node->firstSib.sib);
-      queue.append(node->firstSib.sib);
+      queue.push_back(node->firstSib.sib);
 
       FOREACH_OBJLIST(SiblingLink, node->leftSiblings, iter) {
         dumpGSSEdge(dest, node, iter.data()->sib);
-        queue.append(const_cast<StackNode*>( iter.data()->sib.getC() ));
+        queue.push_back(const_cast<StackNode*>( iter.data()->sib.getC() ));
       }
     }
   }
@@ -1552,11 +1558,11 @@ void GLR::dumpGSSEdge(FILE *dest, StackNode const *src,
 // alternative to above: stack info in a single string
 string GLR::stackSummary() const
 {
-  stringBuilder sb;
+  string sb;
 
   // list of nodes we've already printed, to avoid printing any
   // node more than once
-  SObjList<StackNode const> printed;
+  std::unordered_set<StackNode const*> printed;
 
   for (int i=0; i < topmostParsers.length(); i++) {
     sb << " (" << i << ": ";
@@ -1567,15 +1573,15 @@ string GLR::stackSummary() const
   return sb;
 }
 
-void GLR::nodeSummary(stringBuilder &sb, StackNode const *node) const
+static void nodeSummary(string &sb, StackNode const *node)
 {
   sb << node->state << "[" << node->referenceCount << "]";
 }
 
-void GLR::innerStackSummary(stringBuilder &sb, SObjList<StackNode const> &printed,
-                            StackNode const *node) const
+static void innerStackSummary(string &sb, std::unordered_set<StackNode const*> &printed,
+                              StackNode const *node)
 {
-  if (printed.contains(node)) {
+  if (printed.find(node) != printed.end()) {
     sb << "(rep:";
     nodeSummary(sb, node);
     sb << ")";
@@ -1583,7 +1589,7 @@ void GLR::innerStackSummary(stringBuilder &sb, SObjList<StackNode const> &printe
   }
 
   nodeSummary(sb, node);
-  printed.append(node);
+  printed.insert(node);
 
   if (!node->firstSib.sib) {
     return;   // no siblings
