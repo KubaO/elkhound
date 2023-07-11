@@ -24,7 +24,6 @@ project(crc)
 project(srcloc)
 project(hashline)
 project(gprintf)
-project(vptrmap)
 project(testarray)
 project(autofile)
 project(bitarray)
@@ -135,11 +134,6 @@ add_executable(gprintf
     ../gprintf.c
 )
 
-# files for vptrmap
-add_executable(vptrmap
-    ../vptrmap.cc
-)
-
 # files for testarray
 add_executable(testarray
     ../testarray.cc
@@ -173,7 +167,6 @@ target_compile_options(crc PRIVATE -DTEST_CRC)
 target_compile_options(srcloc PRIVATE -DTEST_SRCLOC)
 target_compile_options(hashline PRIVATE -DTEST_HASHLINE)
 target_compile_options(gprintf PRIVATE -DTEST_GPRINTF)
-target_compile_options(vptrmap PRIVATE -DTEST_VPTRMAP)
 target_compile_options(autofile PRIVATE -DTEST_AUTOFILE)
 target_compile_options(bitarray PRIVATE -DTEST_BITARRAY)
 
@@ -195,7 +188,6 @@ target_link_libraries(mysig smbase)
 target_link_libraries(tobjpool smbase)
 target_link_libraries(srcloc smbase)
 target_link_libraries(hashline smbase)
-target_link_libraries(vptrmap smbase)
 target_link_libraries(testarray smbase)
 target_link_libraries(autofile smbase)
 target_link_libraries(bitarray smbase)
@@ -223,7 +215,6 @@ add_test(NAME crc COMMAND ./crc)
 add_test(NAME srcloc COMMAND ./srcloc)
 add_test(NAME hashline COMMAND ./hashline)
 add_test(NAME gprintf COMMAND ./gprintf)
-add_test(NAME vptrmap COMMAND ./vptrmap)
 add_test(NAME testarray COMMAND ./testarray)
 add_test(NAME autofile COMMAND ./autofile)
 add_test(NAME bitarray COMMAND ./bitarray)

@@ -34,5 +34,4 @@ add_library(smbase STATIC
     trdelete.cc
     vdtllist.cc
     voidlist.cc
-    vptrmap.cc
 )
