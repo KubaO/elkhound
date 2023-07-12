@@ -318,7 +318,7 @@ inline void StackNode::init(StateId st, GLR *g)
   state = st;
   xassertdb(leftSiblings.isEmpty());
   xassertdb(hasZeroSiblings());
-  referenceCount = 0;
+  referenceCount = 1;   // the node is going to be used somewhere!
   determinDepth = 1;    // 0 siblings now, so this node is unambiguous
   glr = g;
 
@@ -697,22 +697,11 @@ SemanticValue GLR::grabTopSval(StackNode *node)
 }
 
 
-// This macro has been pulled out so I can have even finer control
-// over the allocation process from the mini-LR core.
-//   dest: variable into which the pointer to the new node will be put
-//   state: DFA state for this node
-//   glr: pointer to the associated GLR object
-//   pool: node pool from which to allocate
-#define MAKE_STACK_NODE(dest, state, glr, pool)              \
-  dest = (pool).alloc();                                     \
-  dest->init(state, glr);                                    \
-  NODE_COLUMN( dest->column = (glr)->globalNodeColumn; )
-
-// more-friendly inline version, for use outside mini-LR
 inline StackNode *GLR::makeStackNode(StateId state)
 {
-  StackNode *sn;
-  MAKE_STACK_NODE(sn, state, this, *stackNodePool);
+  StackNode* sn = stackNodePool->alloc();
+  sn->init(state, this);
+  NODE_COLUMN(sn->column = globalNodeColumn; )
   return sn;
 }
 
@@ -724,7 +713,6 @@ inline void GLR::addTopmostParser(StackNode *parser)
   parser->checkLocalInvariants();
 
   topmostParsers.push_back(parser);
-  parser->incRefCt();
 
   // I implemented this index, and then discovered it made no difference
   // (actually, slight degradation) in performance; so for now it will
@@ -1119,8 +1107,7 @@ STATICDEF bool GLR
           xassertdb(parser->referenceCount==1);
 
           // push new state
-          StackNode *newNode;
-          MAKE_STACK_NODE(newNode, newState, &glr, stackNodePool)
+          StackNode *newNode = glr.makeStackNode(newState);
 
           newNode->addFirstSiblingLink(parser, sval  SOURCELOCARG( leftEdge ) );
           parser->decRefCt();
@@ -1136,7 +1123,6 @@ STATICDEF bool GLR
 
           // replace whatever is in 'topmostParsers[0]' with 'newNode'
           topmostParsers[0] = newNode;
-          newNode->incRefCt();
           xassertdb(newNode->referenceCount == 1);   // topmostParsers[0] is referrer
 
           // emit some trace output
@@ -1182,8 +1168,7 @@ STATICDEF bool GLR
 
         NODE_COLUMN( glr.globalNodeColumn++; )
 
-        StackNode *rightSibling;
-        MAKE_STACK_NODE(rightSibling, newState, &glr, stackNodePool);
+        StackNode *rightSibling = glr.makeStackNode(newState);
 
         rightSibling->addFirstSiblingLink(parser, lexer.sval  SOURCELOCARG( lexer.loc ) );
         parser->decRefCt();
@@ -1198,11 +1183,6 @@ STATICDEF bool GLR
         }
         xassertdb(parser->referenceCount==1);         // rightSibling
 
-        xassertdb(rightSibling->referenceCount==0);   // just created
-        // expand "rightSibling->incRefCt();"
-        {
-          rightSibling->referenceCount = 1;
-        }
         xassertdb(rightSibling->referenceCount==1);   // topmostParsers[0] refers to it
 
         // get next token
