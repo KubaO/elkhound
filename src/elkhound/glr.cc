@@ -978,13 +978,6 @@ STATICDEF bool GLR
           //toPass.ensureIndexDoubler(rhsLen-1);
           xassertdb(rhsLen <= MAX_RHSLEN);
 
-          // we will manually string the stack nodes together onto
-          // the free list in 'stackNodePool', and 'prev' will point
-          // to the head of the current list; at the end, we'll
-          // install the final value of 'prev' back into
-          // 'stackNodePool' as the new head of the list
-          StackNode *prev = stackNodePool.private_getHead();
-
           // ------ loop for arbitrary rhsLen ------
           // pop off 'rhsLen' stack nodes, collecting as many semantic
           // values into 'toPass'
@@ -1009,8 +1002,7 @@ STATICDEF bool GLR
                       << symbolDescription(parser->getSymbolC(), userAct, sib.sval)
                       << rhsDescription; )
 
-            // not necessary:
-            //   sib.sval = NULL;                  // link no longer owns the value
+            sib.sval = NULL;                  // link no longer owns the value
             // this assignment isn't necessary because the usual treatment
             // of NULL is to ignore it, and I manually ignore *any* value
             // in the inline-expanded code below
@@ -1023,8 +1015,7 @@ STATICDEF bool GLR
             )
 
             // pop 'parser' and move to the next one
-            parser->nextInFreeList = prev;
-            prev = parser;
+            StackNode *prev = parser;
             parser = sib.sib;
 
             // don't actually increment, since I now no longer actually decrement
@@ -1032,50 +1023,16 @@ STATICDEF bool GLR
             // cancelled(1) observable: xassertdb(parser->referenceCount==1);       // 'sib' and the fake one
 
             // so now it's just the one
-            xassertdb(parser->referenceCount==1);     // just 'sib'
+            parser->incRefCt();                       // retain a reference
+            xassertdb(parser->referenceCount==2);     // just 'sib' and 'parser'
 
             xassertdb(prev->referenceCount==1);
-            // expand "prev->decRefCt();"             // deinit 'prev', dealloc 'sib'
-            {
-              // I don't actually decrement the reference count on 'prev'
-              // because it will be reset to 0 anyway when it is inited
-              // the next time it is used
-              //prev->referenceCount = 0;
+            prev->decRefCt();                         // sib decremented 'parser' refcnt
+            prev = NULL;
 
-              // adjust the global count of stack nodes
-              prev->decrementAllocCounter();
-
-              // I previously had a test for "prev->firstSib.sval != NULL",
-              // but that can't happen because I set it to NULL above!
-              // (as the alias sib.sval)
-              // update: now I don't even set it to NULL because the code here
-              // has been changed to ignore *any* value
-              //if (prev->firstSib.sval != NULL) {
-              //  std::cout << "I GOT THE ANALYSIS WRONG!\n";
-              //}
-
-              // cancelled(1) effect: parser->decRefCt();
-              prev->firstSib.sib.setWithoutUpdateRefct(NULL);
-
-              // possible optimization: I could eliminiate
-              // "prev->firstSib.sib=NULL" if I consistently modified all
-              // creation of stack nodes to treat sib as a dead value:
-              // right after creation I would make sure the new
-              // sibling value *overwrites* sib, and no attempt is
-              // made to decrement a refct on the dead value
-
-              // this is obviated by the manual construction of the
-              // free list links (nestInFreeList) above
-              //stackNodePool.deallocNoDeinit(prev);
-            }
-
-            xassertdb(parser->referenceCount==1);     // fake refct only
+            xassertdb(parser->referenceCount==1);     // we have one reference
           } // end of general rhsLen loop
 
-
-          // having now manually strung the deallocated stack nodes together
-          // on the free list, I need to make the node pool's head point at them
-          stackNodePool.private_setHead(prev);
 
           // call the user's action function (TREEBUILD)
           SemanticValue sval =
@@ -1110,16 +1067,10 @@ STATICDEF bool GLR
           StackNode *newNode = glr.makeStackNode(newState);
 
           newNode->addFirstSiblingLink(parser, sval  SOURCELOCARG( leftEdge ) );
-          parser->decRefCt();
-          // cancelled(3) effect: parser->incRefCt();
 
-          // cancelled(3) effect: xassertdb(parser->referenceCount==2);
-          // expand:
-          //   "parser->decRefCt();"                 // local variable "parser" about to go out of scope
-          {
-            // cancelled(3) effect: parser->referenceCount = 1;
-          }
-          xassertdb(parser->referenceCount==1);
+          xassertdb(parser->referenceCount == 2);  // 'newNode' and 'parser' hold reference
+          parser->decRefCt();                      // now only 'newNode' holds the reference
+          parser = NULL;
 
           // replace whatever is in 'topmostParsers[0]' with 'newNode'
           topmostParsers[0] = newNode;
