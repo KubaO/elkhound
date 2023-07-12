@@ -519,9 +519,9 @@ inline void StackNode::checkLocalInvariants() const
 
 
 // ------------- stack node list ops ----------------
-void decParserList(ArrayStack<StackNode*> &list)
+void decParserList(std::vector<StackNode*> &list)
 {
-  for (int i=0; i < list.length(); i++) {
+  for (int i=0; i < list.size(); i++) {
     list[i]->decRefCt();
   }
 }
@@ -729,7 +729,7 @@ inline void GLR::addTopmostParser(StackNode *parser)
 {
   parser->checkLocalInvariants();
 
-  topmostParsers.push(parser);
+  topmostParsers.push_back(parser);
   parser->incRefCt();
 
   // I implemented this index, and then discovered it made no difference
@@ -799,8 +799,8 @@ bool GLR::glrParse(LexerInterface &lexer, SemanticValue &treeTop)
 
   // prevent dangling references, clear any stack node pointers
   stackNodePool = NULL;
-  topmostParsers.empty();
-  prevTopmost.empty();
+  topmostParsers.clear();
+  prevTopmost.clear();
 
   if (!ret) {
     lexerPtr = NULL;
@@ -854,7 +854,7 @@ STATICDEF bool GLR
   UserActions *userAct = glr.userAct;
   ParseTables *tables = glr.tables;
   #if USE_MINI_LR
-    ArrayStack<StackNode*> &topmostParsers = glr.topmostParsers;
+    std::vector<StackNode*> &topmostParsers = glr.topmostParsers;
   #endif
 
   // lexer token function
@@ -913,7 +913,7 @@ STATICDEF bool GLR
     TRSPARSE(
            "------- "
         << "processing token " << lexer.tokenDesc()
-        << ", " << glr.topmostParsers.length() << " active parsers"
+        << ", " << glr.topmostParsers.size() << " active parsers"
         << " -------"
     )
     TRSPARSE("Stack:" << glr.stackSummary())
@@ -956,7 +956,7 @@ STATICDEF bool GLR
     //
     // This code is the core of the parsing algorithm, so it's a bit
     // hairy for its performance optimizations.
-    if (topmostParsers.length() == 1) {
+    if (topmostParsers.size() == 1) {
       StackNode *parser = topmostParsers[0];
       xassertdb(parser->referenceCount==1);     // 'topmostParsers[0]' is referrer
 
@@ -1288,7 +1288,7 @@ bool GLR::nondeterministicParseToken()
   // do all reduction explicitly first, then all shifts by
   // re-iterating over topmost parsers
   int i;
-  for (i=0; i < topmostParsers.length(); i++) {
+  for (i=0; i < topmostParsers.size(); i++) {
     StackNode *parser = topmostParsers[i];
 
     ActionEntry action =
@@ -1310,7 +1310,7 @@ bool GLR::nondeterministicParseToken()
 
 
   // if all active parsers have died, there was an error
-  if (topmostParsers.isEmpty()) {
+  if (topmostParsers.empty()) {
     printParseErrorMessage(lastToDie);
     return false;
   }
@@ -1399,11 +1399,11 @@ bool GLR::cleanupAfterParse(SemanticValue &treeTop)
 
 
   // finish the parse by reducing to start symbol
-  if (topmostParsers.length() != 1) {
+  if (topmostParsers.size() != 1) {
     std::cout << "parsing finished with more than one active parser!\n";
     return false;
   }
-  StackNode *last = topmostParsers.top();
+  StackNode *last = topmostParsers.back();
 
   // pull out the semantic values; this assumes the start symbol
   // always looks like "Start -> Something EOF"; it also assumes
@@ -1441,7 +1441,7 @@ bool GLR::cleanupAfterParse(SemanticValue &treeTop)
 // pulled it in hopes the allocator will be happier now
 void GLR::pullFromTopmostParsers(StackNode *parser)
 {
-  int last = topmostParsers.length()-1;
+  int last = topmostParsers.size()-1;
   for (int i=0; i <= last; i++) {
     if (topmostParsers[i] == parser) {
       // remove it; if it's not last in the list, swap it with
@@ -1450,8 +1450,8 @@ void GLR::pullFromTopmostParsers(StackNode *parser)
         topmostParsers[i] = topmostParsers[last];
         // (no need to actually copy 'i' into 'last')
       }
-      topmostParsers.pop();     // removes a reference to 'parser'
-      parser->decRefCt();       // so decrement reference count
+      topmostParsers.pop_back(); // removes a reference to 'parser'
+      parser->decRefCt();        // so decrement reference count
       break;
     }
   }
@@ -1488,7 +1488,7 @@ StackNode *GLR::findTopmostParser(StateId state)
       return NULL;
     }
   #else
-    for (int i=0; i < topmostParsers.length(); i++) {
+    for (int i=0; i < topmostParsers.size(); i++) {
       StackNode *node = topmostParsers[i];
       if (node->state == state) {
         return node;
@@ -1514,7 +1514,7 @@ void GLR::dumpGSS(int tokenNumber) const
   // such nodes should be discarded; initially contains all the active
   // parsers (tops of stacks)
   std::deque<StackNode*> queue;
-  for (int i=0; i < topmostParsers.length(); i++) {
+  for (int i=0; i < topmostParsers.size(); i++) {
     queue.push_back(topmostParsers[i]);
   }
 
@@ -1564,7 +1564,7 @@ string GLR::stackSummary() const
   // node more than once
   std::unordered_set<StackNode const*> printed;
 
-  for (int i=0; i < topmostParsers.length(); i++) {
+  for (int i=0; i < topmostParsers.size(); i++) {
     sb << " (" << i << ": ";
     innerStackSummary(sb, printed, topmostParsers[i]);
     sb << ")";
@@ -1658,8 +1658,8 @@ void ReductionPathQueue::Path::init(StateId ssi, int pi, int rhsLen)
   startStateId = ssi;
   prodIndex = pi;
 
-  sibLinks.ensureIndexDoubler(rhsLen);
-  symbols.ensureIndexDoubler(rhsLen);
+  sibLinks.resize(rhsLen+1);
+  symbols.resize(rhsLen+1);
 }
 
 
@@ -1799,7 +1799,7 @@ void GLR::rwlProcessWorklist()
     // before calling the user, duplicate any needed values; this loop
     // goes from right to left backwards so that 'leftEdge' is
     // computed properly
-    toPass.ensureIndexDoubler(rhsLen-1);
+    toPass.resize(rhsLen);
     for (int i=rhsLen-1; i >= 0; i--) {
       SiblingLink *sib = path->sibLinks[i];
 
@@ -1834,7 +1834,7 @@ void GLR::rwlProcessWorklist()
     // user's code to synthesize a semantic value by combining them
     // (TREEBUILD)
     SemanticValue sval =
-      doReductionAction(path->prodIndex, toPass.getArray()
+      doReductionAction(path->prodIndex, toPass.data()
                         SOURCELOCARG( leftEdge ) );
 
     // emit tracing diagnostics for this reduction
@@ -1855,7 +1855,7 @@ void GLR::rwlProcessWorklist()
 
       if (newLink) {
         // for each 'finished' parser ...
-        for (int i=0; i < topmostParsers.length(); i++) {
+        for (int i=0; i < topmostParsers.size(); i++) {
           StackNode *parser = topmostParsers[i];
 
           // ... do any reduce actions that are now enabled by the new link
@@ -2001,7 +2001,7 @@ SiblingLink *GLR::rwlShiftNonterminal(StackNode *leftSibling, int lhsIndex,
       int changes=1, iters=0;
       while (changes) {
         changes = 0;
-        for (int i=0; i < topmostParsers.length(); i++) {
+        for (int i=0; i < topmostParsers.size(); i++) {
           StackNode *parser = topmostParsers[i];
           int newDepth = parser->computeDeterminDepth();
           if (newDepth != parser->determinDepth) {
@@ -2168,9 +2168,9 @@ void GLR::rwlShiftTerminals()
   NODE_COLUMN( globalNodeColumn++; )
 
   // move all the parsers from 'topmostParsers' into 'prevTopmost'
-  xassert(prevTopmost.isEmpty());
-  prevTopmost.swapWith(topmostParsers);
-  xassert(topmostParsers.isEmpty());
+  xassert(prevTopmost.empty());
+  prevTopmost.swap(topmostParsers);
+  xassert(topmostParsers.empty());
 
   // to solve the multi-yield problem for tokens, I'll remember
   // the previously-created sibling link (if any), and dup the
@@ -2178,11 +2178,12 @@ void GLR::rwlShiftTerminals()
   SiblingLink *prev = NULL;
 
   // foreach node in prevTopmost
-  while (prevTopmost.isNotEmpty()) {
+  while (!prevTopmost.empty()) {
     // take the node from 'prevTopmost'; the refcount includes both
     // 'leftSibling' and 'prevTopmost', and then we decrement the
     // count to reflect that only 'leftSibling' has it
-    RCPtr<StackNode> leftSibling(prevTopmost.pop());
+    RCPtr<StackNode> leftSibling(prevTopmost.back());
+    prevTopmost.pop_back();
     xassertdb(leftSibling->referenceCount >= 2);
     leftSibling->decRefCt();
 

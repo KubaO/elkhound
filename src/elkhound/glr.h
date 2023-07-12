@@ -42,12 +42,13 @@
 #include "parsetables.h"   // StateId
 #include "rcptr.h"         // RCPtr
 #include "useract.h"       // UserActions, SemanticValue
-#include "objpool.h"       // ObjectPool, GrowArray
+#include "objpool.h"       // ObjectPool
 #include "objlist.h"       // ObjList
 #include "srcloc.h"        // SourceLoc
 
 #include <stdio.h>         // FILE
 #include <iostream>        // std::ostream
+#include <vector>          // std::vector
 
 
 // fwds from other files
@@ -251,11 +252,11 @@ public:       // types
     // array of sibling links, naming the path; 'sibLink[0]' is the
     // leftmost link; array length is given by the rhsLen of
     // prodIndex's production
-    GrowArray<SiblingLink*> sibLinks;    // (array of serfs)
+    std::vector<SiblingLink*> sibLinks;    // (array of serfs)
 
     // corresponding array of symbol ids so we know how to interpret
     // the semantic values in the links
-    GrowArray<SymbolId> symbols;
+    std::vector<SymbolId> symbols;
 
     union {
       // link between nodes for construction of a linked list,
@@ -332,7 +333,7 @@ public:
   // ultimately succeed to parse the input, or might reach a
   // point where it cannot proceed, and therefore dies.  (See
   // comments at top of glr.cc for more details.)
-  ArrayStack<StackNode*> topmostParsers;     // (refct list)
+  std::vector<StackNode*> topmostParsers;     // (refct list)
 
   // index: StateId -> index in 'topmostParsers' of unique parser
   // with that state, or INDEX_NO_PARSER if none has that state
@@ -356,12 +357,12 @@ public:
 
   // ---- scratch space re-used at token-level (or finer) granularity ----
   // to be regarded as a local variable of GLR::rwlProcessWorklist
-  GrowArray<SemanticValue> toPass;
+  std::vector<SemanticValue> toPass;
 
   // persistent array that I swap with 'topmostParsers' during
   // 'rwlShiftTerminals' to avoid extra copying or allocation;
   // this should be regarded as variable local to that function
-  ArrayStack<StackNode*> prevTopmost;        // (refct list)
+  std::vector<StackNode*> prevTopmost;        // (refct list)
 
   // ---- allocation pools ----
   // this is a pointer to the same-named local variable in innerGlrParse
