@@ -381,8 +381,8 @@ void StackNode::deallocSemanticValues()
 
 // add the very first sibling
 inline void StackNode
-  ::addFirstSiblingLink_noRefCt(StackNode *leftSib, SemanticValue sval
-                                SOURCELOCARG( SourceLoc loc ) )
+  ::addFirstSiblingLink(StackNode *leftSib, SemanticValue sval
+                        SOURCELOCARG( SourceLoc loc ) )
 {
   xassertdb(hasZeroSiblings());
 
@@ -390,11 +390,8 @@ inline void StackNode
   determinDepth = leftSib->determinDepth + 1;
 
   // we don't have any siblings yet; use embedded
-  // don't update reference count of 'leftSib', instead caller must do so
-  //firstSib.sib = leftSib;
   xassertdb(firstSib.sib == NULL);      // otherwise we'd miss a decRefCt
-  firstSib.sib.setWithoutUpdateRefct(leftSib);
-
+  firstSib.sib = leftSib;
   firstSib.sval = sval;
 
   // initialize some other fields
@@ -409,10 +406,7 @@ inline SiblingLink *StackNode::
                  SOURCELOCARG( SourceLoc loc ) )
 {
   if (hasZeroSiblings()) {
-    addFirstSiblingLink_noRefCt(leftSib, sval  SOURCELOCARG( loc ) );
-
-    // manually increment leftSib's refct
-    leftSib->incRefCt();
+    addFirstSiblingLink(leftSib, sval  SOURCELOCARG( loc ) );
 
     // sibling link pointers are used to control the reduction
     // process in certain corner cases; an interior pointer
@@ -831,13 +825,6 @@ bool GLR::glrParse(LexerInterface &lexer, SemanticValue &treeTop)
 }
 
 
-// old note: this function's complexity and/or size is *right* at the
-// limit of what gcc-2.95.3 is capable of optimizing well; I've already
-// pulled quite a bit of functionality into separate functions to try
-// to reduce the register pressure, but it's still near the limit;
-// if you do something to cross a pressure threshold, performance drops
-// 25% so watch out!
-//
 // This function is the core of the parser, and its performance is
 // critical to the end-to-end performance of the whole system.  It is
 // a static member so the accesses to 'glr' (aka 'this') will be
@@ -1135,8 +1122,8 @@ STATICDEF bool GLR
           StackNode *newNode;
           MAKE_STACK_NODE(newNode, newState, &glr, stackNodePool)
 
-          newNode->addFirstSiblingLink_noRefCt(
-            parser, sval  SOURCELOCARG( leftEdge ) );
+          newNode->addFirstSiblingLink(parser, sval  SOURCELOCARG( leftEdge ) );
+          parser->decRefCt();
           // cancelled(3) effect: parser->incRefCt();
 
           // cancelled(3) effect: xassertdb(parser->referenceCount==2);
@@ -1198,8 +1185,8 @@ STATICDEF bool GLR
         StackNode *rightSibling;
         MAKE_STACK_NODE(rightSibling, newState, &glr, stackNodePool);
 
-        rightSibling->addFirstSiblingLink_noRefCt(
-          parser, lexer.sval  SOURCELOCARG( lexer.loc ) );
+        rightSibling->addFirstSiblingLink(parser, lexer.sval  SOURCELOCARG( lexer.loc ) );
+        parser->decRefCt();
         // cancelled(2) effect: parser->incRefCt();
 
         // replace 'parser' with 'rightSibling' in the topmostParsers list

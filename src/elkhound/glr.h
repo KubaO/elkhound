@@ -186,10 +186,8 @@ public:     // funcs
   SiblingLink *addSiblingLink(StackNode *leftSib, SemanticValue sval
                               SOURCELOCARG( SourceLoc loc ) );
 
-  // specialized version for performance-critical sections
-  inline void
-    addFirstSiblingLink_noRefCt(StackNode *leftSib, SemanticValue sval
-                                SOURCELOCARG( SourceLoc loc ) );
+  void addFirstSiblingLink(StackNode* leftSib, SemanticValue sval
+                           SOURCELOCARG( SourceLoc loc ) );
 
   // return the symbol represented by this stack node;  it's
   // the symbol shifted or reduced-to to get to this state
