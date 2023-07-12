@@ -168,12 +168,6 @@
   #define ACCOUNTING(stuff)
 #endif
 
-// unroll the inner loop; approx. 3% performance improvement
-// update: right now, it actually *costs* about 8%..
-#ifndef USE_UNROLLED_REDUCE
-  #define USE_UNROLLED_REDUCE 0
-#endif
-
 // some things we track..
 int parserMerges = 0;
 int computeDepthIters = 0;
@@ -527,24 +521,6 @@ void decParserList(ArrayStack<StackNode*> &list)
   }
 }
 
-void incParserList(ArrayStack<StackNode*> &list)
-{
-  for (int i=0; i < list.length(); i++) {
-    list[i]->incRefCt();
-  }
-}
-
-// candidate for adding to ArrayStack.. but I'm hesitant for some reason
-bool parserListContains(ArrayStack<StackNode*> &list, StackNode *node)
-{
-  for (int i=0; i < list.length(); i++) {
-    if (list[i] == node) {
-      return true;
-    }
-  }
-  return false;
-}
-
 
 // ------------------------- GLR ---------------------------
 GLR::GLR(UserActions *user, ParseTables *t)
@@ -675,9 +651,6 @@ void GLR::printConfig() const
 
   printf("  allocated-node and parse action accounting: \t%s\n",
          ACCOUNTING(1+)0? "enabled" : "disabled *");
-
-  printf("  unrolled reduce loop: \t\t\t%s\n",
-         USE_UNROLLED_REDUCE? "enabled  *" : "disabled");
 
   printf("  parser index: \t\t\t\t%s\n",
          #ifdef USE_PARSER_INDEX
@@ -1032,47 +1005,6 @@ STATICDEF bool GLR
           // 'stackNodePool' as the new head of the list
           StackNode *prev = stackNodePool.private_getHead();
 
-          #if USE_UNROLLED_REDUCE
-            // What follows is unrollings of the loop below,
-            // labeled "loop for arbitrary rhsLen".  Read that loop
-            // before the unrollings here, since I omit the comments
-            // here.  In general, this program should be correct
-            // whether USE_UNROLLED_REDUCE is set or not.
-            //
-            // To produce the unrolled versions, simply copy all of the
-            // noncomment lines from the general loop, and replace the
-            // occurrence of 'i' with the value of one less than the 'case'
-            // label number.
-            switch ((unsigned)rhsLen) {    // gcc produces slightly better code if I cast to unsigned first
-              case 1: {
-                SiblingLink &sib = parser->firstSib;
-                toPass[0] = sib.sval;
-                ACTION( rhsDescription =
-                  stringc << " "
-                          << symbolDescription(parser->getSymbolC(), userAct, sib.sval)
-                          << rhsDescription; )
-                SOURCELOC(
-                  if (sib.validLoc()) {
-                    leftEdge = sib.loc;
-                  }
-                )
-                parser->nextInFreeList = prev;
-                prev = parser;
-                parser = sib.sib;
-                xassertdb(parser->referenceCount==1);
-                xassertdb(prev->referenceCount==1);
-                prev->decrementAllocCounter();
-                prev->firstSib.sib.setWithoutUpdateRefct(NULL);
-                xassertdb(parser->referenceCount==1);
-                // drop through into next case
-              }
-
-              case 0:
-                // nothing to do
-                goto afterGeneralLoop;
-            }
-          #endif // USE_UNROLLED_REDUCE
-
           // ------ loop for arbitrary rhsLen ------
           // pop off 'rhsLen' stack nodes, collecting as many semantic
           // values into 'toPass'
@@ -1160,9 +1092,7 @@ STATICDEF bool GLR
             xassertdb(parser->referenceCount==1);     // fake refct only
           } // end of general rhsLen loop
 
-        #if USE_UNROLLED_REDUCE    // suppress the warning when not using it..
-        afterGeneralLoop:
-        #endif
+
           // having now manually strung the deallocated stack nodes together
           // on the free list, I need to make the node pool's head point at them
           stackNodePool.private_setHead(prev);
