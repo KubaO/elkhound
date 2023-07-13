@@ -281,7 +281,7 @@ void GLR::deallocateSemanticValue(SymbolId sym, SemanticValue sval)
 // ------------------ SiblingLink ------------------
 inline SiblingLink::SiblingLink(StackNode *s, SemanticValue sv
                                 SOURCELOCARG( SourceLoc L ) )
-  : sib(s), sval(sv)
+  : sib(s, RCPTR_ACQUIRE), sval(sv)
     SOURCELOCARG( loc(L) )
 {
   YIELD_COUNT( yieldCount = 0; )
@@ -391,7 +391,7 @@ inline void StackNode
 
   // we don't have any siblings yet; use embedded
   xassertdb(firstSib.sib == NULL);      // otherwise we'd miss a decRefCt
-  firstSib.sib = leftSib;
+  firstSib.sib.reset(leftSib);
   firstSib.sval = sval;
 
   // initialize some other fields
@@ -1016,7 +1016,7 @@ STATICDEF bool GLR
 
             // pop 'parser' and move to the next one
             StackNode *prev = parser;
-            parser = sib.sib;
+            parser = sib.sib.get();
 
             // don't actually increment, since I now no longer actually decrement
             // cancelled(1) effect: parser->incRefCt();    // so 'parser' survives deallocation of 'sib'
@@ -1327,7 +1327,7 @@ bool GLR::cleanupAfterParse(SemanticValue &treeTop)
   // always looks like "Start -> Something EOF"; it also assumes
   // the top of the tree is unambiguous
   SemanticValue arr[2];
-  StackNode *nextToLast = last->getUniqueLink()->sib;
+  StackNode *nextToLast = last->getUniqueLink()->sib.get();
   arr[0] = grabTopSval(nextToLast);   // Something's sval
   arr[1] = grabTopSval(last);         // eof's sval
 
@@ -1450,11 +1450,11 @@ void GLR::dumpGSS(int tokenNumber) const
     // the sibling links now; while iterating, add the discovered
     // nodes to the queue so we'll print them too
     if (node->firstSib.sib != NULL) {
-      dumpGSSEdge(dest, node, node->firstSib.sib);
-      queue.push_back(node->firstSib.sib);
+      dumpGSSEdge(dest, node, node->firstSib.sib.getC());
+      queue.push_back(node->firstSib.sib.get());
 
       FOREACH_OBJLIST(SiblingLink, node->leftSiblings, iter) {
-        dumpGSSEdge(dest, node, iter.data()->sib);
+        dumpGSSEdge(dest, node, iter.data()->sib.getC());
         queue.push_back(const_cast<StackNode*>( iter.data()->sib.getC() ));
       }
     }
@@ -1517,16 +1517,16 @@ static void innerStackSummary(string &sb, std::unordered_set<StackNode const*> &
 
   if (node->leftSiblings.isEmpty()) {
     // one sibling
-    innerStackSummary(sb, printed, node->firstSib.sib);
+    innerStackSummary(sb, printed, node->firstSib.sib.getC());
   }
   else {
     // multiple siblings
     sb << "(";
-    innerStackSummary(sb, printed, node->firstSib.sib);
+    innerStackSummary(sb, printed, node->firstSib.sib.getC());
 
     FOREACH_OBJLIST(SiblingLink, node->leftSiblings, iter) {
       sb << "|";
-      innerStackSummary(sb, printed, iter.data()->sib);
+      innerStackSummary(sb, printed, iter.data()->sib.getC());
     }
     sb << ")";
   }
@@ -2033,11 +2033,11 @@ inline void GLR::rwlCollectPathLink(
   proto->symbols[popsRemaining] = currentNode->getSymbolC();
 
   if (linkToAdd == mustUseLink) {
-    rwlRecursiveEnqueue(proto, popsRemaining, linkToAdd->sib,
+    rwlRecursiveEnqueue(proto, popsRemaining, linkToAdd->sib.get(),
                         NULL /*mustUseLink*/);
   }
   else {
-    rwlRecursiveEnqueue(proto, popsRemaining, linkToAdd->sib,
+    rwlRecursiveEnqueue(proto, popsRemaining, linkToAdd->sib.get(),
                         mustUseLink);
   }
 }
@@ -2100,7 +2100,7 @@ void GLR::rwlShiftTerminals()
     // take the node from 'prevTopmost'; the refcount includes both
     // 'leftSibling' and 'prevTopmost', and then we decrement the
     // count to reflect that only 'leftSibling' has it
-    RCPtr<StackNode> leftSibling(prevTopmost.back());
+    RCPtr<StackNode> leftSibling(prevTopmost.back(), RCPTR_ACQUIRE);
     prevTopmost.pop_back();
     xassertdb(leftSibling->referenceCount >= 2);
     leftSibling->decRefCt();
@@ -2177,7 +2177,7 @@ void GLR::rwlShiftTerminals()
 
     // either way, add the sibling link now
     //TRSACTION("grabbed token sval " << lexerPtr->sval);
-    prev = rightSibling->addSiblingLink(leftSibling, sval
+    prev = rightSibling->addSiblingLink(leftSibling.get(), sval
                                         SOURCELOCARG( lexerPtr->loc ) );
 
     // adding this sibling link cannot violate the determinDepth

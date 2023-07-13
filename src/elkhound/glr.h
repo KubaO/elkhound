@@ -196,8 +196,9 @@ public:     // funcs
   SymbolId getSymbolC() const;
 
   // reference count stuff
-  void incRefCt() { referenceCount++; }
+  void incRefCt() noexcept { referenceCount++; }
   void decRefCt();
+  inline int getRefCt() const noexcept { return referenceCount; }
 
   // sibling count queries (each one answerable in constant time)
   bool hasZeroSiblings() const { return firstSib.sib==NULL; }

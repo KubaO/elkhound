@@ -3,65 +3,107 @@
 
 // the object pointed-at must support this interface:
 //   // increment reference count
-//   void incRefCt();
+//   void incRefCt() noexcept;
 //
 //   // decrement refcount, and if it becomes 0, delete yourself
 //   void decRefCt();
+//
+//   // return the reference count
+//   int getRefCt() const noexcept;
 
 #ifndef __RCPTR_H
 #define __RCPTR_H
 
-#include "typ.h"      // NULL
+#include <utility>    // std::swap
 #include "xassert.h"
 
 #if 0
-  #include <stdio.h>    // printf, temporary
-  #define DBG(fn) printf("%s(%p)\n", fn, ptr)
+#include <stdio.h>    // printf
+#define RCPTR_DBG(msg)        do { if (ptr) printf("%6s (%p)\n", msg, ptr); else printf("%6s ()\n", msg); } while(false)
+#define RCPTR_DBG2(msg, ptr2) printf("%6s (%p,%p)\n", msg, ptr, ptr2)
 #else
-  #define DBG(fn)
+#define RCPTR_DBG(msg)
+#define RCPTR_DBG2(msg, ptr2)
 #endif
 
+struct RCPtrAcquire {};
+static constexpr RCPtrAcquire RCPTR_ACQUIRE = {};
+
+// The semantics are similar to those of std::shared_ptr.
 template <class T>
 class RCPtr {
-private:    // data
-  T *ptr;                // the real pointer
+private:
+  T* ptr = nullptr;
 
-private:    // funcs
-  void inc() { DBG("inc"); if (ptr) { ptr->incRefCt(); } }
-  void dec() { DBG("dec"); if (ptr) { ptr->decRefCt(); ptr=NULL; }
-    xassert(ptr == NULL); }
+private:
+  void inc() noexcept { RCPTR_DBG("inc"); if (ptr) { ptr->incRefCt(); } }
+  void dec()
+  {
+    RCPTR_DBG("dec");
+    if (ptr) { ptr->decRefCt(); ptr = nullptr; }
+    xassert(!ptr);
+  }
 
-public:     // funcs
-  explicit RCPtr(T *p = NULL) : ptr(p) { DBG("ctor"); inc(); }
-  explicit RCPtr(RCPtr const &obj) : ptr(obj.ptr) { DBG("cctor"); inc(); }
-  ~RCPtr() { DBG("dtor"); dec(); }
+public:
+  RCPtr(std::nullptr_t p = nullptr) noexcept { RCPTR_DBG("cnull"); }
 
-  // point at something new (setting to NULL is an option)
-  void operator= (T *p) { DBG("op=ptr"); dec(); ptr=p; inc(); }
-  void operator= (RCPtr<T> const &obj)
-    { DBG("op=obj"); dec(); ptr=obj.ptr; inc(); }
+  explicit RCPtr(T* p, RCPtrAcquire) noexcept : ptr(p) { RCPTR_DBG("acq"); inc(); }
 
-  // some operators that make Owner behave more or less like
-  // a native C++ pointer
-  operator T const * () const { DBG("opcT*"); return ptr; }
-  T const & operator* () const { DBG("opc*"); return *ptr; }
-  T const * operator-> () const { DBG("opc->"); return ptr; }
+  // The only valid use is with a fresh object that must have ref counter == 1, or a null.
+  explicit RCPtr(T* p) noexcept : ptr(p) { RCPTR_DBG("ctor"); xassert(!p || p->getRefCt() == 1); }
 
-  bool operator==(T *p) const { return ptr == p; }
-  bool operator!=(T *p) const { return !this->operator==(p); }
+  RCPtr(RCPtr const& other) noexcept : ptr(other.ptr) { RCPTR_DBG("cctor"); inc(); }
 
-  bool operator==(RCPtr<T> const &obj) const { return ptr == obj.ptr; }
-  bool operator!=(RCPtr<T> const &obj) const { return !this->operator==(obj); }
+  RCPtr(RCPtr&& other) noexcept
+  {
+    using std::swap;
+    swap(ptr, other.ptr);
+    RCPTR_DBG("&&ctor");
+  }
+  ~RCPtr() { RCPTR_DBG("dtor"); dec(); }
 
-  operator T* () { DBG("opT*"); return ptr; }
-  operator T const * () { DBG("opcT*"); return ptr; }
-  T& operator* () { DBG("op*"); return *ptr; }
-  T* operator-> () { DBG("op->"); return ptr; }
+  void reset(T* other)
+  {
+    RCPTR_DBG2("reset", other);
+    if (ptr != other) { // otherwise, we'd potentially release the object
+      dec(); ptr = other; inc();
+    }
+  }
 
-  // escape hatch for when operators flake out on us
-  T *get() { DBG("get"); return ptr; }
-  T const *getC() const { DBG("getC"); return ptr; }
+  void operator= (RCPtr<T> const& other)
+  {
+    RCPTR_DBG2("=obj", other.ptr);
+    if (ptr != other.ptr) { // otherwise, we'd potentially release the object
+      dec(); ptr = other.ptr; inc();
+    }
+  }
+
+  void operator= (RCPtr<T>&& other)
+  {
+    RCPTR_DBG2("=&&obj", other.ptr);
+    if (ptr != other.ptr) { // otherwise, we'd potentially release the object
+      using std::swap;
+      dec(); swap(ptr, other.ptr);
+    }
+  }
+
+  explicit operator bool() const noexcept { return ptr != nullptr; }
+
+  bool operator==(const T* p) const noexcept { return ptr == p; }
+  bool operator!=(const T* p) const noexcept { return ptr != p; }
+
+  bool operator==(RCPtr<T> const& obj) const noexcept { return ptr == obj.ptr; }
+  bool operator!=(RCPtr<T> const& obj) const noexcept { return ptr != obj.ptr; }
+
+  T& operator* () const noexcept { RCPTR_DBG("op*"); return *ptr; }
+  T* operator-> () const noexcept { RCPTR_DBG("op->"); return ptr; }
+
+  T* get() const noexcept { RCPTR_DBG("get"); return ptr; }
+  T const* getC() const noexcept { RCPTR_DBG("getC"); return ptr; }
 };
+
+#undef RCPTR_DBG
+#undef RCPTR_DBG2
 
 
 #endif // __RCPTR_H

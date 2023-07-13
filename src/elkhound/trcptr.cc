@@ -65,16 +65,16 @@ void test1()
 {
   printf("----------- test1 -----------\n");
   RCPtr<Foo> f;
-  f = new Foo(4);
+  f.reset(new Foo(4));
 }
 
 // access all of the operators as non-const
 void test2()
 {
   printf("----------- test2 -----------\n");
-  RCPtr<Foo> f(new Foo(6));
+  RCPtr<Foo> f(new Foo(6), RCPTR_ACQUIRE);
 
-  printFoo(f);
+  printFoo(f.get());
   (*f).x = 9;
   f->x = 12;
 }
@@ -83,10 +83,10 @@ void test2()
 void test3()
 {
   printf("----------- test3 -----------\n");
-  RCPtr<Foo> f(new Foo(8));
+  RCPtr<Foo> f(new Foo(8), RCPTR_ACQUIRE);
   RCPtr<Foo> const &g = f;
 
-  printFooC(g);
+  printFooC(g.getC());
   printInt((*g).x);      // egcs-1.1.2 allows this for non-const operator fn!!!
   printInt(g->x);
 }
@@ -96,26 +96,26 @@ void test4()
 {
   printf("----------- test4 -----------\n");
   //RCPtr<Foo> f = new Foo(3);     // egcs-1.1.2 does the wrong thing here
-  RCPtr<Foo> f(new Foo(3));
+  RCPtr<Foo> f(new Foo(3), RCPTR_ACQUIRE);
   RCPtr<Foo> g;
   g = f;
   f = NULL;
-  printFoo(f);    // should be null
+  printFoo(f.get());    // should be null
   f = g;
   g = NULL;
-  printFoo(g);    // should be null
+  printFoo(g.get());    // should be null
 }
 
 // test several things pointing at same obj
 void test5()
 {
   printf("----------- test5 -----------\n");
-  RCPtr<Foo> f(new Foo(3));
+  RCPtr<Foo> f(new Foo(3), RCPTR_ACQUIRE);
   RCPtr<Foo> g;
   g = f;
-  printFoo(f);
+  printFoo(f.get());
   g = NULL;
-  printFoo(f);
+  printFoo(f.get());
 }
 
 
