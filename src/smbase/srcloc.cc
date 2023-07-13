@@ -416,9 +416,9 @@ SourceLocManager::File *SourceLocManager::findFile(char const *name)
     return recent;
   }
 
-  FOREACH_OBJLIST_NC(File, files, iter) {
-    if (iter.data()->name == name) {
-      return recent = iter.data();
+  for (auto& file : files) {
+    if (file.name == name) {
+      return (recent = &file);
     }
   }
 
@@ -431,8 +431,8 @@ SourceLocManager::File *SourceLocManager::getFile(char const *name)
   File *f = findFile(name);
   if (!f) {
     // read the file
-    f = new File(name, nextLoc);
-    files.append(f);
+    files.emplace_back(name, nextLoc);
+    f = &files.back();
 
     // bump 'nextLoc' according to how long that file was,
     // plus 1 so it can own the position equal to its length
@@ -492,7 +492,7 @@ SourceLoc SourceLocManager::encodeStatic(StaticLoc const &obj)
   }
 
   // save this location
-  statics.append(new StaticLoc(obj));
+  statics.emplace_back(obj);
 
   // return current index, yield next
   SourceLoc ret = nextStaticLoc;
@@ -509,9 +509,9 @@ SourceLocManager::File *SourceLocManager::findFileWithLoc(SourceLoc loc)
   }
 
   // iterative walk
-  FOREACH_OBJLIST_NC(File, files, iter) {
-    if (iter.data()->hasLoc(loc)) {
-      return recent = iter.data();
+  for (auto& file : files) {
+    if (file.hasLoc(loc)) {
+      return (recent = &file);
     }
   }
 
@@ -524,7 +524,7 @@ SourceLocManager::File *SourceLocManager::findFileWithLoc(SourceLoc loc)
 SourceLocManager::StaticLoc const *SourceLocManager::getStatic(SourceLoc loc)
 {
   int index = -toInt(loc);
-  return statics.nthC(index);
+  return &statics[index];
 }
 
 

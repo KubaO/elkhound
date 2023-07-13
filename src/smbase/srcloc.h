@@ -28,7 +28,9 @@
 #define SRCLOC_H
 
 #include "str.h"      // string
-#include "objlist.h"  // ObjList
+#include "xassert.h"  // xassert
+
+#include <deque>      // std::deque
 
 class HashLineMap;    // hashline.h
 
@@ -184,14 +186,14 @@ private:     // data
   // list of files; it would be possible to use a data structure
   // that is faster to search, but the cache ought to exploit
   // query locality to the extent that it doesn't matter
-  ObjList<File> files;
+  std::deque<File> files;
 
   // most-recently accessed File; this is a cache
   File *recent;                      // (serf)
 
   // list of StaticLocs; any SourceLoc less than 0 is interpreted
   // as an index into this list
-  ObjList<StaticLoc> statics;
+  std::deque<StaticLoc> statics;
 
   // next source location to assign
   SourceLoc nextLoc;
