@@ -11,6 +11,10 @@
 
 #include <fstream.h>     // ofstream
 
+#define FOREACH_TERMINAL(list, iter) FOREACH_OBJLIST(Terminal, list, iter)
+#define MUTATE_EACH_TERMINAL(list, iter) MUTATE_EACH_OBJLIST(Terminal, list, iter)
+#define SFOREACH_TERMINAL(list, iter) SFOREACH_OBJLIST(Terminal, list, iter)
+#define SMUTATE_EACH_TERMINAL(list, iter) SMUTATE_EACH_OBJLIST(Terminal, list, iter)
 
 #if 0    // not used anymore; gprof is much better
 // should make a new module for this

@@ -22,12 +22,11 @@
 #define __GRAMMAR_H
 
 #include <deque>         // std::deque
-#include <vector>        // std::vector
 #include <iostream>      // std::ostream
+#include <list>          // std::list
 #include <vector>        // std::vector
 
 #include "str.h"         // string
-#include "objlist.h"     // ObjList
 #include "util.h"        // OSTREAM_OPERATOR, INTLOOP
 #include "locstr.h"      // LocString, StringRef
 #include "owner.h"       // Owner
@@ -197,14 +196,6 @@ public:     // funcs
 };
 
 
-#define FOREACH_TERMINAL(list, iter) FOREACH_OBJLIST(Terminal, list, iter)
-#define MUTATE_EACH_TERMINAL(list, iter) MUTATE_EACH_OBJLIST(Terminal, list, iter)
-#define SFOREACH_TERMINAL(list, iter) SFOREACH_OBJLIST(Terminal, list, iter)
-#define SMUTATE_EACH_TERMINAL(list, iter) SMUTATE_EACH_OBJLIST(Terminal, list, iter)
-
-// casting aggregates
-inline ObjList<Symbol> const &toObjList(ObjList<Terminal> const &list)
-  { return reinterpret_cast< ObjList<Symbol>const& >(list); }
 
 // format: "t1 t2 t3"
 string terminalSequenceToString(TerminalList const &list);
@@ -301,15 +292,6 @@ public:     // data
   Nonterminal *superset; // inverse of 'subsets'
 };
 
-
-#define FOREACH_NONTERMINAL(list, iter) FOREACH_OBJLIST(Nonterminal, list, iter)
-#define MUTATE_EACH_NONTERMINAL(list, iter) MUTATE_EACH_OBJLIST(Nonterminal, list, iter)
-#define SFOREACH_NONTERMINAL(list, iter) SFOREACH_OBJLIST(Nonterminal, list, iter)
-#define SMUTATE_EACH_NONTERMINAL(list, iter) SMUTATE_EACH_OBJLIST(Nonterminal, list, iter)
-
-// casting aggregates
-inline ObjList<Symbol> const &toObjList(ObjList<Nonterminal> const &list)
-  { return reinterpret_cast< ObjList<Symbol>const& >(list); }
 
 
 // ---------------- Production --------------------
@@ -438,8 +420,8 @@ using RHSEltListIter = std::vector<Production::RHSElt>::const_iterator;
 class Grammar {
 // ------ representation ------
 public:	    // data
-  ObjList<Nonterminal> nonterminals;    // (owner list)
-  ObjList<Terminal> terminals;          // (owner list)
+  std::list<Nonterminal> nonterminals;  // (owner list)
+  std::list<Terminal> terminals;        // (owner list)
   ObjList<Production> productions;      // (owner list)
   Nonterminal *startSymbol;             // (serf) a particular nonterminal
 

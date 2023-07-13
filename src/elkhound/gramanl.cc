@@ -1057,12 +1057,9 @@ void GrammarAnalysis::
 }
 
 
-void printSymbols(std::ostream &os, ObjList<Symbol> const &list)
+void printSymbol(std::ostream &os, Symbol const &sym)
 {
-  for (ObjListIter<Symbol> iter(list);
-       !iter.isDone(); iter.adv()) {
-    os << "  " << *(iter.data()) << std::endl;
-  }
+  os << "  " << sym << std::endl;
 }
 
 
@@ -1213,10 +1210,10 @@ void GrammarAnalysis::computeIndexedNonterms()
   int index = emptyStringIndex;
   emptyString.ntIndex = index++;
 
-  for (ObjListMutator<Nonterminal> sym(nonterminals);
-       !sym.isDone(); index++, sym.adv()) {
-    indexedNonterms[index] = sym.data();    // map: index to symbol
-    sym.data()->ntIndex = index;            // map: symbol to index
+  for (auto& sym : nonterminals) {
+    indexedNonterms[index] = &sym;    // map: index to symbol
+    sym.ntIndex = index;              // map: symbol to index
+    index++;
   }
 }
 
@@ -1232,13 +1229,12 @@ void GrammarAnalysis::computeIndexedTerms()
   loopi(numTerminals()) {
     indexedTerms[i] = NULL;      // used to track id duplication
   }
-  for (ObjListMutator<Terminal> sym(terminals);
-       !sym.isDone(); sym.adv()) {
-    int index = sym.data()->termIndex;   // map: symbol to index
+  for (auto& sym : terminals) {
+    int index = sym.termIndex;   // map: symbol to index
     if (indexedTerms[index] != NULL) {
       xfailure(stringc << "terminal index collision at index " << index << c_str);
     }
-    indexedTerms[index] = sym.data();    // map: index to symbol
+    indexedTerms[index] = &sym;    // map: index to symbol
   }
 }
 
@@ -1246,9 +1242,9 @@ void GrammarAnalysis::computeIndexedTerms()
 // set the first/follow of all nonterminals to the correct size
 void GrammarAnalysis::resetFirstFollow()
 {
-  MUTATE_EACH_NONTERMINAL(nonterminals, sym) {
-    sym.data()->first.reset(numTerminals());
-    sym.data()->follow.reset(numTerminals());
+  for (auto& sym : nonterminals) {
+    sym.first.reset(numTerminals());
+    sym.follow.reset(numTerminals());
   }
 }
 
@@ -1529,16 +1525,15 @@ void GrammarAnalysis::computeWhatCanDeriveWhat()
 // set Nonterminal::superset to correspond to Nonterminal::subsets
 void GrammarAnalysis::computeSupersets()
 {
-  FOREACH_OBJLIST_NC(Nonterminal, nonterminals, iter1) {
-    Nonterminal *super = iter1.data();
+  for (auto &super : nonterminals) {
 
-    for (Nonterminal *sub : super->subsets) {
+    for (Nonterminal *sub : super.subsets) {
 
       // for now, only handle 'super' as a partial function
       if (sub->superset != NULL) {
         xfailure(stringc << sub->name << " has more than one superset" << c_str);
       }
-      sub->superset = super;
+      sub->superset = &super;
     }
   }
 }
@@ -1596,9 +1591,7 @@ void GrammarAnalysis::computeFirst()
   } // while (changes)
 
   if (tr) {
-    FOREACH_NONTERMINAL(nonterminals, iter) {
-      Nonterminal const &nt = *(iter.data());
-
+    for (auto const& nt : nonterminals) {
       std::ostream &trs = trace("first") << " " << nt.name << ": ";
       nt.first.print(trs, *this);
       trs << std::endl;
@@ -2564,16 +2557,16 @@ Symbol const *GrammarAnalysis::
   inverseTransitionC(ItemSet const *source, ItemSet const *target) const
 {
   // for each symbol..
-  FOREACH_TERMINAL(terminals, t) {
+  for (auto const& t : terminals) {
     // see if it is the one
-    if (source->transitionC(t.data()) == target) {
-      return t.data();
+    if (source->transitionC(&t) == target) {
+      return &t;
     }
   }
 
-  FOREACH_NONTERMINAL(nonterminals, nt) {
-    if (source->transitionC(nt.data()) == target) {
-      return nt.data();
+  for (auto const& nt : nonterminals) {
+    if (source->transitionC(&nt) == target) {
+      return &nt;
     }
   }
 
@@ -2585,8 +2578,8 @@ Symbol const *GrammarAnalysis::
 void GrammarAnalysis::computeReachable()
 {
   // start by clearing the reachability flags
-  MUTATE_EACH_NONTERMINAL(nonterminals, iter) {
-    iter.data()->reachable = false;
+  for (auto& nt : nonterminals) {
+    nt.reachable = false;
   }
 
   // do a DFS on the grammar, marking things reachable as
@@ -2732,13 +2725,13 @@ void GrammarAnalysis::computeBFSTree()
   // it will be convenient to have all the symbols in a single list
   // for iteration purposes
   std::vector <Symbol const *> allSymbols;
-  allSymbols.reserve(terminals.count() + nonterminals.count());
+  allSymbols.reserve(terminals.size() + nonterminals.size());
   {
-    FOREACH_TERMINAL(terminals, t) {
-      allSymbols.push_back(t.data());
+    for (auto &t : terminals) {
+      allSymbols.push_back(&t);
     }
-    FOREACH_NONTERMINAL(nonterminals, nt) {
-      allSymbols.push_back(nt.data());
+    for (auto &nt : nonterminals) {
+      allSymbols.push_back(&nt);
     }
   }
 
@@ -3134,10 +3127,10 @@ STATICDEF int GrammarAnalysis::renumberStatesDiff
   //std::cout << "using reductions to distinguish states\n";
 
   // finally, order by possible reductions
-  FOREACH_OBJLIST(Terminal, gramanl->terminals, termIter) {
+  for (const auto &term : gramanl->terminals) {
     ProductionList
-      lpl = left->getPossibleReductions(termIter.data(), false /*parsing*/),
-      rpl = right->getPossibleReductions(termIter.data(), false /*parsing*/);
+      lpl = left->getPossibleReductions(&term, false /*parsing*/),
+      rpl = right->getPossibleReductions(&term, false /*parsing*/);
 
     // sort the productions before we can compare them...
     sm::sortSList(lpl, &GrammarAnalysis::arbitraryProductionOrder);
@@ -3848,20 +3841,19 @@ void GrammarAnalysis::addTreebuildingActions()
   LocString mergeCode = STR("L->addAlternative(R); return L;");
 
   // write dup/del/merge for nonterminals
-  MUTATE_EACH_OBJLIST(Nonterminal, nonterminals, ntIter) {
-    Nonterminal *nt = ntIter.data();
+  for (auto& nt : nonterminals) {
 
-    nt->dupParam = param;
-    nt->dupCode = dupCode;
+    nt.dupParam = param;
+    nt.dupCode = dupCode;
 
-    nt->delParam = param;
-    nt->delCode = delCode;
+    nt.delParam = param;
+    nt.delCode = delCode;
 
-    nt->type = svalType;
+    nt.type = svalType;
 
-    nt->mergeParam1 = mergeParam1;
-    nt->mergeParam2 = mergeParam2;
-    nt->mergeCode = mergeCode;
+    nt.mergeParam1 = mergeParam1;
+    nt.mergeParam2 = mergeParam2;
+    nt.mergeCode = mergeCode;
   }
 
   // write treebuilding actions for productions
@@ -3975,12 +3967,16 @@ void GrammarAnalysis::runAnalyses(char const *setsFname)
   // print results
   {
     std::ostream &tracer = trace("terminals") << "Terminals:\n";
-    printSymbols(tracer, toObjList(terminals));
+    for (auto const& t : terminals) {
+      printSymbol(tracer, t);
+    }
   }
   {
     std::ostream &tracer = trace("nonterminals") << "Nonterminals:\n";
     tracer << "  " << emptyString << std::endl;
-    printSymbols(tracer, toObjList(nonterminals));
+    for (auto const& nt : nonterminals) {
+      printSymbol(tracer, nt);
+    }
   }
 
   if (tracingSys("derivable")) {
@@ -4056,12 +4052,12 @@ void GrammarAnalysis::runAnalyses(char const *setsFname)
       *setsOutput << "unreachable nonterminals:\n";
     }
     int ct=0;
-    FOREACH_NONTERMINAL(nonterminals, iter) {
-      if (!iter.data()->reachable) {
+    for (const auto& nt : nonterminals) {
+      if (!nt.reachable) {
         ct++;
 
         if (setsOutput) {
-          *setsOutput << "  " << iter.data()->name << "\n";
+          *setsOutput << "  " << nt.name << "\n";
         }
       }
     }
@@ -4076,12 +4072,12 @@ void GrammarAnalysis::runAnalyses(char const *setsFname)
       *setsOutput << "unreachable terminals:\n";
     }
     ct=0;
-    FOREACH_TERMINAL(terminals, jter) {
-      if (!jter.data()->reachable) {
+    for (auto const& jt : terminals) {
+      if (!jt.reachable) {
         ct++;
 
         if (setsOutput) {
-          *setsOutput << "  " << jter.data()->name << "\n";
+          *setsOutput << "  " << jt.name << "\n";
         }
       }
     }
@@ -4102,19 +4098,17 @@ void GrammarAnalysis::runAnalyses(char const *setsFname)
   // print information about all tokens
   if (setsOutput) {
     *setsOutput << "terminals:\n";
-    FOREACH_TERMINAL(terminals, iter) {
-      Terminal const *t = iter.data();
+    for (auto const& t : terminals) {
       *setsOutput << "  ";
-      t->print(*setsOutput);
+      t.print(*setsOutput);
       *setsOutput << "\n";
     }
 
     // and nonterminals
     *setsOutput << "nonterminals:\n";
-    FOREACH_NONTERMINAL(nonterminals, ntIter) {
-      Nonterminal const *nt = ntIter.data();
+    for (auto const& nt : nonterminals) {
       *setsOutput << "  ";
-      nt->print(*setsOutput);
+      nt.print(*setsOutput);
       *setsOutput << "\n";
     }
 
@@ -4167,7 +4161,7 @@ void emitDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
                     Symbol const &sym);
 void emitSwitchCode(Grammar const &g, EmitCode &out,
                     char const *signature, char const *switchVar,
-                    ObjList<Symbol> const &syms, int whichFunc,
+                    std::list<Symbol> const &syms, int whichFunc,
                     char const *templateCode, char const *actUpon);
 
 
@@ -4594,15 +4588,15 @@ void emitDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
       << "\n";
 
   // emit inlines for dup/del/merge of nonterminals
-  FOREACH_OBJLIST(Nonterminal, g.nonterminals, ntIter) {
-    emitDDMInlines(g, out, dcl, *(ntIter.data()));
+  for (auto const& nt : g.nonterminals) {
+    emitDDMInlines(g, out, dcl, nt);
   }
 
   // emit dup-nonterm
   emitSwitchCode(g, out,
     "SemanticValue $acn::duplicateNontermValue(int nontermId, SemanticValue sval)",
     "nontermId",
-    (ObjList<Symbol> const&)g.nonterminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.nonterminals), /*FIXME this is a bad hack*/
     0 /*dupCode*/,
     "      return (SemanticValue)dup_$symName(($symType)sval);\n",
     NULL);
@@ -4611,7 +4605,7 @@ void emitDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
   emitSwitchCode(g, out,
     "void $acn::deallocateNontermValue(int nontermId, SemanticValue sval)",
     "nontermId",
-    (ObjList<Symbol> const&)g.nonterminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.nonterminals), /*FIXME this is a bad hack*/
     1 /*delCode*/,
     "      del_$symName(($symType)sval);\n"
     "      return;\n",
@@ -4624,7 +4618,7 @@ void emitDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
     SOURCELOC(",  SourceLoc loc")
     ")",
     "nontermId",
-    (ObjList<Symbol> const&)g.nonterminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.nonterminals), /*FIXME this is a bad hack*/
     2 /*mergeCode*/,
     "      return (SemanticValue)merge_$symName(($symType)left, ($symType)right);\n",
     "merge nonterm");
@@ -4633,7 +4627,7 @@ void emitDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
   emitSwitchCode(g, out,
     "bool $acn::keepNontermValue(int nontermId, SemanticValue sval)",
     "nontermId",
-    (ObjList<Symbol> const&)g.nonterminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.nonterminals), /*FIXME this is a bad hack*/
     3 /*keepCode*/,
     "      return keep_$symName(($symType)sval);\n",
     NULL);
@@ -4642,15 +4636,15 @@ void emitDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
   out << "\n";
   out << "// ---------------- dup/del/classify terminals ---------------\n";
   // emit inlines for dup/del of terminals
-  FOREACH_OBJLIST(Terminal, g.terminals, termIter) {
-    emitDDMInlines(g, out, dcl, *(termIter.data()));
+  for (auto const& t : g.terminals) {
+    emitDDMInlines(g, out, dcl, t);
   }
 
   // emit dup-term
   emitSwitchCode(g, out,
     "SemanticValue $acn::duplicateTerminalValue(int termId, SemanticValue sval)",
     "termId",
-    (ObjList<Symbol> const&)g.terminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.terminals), /*FIXME this is a bad hack*/
     0 /*dupCode*/,
     "      return (SemanticValue)dup_$symName(($symType)sval);\n",
     NULL);
@@ -4659,7 +4653,7 @@ void emitDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
   emitSwitchCode(g, out,
     "void $acn::deallocateTerminalValue(int termId, SemanticValue sval)",
     "termId",
-    (ObjList<Symbol> const&)g.terminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.terminals), /*FIXME this is a bad hack*/
     1 /*delCode*/,
     "      del_$symName(($symType)sval);\n"
     "      return;\n",
@@ -4669,7 +4663,7 @@ void emitDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
   emitSwitchCode(g, out,
     "/*static*/ int $acn::reclassifyToken($acn *ths, int oldTokenType, SemanticValue sval)",
     "oldTokenType",
-    (ObjList<Symbol> const&)g.terminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.terminals), /*FIXME this is a bad hack*/
     4 /*classifyCode*/,
     "      return ths->classify_$symName(($symType)sval);\n",
     NULL);
@@ -4749,15 +4743,14 @@ bool noDeclaredType(char const *type)
 
 void emitSwitchCode(Grammar const &g, EmitCode &out,
                     char const *signature, char const *switchVar,
-                    ObjList<Symbol> const &syms, int whichFunc,
+                    std::list<Symbol> const &syms, int whichFunc,
                     char const *templateCode, char const *actUpon)
 {
   out << replace(signature, "$acn", string(g.actionClassName)) << "\n"
          "{\n"
          "  switch (" << switchVar << ") {\n";
 
-  FOREACH_OBJLIST(Symbol, syms, symIter) {
-    Symbol const &sym = *(symIter.data());
+  for (auto const& sym : syms) {
 
     if ((whichFunc==0 && sym.dupCode) ||
         (whichFunc==1 && sym.delCode) ||
@@ -4800,7 +4793,7 @@ void emitSwitchCode(Grammar const &g, EmitCode &out,
     case 1:    // unspecified del
       if (!g.useGCDefaults) {
         // warn about unspec'd del, since it's probably a memory leak
-        if (syms.firstC()->isNonterminal()) {
+        if (syms.front().isNonterminal()) {
           // use the nonterminal map
           out << "      std::cout << \"WARNING: there is no action to deallocate nonterm \"\n"
                  "           << nontermNames[" << switchVar << "] << std::endl;\n";
@@ -4815,7 +4808,7 @@ void emitSwitchCode(Grammar const &g, EmitCode &out,
           // emitting that instead. /FL
           out <<
             "      int arrayMin = 0;\n"
-            "      int arrayMax = " << syms.count() << ";\n"
+            "      int arrayMax = " << syms.size() << ";\n"
             "      xassert(" << switchVar << " >= arrayMin &&"
             " " << switchVar << " < arrayMax);\n"
             "      std::cout << \"WARNING: there is no action to deallocate terminal \"\n"
@@ -5015,7 +5008,7 @@ int inner_entry(int argc, char **argv)
     string mliFname = stringc << prefix << ".mli";
     string mlFname = stringc << prefix << ".ml";
     traceProgress() << "emitting OCaml code to " << mlFname
-                    << " and " << mliFname << " ...\n";
+                    << " and " << mliFname << " ...\n" << std::flush;
 
     try {
       emitMLActionCode(g, mliFname, mlFname, grammarFname);
