@@ -332,7 +332,7 @@ public:
   // ultimately succeed to parse the input, or might reach a
   // point where it cannot proceed, and therefore dies.  (See
   // comments at top of glr.cc for more details.)
-  std::vector<StackNode*> topmostParsers;     // (refct list)
+  std::vector<RCPtr<StackNode>> topmostParsers;     // (refct list)
 
   // index: StateId -> index in 'topmostParsers' of unique parser
   // with that state, or INDEX_NO_PARSER if none has that state
@@ -361,7 +361,7 @@ public:
   // persistent array that I swap with 'topmostParsers' during
   // 'rwlShiftTerminals' to avoid extra copying or allocation;
   // this should be regarded as variable local to that function
-  std::vector<StackNode*> prevTopmost;        // (refct list)
+  std::vector<RCPtr<StackNode>> prevTopmost;        // (refct list)
 
   // ---- allocation pools ----
   // this is a pointer to the same-named local variable in innerGlrParse
@@ -401,7 +401,7 @@ private:    // funcs
   RCPtr<StackNode> makeStackNode(StateId state);
   void writeParseGraph(char const *input) const;
   void clearAllStackNodes();
-  void addTopmostParser(StackNode *parser);
+  void addTopmostParser(RCPtr<StackNode> parser);
   void pullFromTopmostParsers(StackNode *parser);
   bool canMakeProgress(StackNode *parser);
   void dumpGSS(int tokenNumber) const;
