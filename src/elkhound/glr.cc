@@ -113,7 +113,6 @@
 #include "lexerint.h"    // LexerInterface
 #include "test.h"        // PVAL
 #include "cyctimer.h"    // CycleTimer
-#include "owner.h"       // Owner
 
 #include <deque>         // std::deque
 #include <unordered_set> // std::unordered_set
@@ -298,7 +297,6 @@ int StackNode::maxStackNodesAllocd=0;
 
 StackNode::StackNode()
   : state(STATE_INVALID),
-    leftSiblings(),
     firstSib(NULL, NULL_SVAL  SOURCELOCARG( SL_UNKNOWN ) ),
     referenceCount(0),
     determinDepth(0),
@@ -316,7 +314,7 @@ StackNode::~StackNode()
 inline void StackNode::init(StateId st, GLR *g)
 {
   state = st;
-  xassertdb(leftSiblings.isEmpty());
+  xassertdb(leftSiblings.empty());
   xassertdb(hasZeroSiblings());
   referenceCount = 1;   // the node is going to be used somewhere!
   determinDepth = 1;    // 0 siblings now, so this node is unambiguous
@@ -366,11 +364,25 @@ void StackNode::deallocSemanticValues()
   if (firstSib.sib) {
     deallocateSemanticValue(getSymbolC(), glr->userAct, firstSib.sval);
     firstSib.sib.reset();
-  }
 
-  while (leftSiblings.isNotEmpty()) {
-    Owner<SiblingLink> sib(leftSiblings.removeAt(0));
-    deallocateSemanticValue(getSymbolC(), glr->userAct, sib->sval);
+    if (!leftSiblings.empty()) {
+      // the locally moved list ensures that if we ever recurse,
+      // the leftSiblings list won't be corrupted (this is not
+      // necessary, just a precaution);
+      // this can also be used to splice the entire list back
+      // into a list forming a pool of objects to reuse for
+      // memory locality
+      std::forward_list<SiblingLink> siblings = std::move(leftSiblings);
+      while (!siblings.empty()) {
+        deallocateSemanticValue(getSymbolC(), glr->userAct, siblings.front().sval);
+        siblings.pop_front();
+      }
+    }
+  }
+  else {
+    // firstSib should have held the first value, otherwise we
+    // should have no other left siblings
+    xassertdb(leftSiblings.empty());
   }
 }
 
@@ -430,9 +442,8 @@ SiblingLink *StackNode::
   // most likely will catch that when we use the stale info)
   determinDepth = 0;
 
-  SiblingLink *link = new SiblingLink(std::move(leftSib), sval  SOURCELOCARG(loc));
-  leftSiblings.prepend(link);   // dsw: don't append; it becomes quadratic!
-  return link;
+  leftSiblings.emplace_front(std::move(leftSib), sval  SOURCELOCARG(loc));
+  return &leftSiblings.front();
 }
 
 
@@ -466,10 +477,9 @@ SiblingLink *StackNode::getLinkTo(StackNode *another)
   }
 
   // check rest
-  MUTATE_EACH_OBJLIST(SiblingLink, leftSiblings, sibIter) {
-    SiblingLink *candidate = sibIter.data();
-    if (candidate->sib == another) {
-      return candidate;
+  for (auto& candidate : leftSiblings) {
+    if (candidate.sib == another) {
+      return &candidate;
     }
   }
   return NULL;
@@ -1434,9 +1444,9 @@ void GLR::dumpGSS(int tokenNumber) const
       dumpGSSEdge(dest, node, node->firstSib.sib.getC());
       queue.push_back(node->firstSib.sib.get());
 
-      FOREACH_OBJLIST(SiblingLink, node->leftSiblings, iter) {
-        dumpGSSEdge(dest, node, iter.data()->sib.getC());
-        queue.push_back(const_cast<StackNode*>( iter.data()->sib.getC() ));
+      for (auto const& lsib : node->leftSiblings) {
+        dumpGSSEdge(dest, node, lsib.sib.getC());
+        queue.push_back(const_cast<StackNode*>( lsib.sib.getC() ));
       }
     }
   }
@@ -1496,7 +1506,7 @@ static void innerStackSummary(string &sb, std::unordered_set<StackNode const*> &
 
   sb << "-";
 
-  if (node->leftSiblings.isEmpty()) {
+  if (node->leftSiblings.empty()) {
     // one sibling
     innerStackSummary(sb, printed, node->firstSib.sib.getC());
   }
@@ -1505,9 +1515,9 @@ static void innerStackSummary(string &sb, std::unordered_set<StackNode const*> &
     sb << "(";
     innerStackSummary(sb, printed, node->firstSib.sib.getC());
 
-    FOREACH_OBJLIST(SiblingLink, node->leftSiblings, iter) {
+    for (auto const& lsib : node->leftSiblings) {
       sb << "|";
-      innerStackSummary(sb, printed, iter.data()->sib.getC());
+      innerStackSummary(sb, printed, lsib.sib.getC());
     }
     sb << ")";
   }
@@ -1521,9 +1531,9 @@ SemanticValue GLR::getParseResult()
   // end-of-stream marker, so we want its left sibling, since that
   // will be the reduction(s) to the start symbol
   SemanticValue sv =
-    topmostParsers.first()->                    // parser that shifted end-of-stream
-      leftSiblings.first()->sib->              // parser that shifted start symbol
-      leftSiblings.first()->                   // sibling link with start symbol
+    topmostParsers.front()->                   // parser that shifted end-of-stream
+      leftSiblings.front()->sib->              // parser that shifted start symbol
+      leftSiblings.front()->                   // sibling link with start symbol
       sval;                                    // start symbol tree node
 
   return sv;
@@ -2049,13 +2059,9 @@ void GLR::rwlRecursiveEnqueue(
     rwlCollectPathLink(proto, popsRemaining-1, currentNode, mustUseLink,
                        &(currentNode->firstSib));
 
-    // test before dropping into the loop, since profiler reported
-    // some time spent calling VoidListMutator::reset ..
-    if (currentNode->leftSiblings.isNotEmpty()) {
-      FOREACH_OBJLIST_NC(SiblingLink, currentNode->leftSiblings, sibling) {
+    for (auto& lsib : currentNode->leftSiblings) {
         rwlCollectPathLink(proto, popsRemaining-1, currentNode, mustUseLink,
-                           sibling.data());
-      }
+                           &lsib);
     }
   }
 }
@@ -2233,8 +2239,8 @@ void GLR::writeParseGraph(char const *fname) const
 
     // for all sibling links
     int ruleNo=0;
-    FOREACH_OBJLIST(SiblingLink, stackNode->leftSiblings, sibIter) {
-      SiblingLink const *link = sibIter.data();
+    for (auto link = stackNode->leftSiblings.cbegin();
+              link != stackNode->leftSiblings.cend(); link++) {
 
       // write the sibling link
       fputs(stringb("e " << myName << " "

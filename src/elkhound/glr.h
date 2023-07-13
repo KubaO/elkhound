@@ -43,9 +43,9 @@
 #include "rcptr.h"         // RCPtr
 #include "useract.h"       // UserActions, SemanticValue
 #include "objpool.h"       // ObjectPool
-#include "objlist.h"       // ObjList
 #include "srcloc.h"        // SourceLoc
 
+#include <forward_list>    // std::forward_list
 #include <stdio.h>         // FILE
 #include <iostream>        // std::ostream
 #include <vector>          // std::vector
@@ -88,7 +88,7 @@ public:
   YIELD_COUNT( int yieldCount; )
 
   // if you add additional fields, they need to be inited in the
-  // constructor *and* in StackNode::addFirstSiblingLink_noRefCt
+  // constructor *and* in StackNode::addFirstSiblingLink
 
 public:
   SiblingLink(RCPtr<StackNode> s, SemanticValue sv
@@ -129,7 +129,7 @@ public:
   // been joined at this point.  this is the parse-time representation
   // of ambiguity (actually, unambiguous grammars or inputs do
   // sometimes lead to multiple siblings)
-  ObjList<SiblingLink> leftSiblings;           // this is a set
+  std::forward_list<SiblingLink> leftSiblings;   // this is a set
 
   // the *first* sibling is simply embedded directly into the
   // stack node, to avoid list overhead in the common case of
@@ -208,9 +208,9 @@ public:     // funcs
   inline bool refCtIs(int desired) const noexcept { return referenceCount == desired; }
 
   // sibling count queries (each one answerable in constant time)
-  bool hasZeroSiblings() const { return firstSib.sib==NULL; }
-  bool hasOneSibling() const { return firstSib.sib!=NULL && leftSiblings.isEmpty(); }
-  bool hasMultipleSiblings() const { return leftSiblings.isNotEmpty(); }
+  bool hasZeroSiblings() const { return !firstSib.sib; }
+  bool hasOneSibling() const { return firstSib.sib && leftSiblings.empty(); }
+  bool hasMultipleSiblings() const { return !leftSiblings.empty(); }
 
   // when you expect there's only one sibling link, get it this way
   SiblingLink const *getUniqueLinkC() const;
