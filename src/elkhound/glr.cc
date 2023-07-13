@@ -348,11 +348,6 @@ inline void StackNode::deinit()
   }
 
   deallocSemanticValues();
-
-  // this is pulled out of 'deallocSemanticValues' since dSV gets
-  // called from the mini-LR parser, which sets this to NULL itself
-  // (and circumvents the refct decrement)
-  firstSib.sib = NULL;
 }
 
 inline SymbolId StackNode::getSymbolC() const
@@ -368,8 +363,9 @@ void StackNode::deallocSemanticValues()
   // explicitly deallocate siblings, so I can deallocate their
   // semantic values if necessary (this requires knowing the
   // associated symbol, which the SiblingLinks don't know)
-  if (firstSib.sib != NULL) {
+  if (firstSib.sib) {
     deallocateSemanticValue(getSymbolC(), glr->userAct, firstSib.sval);
+    firstSib.sib.reset();
   }
 
   while (leftSiblings.isNotEmpty()) {
