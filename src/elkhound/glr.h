@@ -42,13 +42,13 @@
 #include "parsetables.h"   // StateId
 #include "rcptr.h"         // RCPtr
 #include "useract.h"       // UserActions, SemanticValue
-#include "objpool.h"       // ObjectPool, GrowArray
+#include "objpool.h"       // ObjectPool
 #include "objlist.h"       // ObjList
 #include "srcloc.h"        // SourceLoc
-#include "sobjlist.h"      // SObjList
 
 #include <stdio.h>         // FILE
 #include <iostream>        // std::ostream
+#include <vector>          // std::vector
 
 
 // fwds from other files
@@ -91,7 +91,7 @@ public:
   // constructor *and* in StackNode::addFirstSiblingLink_noRefCt
 
 public:
-  SiblingLink(StackNode *s, SemanticValue sv
+  SiblingLink(RCPtr<StackNode> s, SemanticValue sv
               SOURCELOCARG( SourceLoc L ) );
   ~SiblingLink();
 
@@ -109,6 +109,14 @@ public:
 // stack because choice points (real or potential ambiguities)
 // are represented as multiple left-siblings
 class StackNode {
+private:
+  // we only let RCPtr manipulate the reference count
+  friend class RCPtr<StackNode>;
+  // number of sibling links pointing at 'this', plus the number
+  // of worklists on which 'this' appears (some liberty is taken
+  // in the mini-LR parser, but it is carefully documented there)
+  int referenceCount;
+
 public:
   // the LR state the parser is in when this node is at the
   // top ("at the top" means that nothing, besides perhaps itself,
@@ -128,11 +136,6 @@ public:
   // only one sibling; when firstSib.sib==NULL, there are no
   // siblings
   SiblingLink firstSib;
-
-  // number of sibling links pointing at 'this', plus the number
-  // of worklists on which 'this' appears (some liberty is taken
-  // in the mini-LR parser, but it is carefully documented there)
-  int referenceCount;
 
   // how many stack nodes can I pop before hitting a nondeterminism?
   // if this node itself has >1 sibling link, determinDepth==0; if
@@ -167,8 +170,13 @@ public:
 
 private:    // funcs
   SiblingLink *
-    addAdditionalSiblingLink(StackNode *leftSib, SemanticValue sval
+    addAdditionalSiblingLink(RCPtr<StackNode> leftSib, SemanticValue sval
                              SOURCELOCARG( SourceLoc loc ) );
+
+  // Reference count stuff - only managed by RCPtr to ensure
+  // correct lifetime management.
+  void incRefCt() noexcept { referenceCount++; }
+  void decRefCt();
 
 public:     // funcs
   StackNode();
@@ -183,13 +191,11 @@ public:     // funcs
   void deallocSemanticValues();
 
   // add a new link with the given tree node; return the link
-  SiblingLink *addSiblingLink(StackNode *leftSib, SemanticValue sval
+  SiblingLink *addSiblingLink(RCPtr<StackNode> leftSib, SemanticValue sval
                               SOURCELOCARG( SourceLoc loc ) );
 
-  // specialized version for performance-critical sections
-  inline void
-    addFirstSiblingLink_noRefCt(StackNode *leftSib, SemanticValue sval
-                                SOURCELOCARG( SourceLoc loc ) );
+  void addFirstSiblingLink(RCPtr<StackNode> leftSib, SemanticValue sval
+                           SOURCELOCARG( SourceLoc loc ) );
 
   // return the symbol represented by this stack node;  it's
   // the symbol shifted or reduced-to to get to this state
@@ -197,9 +203,9 @@ public:     // funcs
   // two ways to compute it, so there's no need to store it)
   SymbolId getSymbolC() const;
 
-  // reference count stuff
-  void incRefCt() { referenceCount++; }
-  void decRefCt();
+  // reference count stuff - public for asserts and diagnostics
+  inline int getRefCt() const noexcept { return referenceCount; }
+  inline bool refCtIs(int desired) const noexcept { return referenceCount == desired; }
 
   // sibling count queries (each one answerable in constant time)
   bool hasZeroSiblings() const { return firstSib.sib==NULL; }
@@ -252,11 +258,11 @@ public:       // types
     // array of sibling links, naming the path; 'sibLink[0]' is the
     // leftmost link; array length is given by the rhsLen of
     // prodIndex's production
-    GrowArray<SiblingLink*> sibLinks;    // (array of serfs)
+    std::vector<SiblingLink*> sibLinks;    // (array of serfs)
 
     // corresponding array of symbol ids so we know how to interpret
     // the semantic values in the links
-    GrowArray<SymbolId> symbols;
+    std::vector<SymbolId> symbols;
 
     union {
       // link between nodes for construction of a linked list,
@@ -333,7 +339,7 @@ public:
   // ultimately succeed to parse the input, or might reach a
   // point where it cannot proceed, and therefore dies.  (See
   // comments at top of glr.cc for more details.)
-  ArrayStack<StackNode*> topmostParsers;     // (refct list)
+  std::vector<RCPtr<StackNode>> topmostParsers;     // (refct list)
 
   // index: StateId -> index in 'topmostParsers' of unique parser
   // with that state, or INDEX_NO_PARSER if none has that state
@@ -357,12 +363,12 @@ public:
 
   // ---- scratch space re-used at token-level (or finer) granularity ----
   // to be regarded as a local variable of GLR::rwlProcessWorklist
-  GrowArray<SemanticValue> toPass;
+  std::vector<SemanticValue> toPass;
 
   // persistent array that I swap with 'topmostParsers' during
   // 'rwlShiftTerminals' to avoid extra copying or allocation;
   // this should be regarded as variable local to that function
-  ArrayStack<StackNode*> prevTopmost;        // (refct list)
+  std::vector<RCPtr<StackNode>> prevTopmost;        // (refct list)
 
   // ---- allocation pools ----
   // this is a pointer to the same-named local variable in innerGlrParse
@@ -399,10 +405,10 @@ private:    // funcs
   SemanticValue grabTopSval(StackNode *node);
 
   StackNode *findTopmostParser(StateId state);
-  StackNode *makeStackNode(StateId state);
+  RCPtr<StackNode> makeStackNode(StateId state);
   void writeParseGraph(char const *input) const;
   void clearAllStackNodes();
-  void addTopmostParser(StackNode *parser);
+  void addTopmostParser(RCPtr<StackNode> parser);
   void pullFromTopmostParsers(StackNode *parser);
   bool canMakeProgress(StackNode *parser);
   void dumpGSS(int tokenNumber) const;
@@ -437,10 +443,6 @@ private:    // funcs
   void configCheck(char const *option, bool core, bool table);
 
   string stackSummary() const;
-  void nodeSummary(stringBuilder &sb, StackNode const *node) const;
-  void innerStackSummary(stringBuilder &sb,
-                         SObjList<StackNode const> &printed,
-                         StackNode const *node) const;
 
 public:     // funcs
   GLR(UserActions *userAct, ParseTables *tables);

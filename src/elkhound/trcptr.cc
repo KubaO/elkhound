@@ -9,20 +9,21 @@ class Foo {
 public:
   static int count;    // # of Foos there are
   int x;
-  int refCt;
+  int refCt = 1;       // the smart pointer assumes that
 
 public:
   Foo(int a);
   ~Foo();
 
-  void incRefCt() { refCt++; }
+  void incRefCt() noexcept { refCt++; }
   void decRefCt();
+  int getRefCt() const noexcept { return refCt; }
 };
 
 int Foo::count = 0;
 
 Foo::Foo(int ax)
-  : x(ax), refCt(0)
+  : x(ax)
 {
   printf("created Foo at %p\n", this);
   count++;
@@ -65,7 +66,8 @@ void test1()
 {
   printf("----------- test1 -----------\n");
   RCPtr<Foo> f;
-  f = new Foo(4);
+  f.reset(new Foo(4));
+  f->decRefCt(); // release the original assumed reference
 }
 
 // access all of the operators as non-const
@@ -74,7 +76,7 @@ void test2()
   printf("----------- test2 -----------\n");
   RCPtr<Foo> f(new Foo(6));
 
-  printFoo(f);
+  printFoo(f.get());
   (*f).x = 9;
   f->x = 12;
 }
@@ -86,7 +88,7 @@ void test3()
   RCPtr<Foo> f(new Foo(8));
   RCPtr<Foo> const &g = f;
 
-  printFooC(g);
+  printFooC(g.getC());
   printInt((*g).x);      // egcs-1.1.2 allows this for non-const operator fn!!!
   printInt(g->x);
 }
@@ -100,10 +102,10 @@ void test4()
   RCPtr<Foo> g;
   g = f;
   f = NULL;
-  printFoo(f);    // should be null
+  printFoo(f.get());    // should be null
   f = g;
   g = NULL;
-  printFoo(g);    // should be null
+  printFoo(g.get());    // should be null
 }
 
 // test several things pointing at same obj
@@ -113,9 +115,9 @@ void test5()
   RCPtr<Foo> f(new Foo(3));
   RCPtr<Foo> g;
   g = f;
-  printFoo(f);
+  printFoo(f.get());
   g = NULL;
-  printFoo(f);
+  printFoo(f.get());
 }
 
 

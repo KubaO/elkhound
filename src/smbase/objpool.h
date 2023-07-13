@@ -51,17 +51,8 @@ public:      // funcs
   // calls obj->deinit()
   inline void dealloc(T *obj);
 
-  // same as 'dealloc', but without the call to 'deinit'
-  inline void deallocNoDeinit(T *obj);
-
   // available for diagnostic purposes
   int freeObjectsInPool() const;
-
-  // low-level access for heavily-optimized client code; clients that
-  // use these functions accept the burden of possibly needing to
-  // change if internals of ObjectPool change
-  T *private_getHead() { return head; }
-  void private_setHead(T *h) { head = h; }
 };
 
 
@@ -117,23 +108,6 @@ void ObjectPool<T>::expandPool()
 }
 
 
-// usually I want the convenience of dealloc calling deinit; however,
-// in the inner loop of a performance-critical section of code, I
-// want finer control
-template <class T>
-inline void ObjectPool<T>::deallocNoDeinit(T *obj)
-{
-  // I don't check that nextInFreeList == NULL, despite having set it
-  // that way in alloc(), because I want to allow for users to make
-  // nextInFreeList share storage (e.g. with a union) with some other
-  // field that gets used while the node is allocated
-
-  // prepend the object to the free list; will be next yielded
-  obj->nextInFreeList = head;
-  head = obj;
-}
-
-
 template <class T>
 inline void ObjectPool<T>::dealloc(T *obj)
 {
@@ -142,7 +116,14 @@ inline void ObjectPool<T>::dealloc(T *obj)
   // before dealloc)
   obj->deinit();
 
-  deallocNoDeinit(obj);
+  // I don't check that nextInFreeList == NULL, despite having set it
+  // that way in alloc(), because I want to allow for users to make
+  // nextInFreeList share storage (e.g. with a union) with some other
+  // field that gets used while the node is allocated
+
+  // prepend the object to the free list; will be next yielded
+  obj->nextInFreeList = head;
+  head = obj;
 }
 
 
