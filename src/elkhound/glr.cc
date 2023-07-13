@@ -932,8 +932,9 @@ STATICDEF bool GLR
     // This code is the core of the parsing algorithm, so it's a bit
     // hairy for its performance optimizations.
     if (topmostParsers.size() == 1) {
-      RCPtr<StackNode> parser(topmostParsers[0], RCPTR_ACQUIRE);
-      xassertdb(parser->referenceCount==2);     // 'topmostParsers[0]' and 'parser'
+      RCPtr<StackNode> parser(topmostParsers[0]);
+      topmostParsers[0] = nullptr;
+      xassertdb(parser->referenceCount==1);     // 'parser'
 
       #if ENABLE_EEF_COMPRESSION
         if (tables->actionEntryIsError(parser->state, lexer.type)) {
@@ -1019,11 +1020,11 @@ STATICDEF bool GLR
             parser = sib.sib;
 
             xassertdb(parser->referenceCount == 2);     // 'sib', 'parser'
-            xassertdb(prev->referenceCount == 2);       // 'topmostParsers[0]', 'prev'
+            xassertdb(prev->referenceCount == 1);       // 'prev'
           } // end of general rhsLen loop
 
-          // 'parser', 'topmostparsers[0]' or its siblings
-          xassertdb(parser->referenceCount == 2);
+          // 'parser'
+          xassertdb(parser->referenceCount == 1);
 
           // call the user's action function (TREEBUILD)
           SemanticValue sval =
@@ -1051,18 +1052,16 @@ STATICDEF bool GLR
                    "), back to " << parser->state <<
                    " then out to " << newState);
 
-          // 'parser', 'topmostparsers[0]' or its siblings
-          xassertdb(parser->referenceCount==2);
+          // 'parser'
+          xassertdb(parser->referenceCount == 1);
 
           // push new state
           RCPtr<StackNode> newNode(glr.makeStackNode(newState));
           xassertdb(newNode->referenceCount == 1);
 
-
-          newNode->addFirstSiblingLink(parser.decRelease(), sval  SOURCELOCARG(leftEdge));
+          newNode->addFirstSiblingLink(parser.get(), sval  SOURCELOCARG(leftEdge));
+          parser.reset();
           xassertdb(newNode->referenceCount == 1);            // 'newNode'
-          topmostParsers[0]->decRefCt();
-          topmostParsers[0] = nullptr;
 
           xassertdb(!parser);
 
@@ -1116,16 +1115,13 @@ STATICDEF bool GLR
         RCPtr<StackNode> rightSibling(glr.makeStackNode(newState));
         xassertdb(rightSibling->referenceCount == 1);
 
-        xassertdb(parser->referenceCount == 2);       // 'parser', 'topmostParsers[0]'
+        xassertdb(parser->referenceCount == 1);       // 'parser'
         StackNode* const prevParser = parser.get();
-        rightSibling->addFirstSiblingLink(parser.decRelease(), lexer.sval  SOURCELOCARG(lexer.loc));
-        xassertdb(prevParser->referenceCount == 2);   // 'rightSibling.sib', 'topmostParsers[0]'
+        rightSibling->addFirstSiblingLink(parser.get(), lexer.sval  SOURCELOCARG(lexer.loc));
+        parser.reset();
+        xassertdb(prevParser->referenceCount == 1);   // 'rightSibling.firstSib'
 
-        // replace 'parser' with 'rightSibling' in the topmostParsers list
-        topmostParsers[0]->decRefCt();
-        topmostParsers[0] = nullptr;
-        xassertdb(prevParser->referenceCount == 1);   // 'rightSibling.sib'
-
+        // put 'rightSibling' in the topmostParsers list
         topmostParsers[0] = rightSibling.transferToPtr();
         xassertdb(topmostParsers[0]->referenceCount==1);   // 'topmostParsers[0]'
 
@@ -1135,6 +1131,11 @@ STATICDEF bool GLR
 
       else {
         // error or ambig; not deterministic
+      }
+      if (!topmostParsers[0]) {
+        // restore topmostParsers if no new value was assigned
+        topmostParsers[0] = parser.transferToPtr();
+        xassertdb(topmostParsers[0]->referenceCount == 1); // 'topmostParsers[0]'
       }
     }
     // ------------------ end of mini-LR parser ------------------

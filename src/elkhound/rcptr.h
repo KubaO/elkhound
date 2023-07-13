@@ -62,10 +62,12 @@ public:
   }
   ~RCPtr() { RCPTR_DBG("dtor"); dec(); }
 
-  void reset(T* other)
+  void reset(T* other = nullptr)
   {
     RCPTR_DBG2("reset", other);
     if (ptr != other) { // otherwise, we'd potentially release the object
+      // if we're assigned an object, it better not be dead
+      xassert(!other || other->getRefCt() > 0);
       dec(); ptr = other; inc();
     }
   }
@@ -101,13 +103,9 @@ public:
   T* get() const noexcept { RCPTR_DBG("get"); return ptr; }
   T const* getC() const noexcept { RCPTR_DBG("getC"); return ptr; }
 
-  T* decRelease() noexcept
-  {
-    RCPTR_DBG("dcRel");
-    T* ret = ptr;
-    dec();
-    return ret;
-  }
+  // No release operation is implemented, since its result depends
+  // on whether this pointer holds the last reference to the object.
+  // Such uses are always bugs.
 
   T* transferToPtr() noexcept
   {

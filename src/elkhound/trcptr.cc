@@ -9,20 +9,21 @@ class Foo {
 public:
   static int count;    // # of Foos there are
   int x;
-  int refCt;
+  int refCt = 1;       // the smart pointer assumes that
 
 public:
   Foo(int a);
   ~Foo();
 
-  void incRefCt() { refCt++; }
+  void incRefCt() noexcept { refCt++; }
   void decRefCt();
+  int getRefCt() const noexcept { return refCt; }
 };
 
 int Foo::count = 0;
 
 Foo::Foo(int ax)
-  : x(ax), refCt(0)
+  : x(ax)
 {
   printf("created Foo at %p\n", this);
   count++;
@@ -66,13 +67,14 @@ void test1()
   printf("----------- test1 -----------\n");
   RCPtr<Foo> f;
   f.reset(new Foo(4));
+  f->decRefCt(); // release the original assumed reference
 }
 
 // access all of the operators as non-const
 void test2()
 {
   printf("----------- test2 -----------\n");
-  RCPtr<Foo> f(new Foo(6), RCPTR_ACQUIRE);
+  RCPtr<Foo> f(new Foo(6));
 
   printFoo(f.get());
   (*f).x = 9;
@@ -83,7 +85,7 @@ void test2()
 void test3()
 {
   printf("----------- test3 -----------\n");
-  RCPtr<Foo> f(new Foo(8), RCPTR_ACQUIRE);
+  RCPtr<Foo> f(new Foo(8));
   RCPtr<Foo> const &g = f;
 
   printFooC(g.getC());
@@ -96,7 +98,7 @@ void test4()
 {
   printf("----------- test4 -----------\n");
   //RCPtr<Foo> f = new Foo(3);     // egcs-1.1.2 does the wrong thing here
-  RCPtr<Foo> f(new Foo(3), RCPTR_ACQUIRE);
+  RCPtr<Foo> f(new Foo(3));
   RCPtr<Foo> g;
   g = f;
   f = NULL;
@@ -110,7 +112,7 @@ void test4()
 void test5()
 {
   printf("----------- test5 -----------\n");
-  RCPtr<Foo> f(new Foo(3), RCPTR_ACQUIRE);
+  RCPtr<Foo> f(new Foo(3));
   RCPtr<Foo> g;
   g = f;
   printFoo(f.get());
