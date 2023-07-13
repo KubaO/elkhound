@@ -109,6 +109,14 @@ public:
 // stack because choice points (real or potential ambiguities)
 // are represented as multiple left-siblings
 class StackNode {
+private:
+  // we only let RCPtr manipulate the reference count
+  friend class RCPtr<StackNode>;
+  // number of sibling links pointing at 'this', plus the number
+  // of worklists on which 'this' appears (some liberty is taken
+  // in the mini-LR parser, but it is carefully documented there)
+  int referenceCount;
+
 public:
   // the LR state the parser is in when this node is at the
   // top ("at the top" means that nothing, besides perhaps itself,
@@ -128,11 +136,6 @@ public:
   // only one sibling; when firstSib.sib==NULL, there are no
   // siblings
   SiblingLink firstSib;
-
-  // number of sibling links pointing at 'this', plus the number
-  // of worklists on which 'this' appears (some liberty is taken
-  // in the mini-LR parser, but it is carefully documented there)
-  int referenceCount;
 
   // how many stack nodes can I pop before hitting a nondeterminism?
   // if this node itself has >1 sibling link, determinDepth==0; if
@@ -170,6 +173,11 @@ private:    // funcs
     addAdditionalSiblingLink(RCPtr<StackNode> leftSib, SemanticValue sval
                              SOURCELOCARG( SourceLoc loc ) );
 
+  // Reference count stuff - only managed by RCPtr to ensure
+  // correct lifetime management.
+  void incRefCt() noexcept { referenceCount++; }
+  void decRefCt();
+
 public:     // funcs
   StackNode();
   ~StackNode();
@@ -195,10 +203,9 @@ public:     // funcs
   // two ways to compute it, so there's no need to store it)
   SymbolId getSymbolC() const;
 
-  // reference count stuff
-  void incRefCt() noexcept { referenceCount++; }
-  void decRefCt();
+  // reference count stuff - public for asserts and diagnostics
   inline int getRefCt() const noexcept { return referenceCount; }
+  inline bool refCtIs(int desired) const noexcept { return referenceCount == desired; }
 
   // sibling count queries (each one answerable in constant time)
   bool hasZeroSiblings() const { return firstSib.sib==NULL; }

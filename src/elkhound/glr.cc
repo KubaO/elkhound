@@ -922,7 +922,7 @@ STATICDEF bool GLR
       // We take the reference to the sole parser. It will be put
       // back if a new topmost parser wasn't instated.
       RCPtr<StackNode> parser(std::move(topmostParsers[0]));
-      xassertdb(parser->referenceCount==1);     // 'parser'
+      xassertdb(parser->refCtIs(1));     // 'parser'
 
       #if ENABLE_EEF_COMPRESSION
         if (tables->actionEntryIsError(parser->state, lexer.type)) {
@@ -1007,12 +1007,12 @@ STATICDEF bool GLR
             RCPtr<StackNode> prev = std::move(parser);
             parser = sib.sib;
 
-            xassertdb(parser->referenceCount == 2);     // 'sib', 'parser'
-            xassertdb(prev->referenceCount == 1);       // 'prev'
+            xassertdb(parser->refCtIs(2));     // 'sib', 'parser'
+            xassertdb(prev->refCtIs(1));       // 'prev'
           } // end of general rhsLen loop
 
           // 'parser'
-          xassertdb(parser->referenceCount == 1);
+          xassertdb(parser->refCtIs(1));
 
           // call the user's action function (TREEBUILD)
           SemanticValue sval =
@@ -1041,19 +1041,19 @@ STATICDEF bool GLR
                    " then out to " << newState);
 
           // 'parser'
-          xassertdb(parser->referenceCount == 1);
+          xassertdb(parser->refCtIs(1));
 
           // push new state
           RCPtr<StackNode> newNode = glr.makeStackNode(newState);
-          xassertdb(newNode->referenceCount == 1);
+          xassertdb(newNode->refCtIs(1));
 
           newNode->addFirstSiblingLink(std::move(parser), sval  SOURCELOCARG(leftEdge));
-          xassertdb(newNode->referenceCount == 1);            // 'newNode'
+          xassertdb(newNode->refCtIs(1));            // 'newNode'
 
           xassertdb(!parser);
 
           topmostParsers[0] = std::move(newNode);
-          xassertdb(topmostParsers[0]->referenceCount == 1);  // 'topmostParsers[0]
+          xassertdb(topmostParsers[0]->refCtIs(1));  // 'topmostParsers[0]
           StackNode* newNodeView = topmostParsers[0].get();
 
           // emit some trace output
@@ -1100,16 +1100,16 @@ STATICDEF bool GLR
         NODE_COLUMN( glr.globalNodeColumn++; )
 
         RCPtr<StackNode> rightSibling = glr.makeStackNode(newState);
-        xassertdb(rightSibling->referenceCount == 1);
+        xassertdb(rightSibling->refCtIs(1));
 
-        xassertdb(parser->referenceCount == 1);       // 'parser'
+        xassertdb(parser->refCtIs(1));       // 'parser'
         StackNode* const prevParser = parser.get();
         rightSibling->addFirstSiblingLink(std::move(parser), lexer.sval  SOURCELOCARG(lexer.loc));
-        xassertdb(prevParser->referenceCount == 1);   // 'rightSibling.firstSib'
+        xassertdb(prevParser->refCtIs(1));   // 'rightSibling.firstSib'
 
         // put 'rightSibling' in the topmostParsers list
         topmostParsers[0] = std::move(rightSibling);
-        xassertdb(topmostParsers[0]->referenceCount==1);   // 'topmostParsers[0]'
+        xassertdb(topmostParsers[0]->refCtIs(1));   // 'topmostParsers[0]'
 
         // get next token
         goto getNextToken;
@@ -1121,7 +1121,7 @@ STATICDEF bool GLR
       if (!topmostParsers[0]) {
         // restore topmostParsers if no new value was assigned
         topmostParsers[0] = std::move(parser);
-        xassertdb(topmostParsers[0]->referenceCount == 1); // 'topmostParsers[0]'
+        xassertdb(topmostParsers[0]->refCtIs(1)); // 'topmostParsers[0]'
       }
     }
     // ------------------ end of mini-LR parser ------------------
@@ -1474,7 +1474,7 @@ string GLR::stackSummary() const
 
 static void nodeSummary(string &sb, StackNode const *node)
 {
-  sb << node->state << "[" << node->referenceCount << "]";
+  sb << node->state << "[" << node->getRefCt() << "]";
 }
 
 static void innerStackSummary(string &sb, std::unordered_set<StackNode const*> &printed,
@@ -1893,7 +1893,7 @@ SiblingLink *GLR::rwlShiftNonterminal(StackNode *leftSibling, int lhsIndex,
     // we don't have to recompute if nothing else points at
     // 'rightSibling'; the refct is always at least 1 because we found
     // it on the "active parsers" worklist
-    if (rightSibling->referenceCount > 1) {
+    if (rightSibling->getRefCt() > 1) {
       // since we added a new link *all* determinDepths might
       // be compromised; iterating more than once should be very
       // rare (and this code path should already be unusual)
@@ -2083,8 +2083,8 @@ void GLR::rwlShiftTerminals()
     // 'leftSibling' and 'prevTopmost'
     RCPtr<StackNode> leftSibling(std::move(prevTopmost.back()));
     prevTopmost.pop_back(); // pop the null pointer
-    // now only 'leftSibling' has it
-    xassertdb(leftSibling->referenceCount >= 1);
+    // now 'leftSibling' has it (and potentially others - why?)
+    xassertdb(leftSibling->getRefCt() >= 1);
 
 
     // where can this shift, if anyplace?
@@ -2169,7 +2169,7 @@ void GLR::rwlShiftTerminals()
     // them, so in particular nothing points to 'rightSibling'; a simple
     // check of this is to check the reference count and verify it is 1,
     // the 1 being for the 'topmostParsers' list it is on
-    xassert(rightSibling->referenceCount == 1);
+    xassert(rightSibling->refCtIs(1));
   }
 }
 
