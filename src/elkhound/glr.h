@@ -398,7 +398,7 @@ private:    // funcs
   SemanticValue grabTopSval(StackNode *node);
 
   StackNode *findTopmostParser(StateId state);
-  StackNode *makeStackNode(StateId state);
+  RCPtr<StackNode> makeStackNode(StateId state);
   void writeParseGraph(char const *input) const;
   void clearAllStackNodes();
   void addTopmostParser(StackNode *parser);

@@ -697,10 +697,11 @@ SemanticValue GLR::grabTopSval(StackNode *node)
 }
 
 
-inline StackNode *GLR::makeStackNode(StateId state)
+inline RCPtr<StackNode> GLR::makeStackNode(StateId state)
 {
-  StackNode* sn = stackNodePool->alloc();
-  sn->init(state, this);
+  StackNode* snRaw = stackNodePool->alloc();
+  snRaw->init(state, this);
+  RCPtr<StackNode> sn(snRaw);
   NODE_COLUMN(sn->column = globalNodeColumn; )
   return sn;
 }
@@ -852,8 +853,8 @@ STATICDEF bool GLR
   // set active-parsers to contain just this
   NODE_COLUMN( glr.globalNodeColumn = 0; )
   {
-    StackNode *first = glr.makeStackNode(tables->startState);
-    glr.addTopmostParser(first);
+    RCPtr<StackNode> first = glr.makeStackNode(tables->startState);
+    glr.addTopmostParser(first.transferToPtr());
   }
 
   #if USE_MINI_LR
@@ -1056,7 +1057,7 @@ STATICDEF bool GLR
           xassertdb(parser->referenceCount == 1);
 
           // push new state
-          RCPtr<StackNode> newNode(glr.makeStackNode(newState));
+          RCPtr<StackNode> newNode = glr.makeStackNode(newState);
           xassertdb(newNode->referenceCount == 1);
 
           newNode->addFirstSiblingLink(parser.get(), sval  SOURCELOCARG(leftEdge));
@@ -1112,7 +1113,7 @@ STATICDEF bool GLR
 
         NODE_COLUMN( glr.globalNodeColumn++; )
 
-        RCPtr<StackNode> rightSibling(glr.makeStackNode(newState));
+        RCPtr<StackNode> rightSibling = glr.makeStackNode(newState);
         xassertdb(rightSibling->referenceCount == 1);
 
         xassertdb(parser->referenceCount == 1);       // 'parser'
@@ -1935,21 +1936,21 @@ SiblingLink *GLR::rwlShiftNonterminal(StackNode *leftSibling, int lhsIndex,
     // no, there is not already an active parser with this
     // state.  we must create one; it will become the right
     // sibling of 'leftSibling'
-    rightSibling = makeStackNode(rightSiblingState);
+    RCPtr<StackNode> rightSibling = makeStackNode(rightSiblingState);
 
     // add the sibling link (and keep ptr for tree stuff)
     rightSibling->addSiblingLink(leftSibling, sval  SOURCELOCARG( loc ) );
 
     // since this is a new parser top, it needs to become a
     // member of the frontier
-    addTopmostParser(rightSibling);
+    addTopmostParser(rightSibling.get());
 
     // here, rather than adding something to the parser worklist,
     // we'll directly expand its reduction paths and add them
     // to the reduction worklist
     ActionEntry action =
       tables->getActionEntry(rightSibling->state, lexerPtr->type);
-    rwlEnqueueReductions(rightSibling, action, NULL /*sibLink*/);
+    rwlEnqueueReductions(rightSibling.transferToPtr(), action, NULL /*sibLink*/);
 
     // no need for the elaborate re-checking above, since we
     // just created rightSibling, so no new opportunities
@@ -2152,7 +2153,7 @@ void GLR::rwlShiftTerminals()
 
     else {
       // must make a new stack node
-      rightSibling = makeStackNode(newState);
+      rightSibling = makeStackNode(newState).transferToPtr();
 
       // and add it to the active parsers
       addTopmostParser(rightSibling);
