@@ -11,21 +11,18 @@ project(tobjlist)
 project(tsobjlist)
 project(bit2d)
 project(growbuf)
-project(strdict)
 project(svdict)
 project(str)
 project(strutil)
 project(strhash)
 project(trdelete)
 project(bflatten)
-project(mysig)
 project(tobjpool)
 project(cycles)
 project(crc)
 project(srcloc)
 project(hashline)
 project(gprintf)
-project(vptrmap)
 project(testarray)
 project(autofile)
 project(bitarray)
@@ -71,11 +68,6 @@ add_executable(growbuf
     ../growbuf.cc
 )
 
-# files for strdict
-add_executable(strdict
-    ../strdict.cc
-)
-
 # files for svdict
 add_executable(svdict
     ../svdict.cc
@@ -104,11 +96,6 @@ add_executable(trdelete
 # files for bflatten
 add_executable(bflatten
     ../bflatten.cc
-)
-
-# files for mysig
-add_executable(mysig
-    ../mysig.cc
 )
 
 # files for tobjpool
@@ -141,11 +128,6 @@ add_executable(gprintf
     ../gprintf.c
 )
 
-# files for vptrmap
-add_executable(vptrmap
-    ../vptrmap.cc
-)
-
 # files for testarray
 add_executable(testarray
     ../testarray.cc
@@ -167,20 +149,17 @@ target_compile_options(voidlist PRIVATE -DTEST_VOIDLIST)
 target_compile_options(vdtllist PRIVATE -DTEST_VDTLLIST)
 target_compile_options(bit2d PRIVATE -DTEST_BIT2D)
 target_compile_options(growbuf PRIVATE -DTEST_GROWBUF)
-target_compile_options(strdict PRIVATE -DTEST_STRDICT)
 target_compile_options(svdict PRIVATE -DTEST_SVDICT)
 target_compile_options(str PRIVATE -DTEST_STR)
 target_compile_options(strutil PRIVATE -DTEST_STRUTIL)
 target_compile_options(strhash PRIVATE -DTEST_STRHASH)
 target_compile_options(trdelete PRIVATE -DTEST_TRDELETE)
 target_compile_options(bflatten PRIVATE -DTEST_BFLATTEN)
-target_compile_options(mysig PRIVATE -DTEST_MYSIG)
 target_compile_options(cycles PRIVATE -DTEST_CYCLES)
 target_compile_options(crc PRIVATE -DTEST_CRC)
 target_compile_options(srcloc PRIVATE -DTEST_SRCLOC)
 target_compile_options(hashline PRIVATE -DTEST_HASHLINE)
 target_compile_options(gprintf PRIVATE -DTEST_GPRINTF)
-target_compile_options(vptrmap PRIVATE -DTEST_VPTRMAP)
 target_compile_options(autofile PRIVATE -DTEST_AUTOFILE)
 target_compile_options(bitarray PRIVATE -DTEST_BITARRAY)
 
@@ -192,18 +171,15 @@ target_link_libraries(tobjlist smbase)
 target_link_libraries(tsobjlist smbase)
 target_link_libraries(bit2d smbase)
 target_link_libraries(growbuf smbase)
-target_link_libraries(strdict smbase)
 target_link_libraries(svdict smbase)
 target_link_libraries(str smbase)
 target_link_libraries(strutil smbase)
 target_link_libraries(strhash smbase)
 target_link_libraries(trdelete smbase)
 target_link_libraries(bflatten smbase)
-target_link_libraries(mysig smbase)
 target_link_libraries(tobjpool smbase)
 target_link_libraries(srcloc smbase)
 target_link_libraries(hashline smbase)
-target_link_libraries(vptrmap smbase)
 target_link_libraries(testarray smbase)
 target_link_libraries(autofile smbase)
 target_link_libraries(bitarray smbase)
@@ -224,14 +200,12 @@ add_test(NAME strutil COMMAND ./strutil)
 add_test(NAME strhash COMMAND ./strhash)
 add_test(NAME trdelete COMMAND ./trdelete)
 add_test(NAME bflatten COMMAND ./bflatten)
-add_test(NAME mysig COMMAND ./mysig)
 add_test(NAME tobjpool COMMAND ./tobjpool)
 add_test(NAME cycles COMMAND ./cycles)
 add_test(NAME crc COMMAND ./crc)
 add_test(NAME srcloc COMMAND ./srcloc)
 add_test(NAME hashline COMMAND ./hashline)
 add_test(NAME gprintf COMMAND ./gprintf)
-add_test(NAME vptrmap COMMAND ./vptrmap)
 add_test(NAME testarray COMMAND ./testarray)
 add_test(NAME autofile COMMAND ./autofile)
 add_test(NAME bitarray COMMAND ./bitarray)

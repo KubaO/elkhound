@@ -19,12 +19,10 @@ add_library(smbase STATIC
     growbuf.cc
     hashline.cc
     hashtbl.cc
-    mysig.cc
     nonport.cpp
     point.cc
     srcloc.cc
     str.cpp
-    strdict.cc
     strhash.cc
     stringset.cc
     strtokp.cpp
@@ -35,5 +33,4 @@ add_library(smbase STATIC
     trdelete.cc
     vdtllist.cc
     voidlist.cc
-    vptrmap.cc
 )
