@@ -91,7 +91,7 @@ public:
   // constructor *and* in StackNode::addFirstSiblingLink_noRefCt
 
 public:
-  SiblingLink(StackNode *s, SemanticValue sv
+  SiblingLink(RCPtr<StackNode> s, SemanticValue sv
               SOURCELOCARG( SourceLoc L ) );
   ~SiblingLink();
 
@@ -167,7 +167,7 @@ public:
 
 private:    // funcs
   SiblingLink *
-    addAdditionalSiblingLink(StackNode *leftSib, SemanticValue sval
+    addAdditionalSiblingLink(RCPtr<StackNode> leftSib, SemanticValue sval
                              SOURCELOCARG( SourceLoc loc ) );
 
 public:     // funcs
@@ -183,10 +183,10 @@ public:     // funcs
   void deallocSemanticValues();
 
   // add a new link with the given tree node; return the link
-  SiblingLink *addSiblingLink(StackNode *leftSib, SemanticValue sval
+  SiblingLink *addSiblingLink(RCPtr<StackNode> leftSib, SemanticValue sval
                               SOURCELOCARG( SourceLoc loc ) );
 
-  void addFirstSiblingLink(StackNode* leftSib, SemanticValue sval
+  void addFirstSiblingLink(RCPtr<StackNode> leftSib, SemanticValue sval
                            SOURCELOCARG( SourceLoc loc ) );
 
   // return the symbol represented by this stack node;  it's

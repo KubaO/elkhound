@@ -279,9 +279,9 @@ void GLR::deallocateSemanticValue(SymbolId sym, SemanticValue sval)
 
 
 // ------------------ SiblingLink ------------------
-inline SiblingLink::SiblingLink(StackNode *s, SemanticValue sv
+inline SiblingLink::SiblingLink(RCPtr<StackNode> s, SemanticValue sv
                                 SOURCELOCARG( SourceLoc L ) )
-  : sib(s, RCPTR_ACQUIRE), sval(sv)
+  : sib(std::move(s)), sval(sv)
     SOURCELOCARG( loc(L) )
 {
   YIELD_COUNT( yieldCount = 0; )
@@ -381,7 +381,7 @@ void StackNode::deallocSemanticValues()
 
 // add the very first sibling
 inline void StackNode
-  ::addFirstSiblingLink(StackNode *leftSib, SemanticValue sval
+  ::addFirstSiblingLink(RCPtr<StackNode> leftSib, SemanticValue sval
                         SOURCELOCARG( SourceLoc loc ) )
 {
   xassertdb(hasZeroSiblings());
@@ -391,7 +391,7 @@ inline void StackNode
 
   // we don't have any siblings yet; use embedded
   xassertdb(firstSib.sib == NULL);      // otherwise we'd miss a decRefCt
-  firstSib.sib.reset(leftSib);
+  firstSib.sib = std::move(leftSib);
   firstSib.sval = sval;
 
   // initialize some other fields
@@ -402,11 +402,11 @@ inline void StackNode
 
 // add a new sibling by creating a new link
 inline SiblingLink *StackNode::
-  addSiblingLink(StackNode *leftSib, SemanticValue sval
+  addSiblingLink(RCPtr<StackNode> leftSib, SemanticValue sval
                  SOURCELOCARG( SourceLoc loc ) )
 {
   if (hasZeroSiblings()) {
-    addFirstSiblingLink(leftSib, sval  SOURCELOCARG( loc ) );
+    addFirstSiblingLink(std::move(leftSib), sval  SOURCELOCARG(loc));
 
     // sibling link pointers are used to control the reduction
     // process in certain corner cases; an interior pointer
@@ -417,7 +417,7 @@ inline SiblingLink *StackNode::
     // as best I can tell, x86 static branch prediction is simply
     // "conditional forward branches are assumed not taken", hence
     // the uncommon case belongs in the 'else' branch
-    return addAdditionalSiblingLink(leftSib, sval  SOURCELOCARG( loc ) );
+    return addAdditionalSiblingLink(std::move(leftSib), sval  SOURCELOCARG(loc));
   }
 }
 
@@ -426,7 +426,7 @@ inline SiblingLink *StackNode::
 // without excessive object code bloat; the branch represented by
 // the code in this function is much less common
 SiblingLink *StackNode::
-  addAdditionalSiblingLink(StackNode *leftSib, SemanticValue sval
+  addAdditionalSiblingLink(RCPtr<StackNode> leftSib, SemanticValue sval
                            SOURCELOCARG( SourceLoc loc ) )
 {
   // there's currently at least one sibling, and now we're adding another;
@@ -434,7 +434,7 @@ SiblingLink *StackNode::
   // most likely will catch that when we use the stale info)
   determinDepth = 0;
 
-  SiblingLink *link = new SiblingLink(leftSib, sval  SOURCELOCARG( loc ) );
+  SiblingLink *link = new SiblingLink(std::move(leftSib), sval  SOURCELOCARG(loc));
   leftSiblings.prepend(link);   // dsw: don't append; it becomes quadratic!
   return link;
 }
@@ -1060,8 +1060,7 @@ STATICDEF bool GLR
           RCPtr<StackNode> newNode = glr.makeStackNode(newState);
           xassertdb(newNode->referenceCount == 1);
 
-          newNode->addFirstSiblingLink(parser.get(), sval  SOURCELOCARG(leftEdge));
-          parser.reset();
+          newNode->addFirstSiblingLink(std::move(parser), sval  SOURCELOCARG(leftEdge));
           xassertdb(newNode->referenceCount == 1);            // 'newNode'
 
           xassertdb(!parser);
@@ -1118,8 +1117,7 @@ STATICDEF bool GLR
 
         xassertdb(parser->referenceCount == 1);       // 'parser'
         StackNode* const prevParser = parser.get();
-        rightSibling->addFirstSiblingLink(parser.get(), lexer.sval  SOURCELOCARG(lexer.loc));
-        parser.reset();
+        rightSibling->addFirstSiblingLink(std::move(parser), lexer.sval  SOURCELOCARG(lexer.loc));
         xassertdb(prevParser->referenceCount == 1);   // 'rightSibling.firstSib'
 
         // put 'rightSibling' in the topmostParsers list
@@ -1882,7 +1880,7 @@ SiblingLink *GLR::rwlShiftNonterminal(StackNode *leftSibling, int lhsIndex,
 
     // we get here if there is no suitable sibling link already
     // existing; so add the link (and keep the ptr for loop below)
-    sibLink = rightSibling->addSiblingLink(leftSibling, sval  SOURCELOCARG( loc ) );
+    sibLink = rightSibling->addSiblingLink(RCPtr<StackNode>(leftSibling, RCPTR_ACQUIRE), sval  SOURCELOCARG( loc ) );
 
     // adding a new sibling link may have introduced additional
     // opportunties to do reductions from parsers we thought
@@ -1939,7 +1937,7 @@ SiblingLink *GLR::rwlShiftNonterminal(StackNode *leftSibling, int lhsIndex,
     RCPtr<StackNode> rightSibling = makeStackNode(rightSiblingState);
 
     // add the sibling link (and keep ptr for tree stuff)
-    rightSibling->addSiblingLink(leftSibling, sval  SOURCELOCARG( loc ) );
+    rightSibling->addSiblingLink(RCPtr<StackNode>(leftSibling, RCPTR_ACQUIRE), sval  SOURCELOCARG(loc));
 
     // since this is a new parser top, it needs to become a
     // member of the frontier
@@ -2172,7 +2170,7 @@ void GLR::rwlShiftTerminals()
 
     // either way, add the sibling link now
     //TRSACTION("grabbed token sval " << lexerPtr->sval);
-    prev = rightSibling->addSiblingLink(leftSibling.get(), sval
+    prev = rightSibling->addSiblingLink(std::move(leftSibling), sval
                                         SOURCELOCARG( lexerPtr->loc ) );
 
     // adding this sibling link cannot violate the determinDepth
