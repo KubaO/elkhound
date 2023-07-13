@@ -100,6 +100,23 @@ public:
 
   T* get() const noexcept { RCPTR_DBG("get"); return ptr; }
   T const* getC() const noexcept { RCPTR_DBG("getC"); return ptr; }
+
+  T* decRelease() noexcept
+  {
+    RCPTR_DBG("dcRel");
+    T* ret = ptr;
+    dec();
+    return ret;
+  }
+
+  T* transferToPtr() noexcept
+  {
+    RCPTR_DBG("xfer");
+    using std::swap;
+    T* ret = nullptr;
+    swap(ret, ptr);
+    return ret;
+  }
 };
 
 #undef RCPTR_DBG

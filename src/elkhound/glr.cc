@@ -932,8 +932,8 @@ STATICDEF bool GLR
     // This code is the core of the parsing algorithm, so it's a bit
     // hairy for its performance optimizations.
     if (topmostParsers.size() == 1) {
-      StackNode *parser = topmostParsers[0];
-      xassertdb(parser->referenceCount==1);     // 'topmostParsers[0]' is referrer
+      RCPtr<StackNode> parser(topmostParsers[0], RCPTR_ACQUIRE);
+      xassertdb(parser->referenceCount==2);     // 'topmostParsers[0]' and 'parser'
 
       #if ENABLE_EEF_COMPRESSION
         if (tables->actionEntryIsError(parser->state, lexer.type)) {
@@ -1015,24 +1015,15 @@ STATICDEF bool GLR
             )
 
             // pop 'parser' and move to the next one
-            StackNode *prev = parser;
-            parser = sib.sib.get();
+            RCPtr<StackNode> prev = std::move(parser);
+            parser = sib.sib;
 
-            // don't actually increment, since I now no longer actually decrement
-            // cancelled(1) effect: parser->incRefCt();    // so 'parser' survives deallocation of 'sib'
-            // cancelled(1) observable: xassertdb(parser->referenceCount==1);       // 'sib' and the fake one
-
-            // so now it's just the one
-            parser->incRefCt();                       // retain a reference
-            xassertdb(parser->referenceCount==2);     // just 'sib' and 'parser'
-
-            xassertdb(prev->referenceCount==1);
-            prev->decRefCt();                         // sib decremented 'parser' refcnt
-            prev = NULL;
-
-            xassertdb(parser->referenceCount==1);     // we have one reference
+            xassertdb(parser->referenceCount == 2);     // 'sib', 'parser'
+            xassertdb(prev->referenceCount == 2);       // 'topmostParsers[0]', 'prev'
           } // end of general rhsLen loop
 
+          // 'parser', 'topmostparsers[0]' or its siblings
+          xassertdb(parser->referenceCount == 2);
 
           // call the user's action function (TREEBUILD)
           SemanticValue sval =
@@ -1060,25 +1051,28 @@ STATICDEF bool GLR
                    "), back to " << parser->state <<
                    " then out to " << newState);
 
-          // 'parser' has refct 1, reflecting the local variable only
-          xassertdb(parser->referenceCount==1);
+          // 'parser', 'topmostparsers[0]' or its siblings
+          xassertdb(parser->referenceCount==2);
 
           // push new state
-          StackNode *newNode = glr.makeStackNode(newState);
+          RCPtr<StackNode> newNode(glr.makeStackNode(newState));
+          xassertdb(newNode->referenceCount == 1);
 
-          newNode->addFirstSiblingLink(parser, sval  SOURCELOCARG( leftEdge ) );
 
-          xassertdb(parser->referenceCount == 2);  // 'newNode' and 'parser' hold reference
-          parser->decRefCt();                      // now only 'newNode' holds the reference
-          parser = NULL;
+          newNode->addFirstSiblingLink(parser.decRelease(), sval  SOURCELOCARG(leftEdge));
+          xassertdb(newNode->referenceCount == 1);            // 'newNode'
+          topmostParsers[0]->decRefCt();
+          topmostParsers[0] = nullptr;
 
-          // replace whatever is in 'topmostParsers[0]' with 'newNode'
-          topmostParsers[0] = newNode;
-          xassertdb(newNode->referenceCount == 1);   // topmostParsers[0] is referrer
+          xassertdb(!parser);
+
+          topmostParsers[0] = newNode.transferToPtr();
+          xassertdb(topmostParsers[0]->referenceCount == 1);  // 'topmostParsers[0]
+          StackNode* const& newNodeView = topmostParsers[0];
 
           // emit some trace output
           TRSACTION("  " <<
-                    symbolDescription(newNode->getSymbolC(), userAct, sval) <<
+                    symbolDescription(newNodeView->getSymbolC(), userAct, sval) <<
                     " ->" << rhsDescription);
 
           #if USE_KEEP
@@ -1087,7 +1081,7 @@ STATICDEF bool GLR
               ACTION( string lhsDesc =
                         userAct->nonterminalDescription(prodInfo.lhsIndex, sval); )
               TRSACTION("    CANCELLED " << lhsDesc);
-              glr.printParseErrorMessage(newNode->state);
+              glr.printParseErrorMessage(newNodeView->state);
               ACCOUNTING(
                 glr.detShift += localDetShift;
                 glr.detReduce += localDetReduce;
@@ -1119,22 +1113,21 @@ STATICDEF bool GLR
 
         NODE_COLUMN( glr.globalNodeColumn++; )
 
-        StackNode *rightSibling = glr.makeStackNode(newState);
+        RCPtr<StackNode> rightSibling(glr.makeStackNode(newState));
+        xassertdb(rightSibling->referenceCount == 1);
 
-        rightSibling->addFirstSiblingLink(parser, lexer.sval  SOURCELOCARG( lexer.loc ) );
-        parser->decRefCt();
-        // cancelled(2) effect: parser->incRefCt();
+        xassertdb(parser->referenceCount == 2);       // 'parser', 'topmostParsers[0]'
+        StackNode* const prevParser = parser.get();
+        rightSibling->addFirstSiblingLink(parser.decRelease(), lexer.sval  SOURCELOCARG(lexer.loc));
+        xassertdb(prevParser->referenceCount == 2);   // 'rightSibling.sib', 'topmostParsers[0]'
 
         // replace 'parser' with 'rightSibling' in the topmostParsers list
-        topmostParsers[0] = rightSibling;
-        // cancelled(2) effect: xassertdb(parser->referenceCount==2);         // rightSibling & topmostParsers[0]
-        // expand "parser->decRefCt();"
-        {
-          // cancelled(2) effect: parser->referenceCount = 1;
-        }
-        xassertdb(parser->referenceCount==1);         // rightSibling
+        topmostParsers[0]->decRefCt();
+        topmostParsers[0] = nullptr;
+        xassertdb(prevParser->referenceCount == 1);   // 'rightSibling.sib'
 
-        xassertdb(rightSibling->referenceCount==1);   // topmostParsers[0] refers to it
+        topmostParsers[0] = rightSibling.transferToPtr();
+        xassertdb(topmostParsers[0]->referenceCount==1);   // 'topmostParsers[0]'
 
         // get next token
         goto getNextToken;
