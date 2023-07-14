@@ -736,7 +736,8 @@ void astParseProduction(Environment &env, Nonterminal *nonterm,
   bool synthesizedStart = nonterm->name.equals("__EarlyStartSymbol");
 
   // build a production; use 'this' as the tag for LHS elements
-  Production *prod = new Production(nonterm, "this");
+  Production prodVal(nonterm, "this");
+  Production *const prod = &prodVal;
 
   // put the code into it
   prod->action = prodDecl->actionCode;
@@ -858,7 +859,7 @@ void astParseProduction(Environment &env, Nonterminal *nonterm,
   //prod->finished();
 
   // add production to grammar
-  env.g.addProduction(prod);
+  env.g.addProduction(std::move(prodVal));
 }
 
 

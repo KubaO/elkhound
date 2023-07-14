@@ -422,7 +422,7 @@ class Grammar {
 public:	    // data
   std::list<Nonterminal> nonterminals;  // (owner list)
   std::list<Terminal> terminals;        // (owner list)
-  ObjList<Production> productions;      // (owner list)
+  std::vector<Production> productions;  // (owner list)
   Nonterminal *startSymbol;             // (serf) a particular nonterminal
 
   // the special terminal for the empty string; does not appear in the
@@ -490,7 +490,7 @@ public:     // funcs
   //void addProduction(Nonterminal *lhs, Symbol *rhs, ...);
 
   // add a pre-constructed production
-  void addProduction(Production *prod);
+  void addProduction(Production &&prod);
 
   // ---------- outputting a grammar --------------
   // print the list of symbols with type annotations

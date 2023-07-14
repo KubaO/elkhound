@@ -805,7 +805,7 @@ void Grammar::xfer(Flatten &flat)
   flat.checkpoint(0xC7AB4D86);
   /*FIXME*/ //xferObjList(flat, nonterminals);
   /*FIXME*/ //xferObjList(flat, terminals);
-  xferObjList(flat, productions);
+  /*FIXME*/ //xferObjList(flat, productions);
 
   // emptyString is const
 
@@ -831,8 +831,8 @@ void Grammar::xfer(Flatten &flat)
   for (auto& nt : nonterminals) {
     nt.xferSerfs(flat, *this);
   }
-  MUTATE_EACH_OBJLIST(Production, productions, p) {
-    p.data()->xferSerfs(flat, *this);
+  for (auto& p : productions) {
+    p.xferSerfs(flat, *this);
   }
 
   /*FIXME*/ //xferSerfPtrToList(flat, startSymbol, nonterminals);
@@ -874,9 +874,8 @@ void Grammar::printSymbolTypes(std::ostream &os) const
 void Grammar::printProductions(std::ostream &os, bool code) const
 {
   os << "Grammar productions:\n";
-  for (ObjListIter<Production> iter(productions);
-       !iter.isDone(); iter.adv()) {
-    os << "  " << iter.data()->toStringMore(code);
+  for (auto const& prod : productions) {
+    os << "  " << prod.toStringMore(code);
   }
 }
 
@@ -904,19 +903,19 @@ void Grammar::addProduction(Nonterminal *lhs, Symbol *firstRhs, ...)
 #endif // 0
 
 
-void Grammar::addProduction(Production *prod)
+void Grammar::addProduction(Production &&prod)
 {
   // I used to add emptyString if there were 0 RHS symbols,
   // but I've now switched to not explicitly saying that
 
-  prod->prodIndex = productions.count();
-  productions.append(prod);
+  prod.prodIndex = productions.size();
+  productions.emplace_back(std::move(prod));
 
   // if the start symbol isn't defined yet, we can here
   // implement the convention that the LHS of the first
   // production is the start symbol
   if (startSymbol == NULL) {
-    startSymbol = prod->left;
+    startSymbol = prod.left;
   }
 }
 
@@ -1020,8 +1019,8 @@ void Grammar::printAsBison(std::ostream &os) const
   for (const auto& nt : nonterminals) {
     // look at every rule where this nonterminal is on LHS
     bool first = true;
-    FOREACH_PRODUCTION(productions, prod) {
-      if (prod.data()->left == &nt) {
+    for (auto const& prod : productions) {
+      if (prod.left == &nt) {
 
         if (first) {
           os << nt.name << ":";
@@ -1035,7 +1034,7 @@ void Grammar::printAsBison(std::ostream &os) const
         }
 
         // print RHS symbols
-        for (auto const& elt : prod.data()->right) {
+        for (auto const& elt : prod.right) {
           Symbol const *sym = elt.sym;
           if (sym != &emptyString) {
             if (sym->isTerminal()) {
@@ -1048,16 +1047,16 @@ void Grammar::printAsBison(std::ostream &os) const
         }
 
         // or, if empty..
-        if (prod.data()->rhsLength() == 0) {
+        if (prod.rhsLength() == 0) {
           os << " /* empty */";
         }
 
         // precedence?
-        if (prod.data()->precedence) {
+        if (prod.precedence) {
           // search for a terminal with the required precedence level
           bool found=false;
           for (const auto& t : terminals) {
-            if (t.precedence == prod.data()->precedence) {
+            if (t.precedence == prod.precedence) {
               // found suitable token
               os << " %prec " << bisonTokenName(&t);
               found = true;
@@ -1066,14 +1065,14 @@ void Grammar::printAsBison(std::ostream &os) const
           }
           if (!found) {
             std::cout << "warning: cannot find token for precedence level "
-                      << prod.data()->precedence << std::endl;
+                      << prod.precedence << std::endl;
             os << " /* no token precedence level "/* */
-               << prod.data()->precedence << " */";
+               << prod.precedence << " */";
           }
         }
 
         // dummy action to help while debugging
-        os << " { $$=" << prod.data()->prodIndex << "; }";
+        os << " { $$=" << prod.prodIndex << "; }";
 
         first = false;
       }
@@ -1184,7 +1183,9 @@ Symbol *Grammar::getOrMakeSymbol(LocString const &name)
 
 int Grammar::getProductionIndex(Production const *prod) const
 {
-  int ret = productions.indexOf(prod);
+  // A production that wasn't inserted into the productions
+  // list will have the default index of -1
+  int ret = prod->prodIndex;
   xassert(ret != -1);
   return ret;
 }

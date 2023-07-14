@@ -359,8 +359,7 @@ void emitMLActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
       ;
 
   // iterate over productions, emitting action function closures
-  {FOREACH_OBJLIST(Production, g.productions, iter) {
-    Production const &prod = *(iter.data());
+  for (auto const& prod : g.productions) {
 
     // there's no syntax for a typeless nonterminal, so this shouldn't
     // be triggerable by the user
@@ -395,7 +394,7 @@ void emitMLActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
         << ");\n"
         << "\n"
         ;
-  }}
+  }
 
   // finish the array; one dummy element for ';' separation
   out << "(fun _ -> (failwith \"bad production index\"))   (* no ; *)"

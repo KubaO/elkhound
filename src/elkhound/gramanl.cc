@@ -328,8 +328,8 @@ ItemSet::ItemSet(Flatten &flat)
 
 Production *getNthProduction(Grammar *g, int n)
 {
-  if (0 <= n && n < g->productions.count()) {
-    return g->productions.nth(n);
+  if (0 <= n && n < g->productions.size()) {
+    return &g->productions[n];
   }
   else {
     // my access path functions' contract is to
@@ -1256,18 +1256,18 @@ void GrammarAnalysis::computeProductionsByLHS()
   productionsByLHS.resize(numNonterms);
 
   // map: prodIndex -> production
-  numProds = productions.count();
+  numProds = productions.size();
   indexedProds = new Production* [numProds];
   memset(indexedProds, 0, sizeof(*indexedProds) * numProds);
 
   // fill in both maps
   {
-    MUTATE_EACH_PRODUCTION(productions, prod) {        // (constness)
-      int LHSindex = prod.data()->left->ntIndex;
+    for (auto& prod : productions) {  // (constness)
+      int LHSindex = prod.left->ntIndex;
       xassert(LHSindex < numNonterms);
 
-      productionsByLHS[LHSindex].push_back(prod.data());
-      indexedProds[prod.data()->prodIndex] = prod.data();
+      productionsByLHS[LHSindex].push_back(&prod);
+      indexedProds[prod.prodIndex] = &prod;
     }
   }
 
@@ -1285,11 +1285,10 @@ void GrammarAnalysis::createDottedProductions()
   dottedProds = new DottedProduction* [numProds];
   memset(dottedProds, 0, sizeof(*dottedProds) * numProds);
 
-  FOREACH_PRODUCTION(productions, iter) {
-    Production const *prod = iter.data();
-    int rhsLen = prod->rhsLength();
+  for (auto const& prod : productions) {
+    int rhsLen = prod.rhsLength();
     xassert(rhsLen >= 0);
-    int id = prod->prodIndex;
+    int id = prod.prodIndex;
 
     // one dottedproduction for every dot position, which is one
     // more than the # of RHS elements
@@ -1298,7 +1297,7 @@ void GrammarAnalysis::createDottedProductions()
 
     // fill in each one
     for (int posn=0; posn <= rhsLen; posn++) {
-      array[posn].setProdAndDot(prod, posn);
+      array[posn].setProdAndDot(&prod, posn);
     }
   }
 
@@ -1364,8 +1363,8 @@ void GrammarAnalysis::initializeAuxData()
 
   // finish the productions before we compute the
   // dotted productions
-  MUTATE_EACH_PRODUCTION(productions, prod) {
-    prod.data()->finished(numTerminals());
+  for (auto& prod : productions) {
+    prod.finished(numTerminals());
   }
 
   createDottedProductions();
@@ -1390,10 +1389,7 @@ void GrammarAnalysis::computeWhatCanDeriveWhat()
 
     // --------- first part: add new canDerive relations --------
     // loop over all productions
-    for (ObjListIter<Production> prodIter(productions);
-         !prodIter.isDone(); prodIter.adv()) {
-      // convenient alias
-      Production const *prod = prodIter.data();
+    for (auto prod = productions.cbegin(); prod != productions.cend(); ++prod) {
 
       // since I don't include 'empty' explicitly in my rules, I won't
       // conclude that anything can derive empty, which is a problem;
@@ -1562,10 +1558,8 @@ void GrammarAnalysis::computeFirst()
     changes = 0;
 
     // for each production
-    for (ObjListMutator<Production> prodIter(productions);
-         !prodIter.isDone(); prodIter.adv()) {
+    for (auto prod = productions.begin(); prod != productions.end(); ++prod) {
       // convenient aliases
-      Production *prod = prodIter.data();
       Nonterminal *LHS = prod->left;
         // the list iter is mutating because I modify LHS's First set
 
@@ -1644,11 +1638,11 @@ void GrammarAnalysis::firstOfIterSeq(TerminalSet &destList,
 void GrammarAnalysis::computeDProdFirsts()
 {
   // for each production..
-  FOREACH_PRODUCTION(productions, prodIter) {
+  for (auto const& prod : productions) {
     // for each dotted production where the dot is not at the end..
-    int rhsLen = prodIter.data()->rhsLength();
+    int rhsLen = prod.rhsLength();
     for (int posn=0; posn <= rhsLen; posn++) {
-      DottedProduction *dprod = getDProd_nc(prodIter.data(), posn);
+      DottedProduction *dprod = getDProd_nc(&prod, posn);
 
       // compute its first
       auto& right = dprod->getProd()->right;
@@ -1676,8 +1670,7 @@ void GrammarAnalysis::computeFollow()
     // needs a mutable 'term' and 'nt'
 
     // for each production
-    MUTATE_EACH_PRODUCTION(productions, prodIter) {
-      Production *prod = prodIter.data();
+    for (auto prod = productions.begin(); prod != productions.end(); ++prod) {
 
       // for each RHS nonterminal member
       auto const rightEnd = prod->right.end();
@@ -1756,8 +1749,7 @@ void GrammarAnalysis::computePredictiveParsingTable()
 
   // for each production 'prod' (non-const iter because adding them
   // to ProductionList, which doesn't promise to not change them)
-  MUTATE_EACH_PRODUCTION(productions, prodIter) {
-    Production *prod = prodIter.data();
+  for (auto prod = productions.begin(); prod != productions.end(); ++prod) {
 
     // for each terminal 'term' in First(RHS)
     TerminalSet firsts(numTerms);
@@ -2292,7 +2284,7 @@ void GrammarAnalysis::constructLRItemSets()
     ItemSet *is = makeItemSet();              // (owner)
     startState = is;
     LRItem *firstDP
-      = new LRItem(numTerms, getDProd(productions.first(), 0 /*dot at left*/));
+      = new LRItem(numTerms, getDProd(&productions.front(), 0 /*dot at left*/));
 
     // don't add this to the lookahead; we assume EOF is actually
     // mentioned in the production already, and we won't contemplate
@@ -3620,8 +3612,7 @@ bool GrammarAnalysis::
 {
   // get all of 'nonterminal's productions that are not recursive
   ProductionList candidates;
-  FOREACH_PRODUCTION(productions, prodIter) {
-    Production const *prod = prodIter.data();
+  for (auto prod = productions.cbegin(); prod != productions.cend(); ++prod) {
     if (prod->left != nonterminal) continue;
 
     // if 'prod' has 'nonterminal' on RHS, that would certainly
@@ -3857,8 +3848,7 @@ void GrammarAnalysis::addTreebuildingActions()
   }
 
   // write treebuilding actions for productions
-  MUTATE_EACH_OBJLIST(Production, productions, prodIter) {
-    Production *p = prodIter.data();
+  for (auto p = productions.begin(); p != productions.end(); ++p) {
 
     // build up the code
     stringBuilder code;
@@ -4458,8 +4448,7 @@ void emitActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
   out << "// ------------------- actions ------------------\n";
 
   // iterate over productions, emitting inline action functions
-  {FOREACH_OBJLIST(Production, g.productions, iter) {
-    Production const &prod = *(iter.data());
+  for (auto const& prod : g.productions) {
 
     // there's no syntax for a typeless nonterminal, so this shouldn't
     // be triggerable by the user
@@ -4504,7 +4493,7 @@ void emitActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
     // now insert the user's code, to execute in this environment of
     // properly-typed semantic values
     emitUserCode(out, prod.action);
-  }}
+  }
 
   out << "\n";
 
@@ -4518,8 +4507,7 @@ void emitActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
   out << "  switch (productionId) {\n";
 
   // iterate over productions
-  FOREACH_OBJLIST(Production, g.productions, iter) {
-    Production const &prod = *(iter.data());
+  for (auto const& prod : g.productions) {
 
     out << "    case " << prod.prodIndex << ":\n";
     out << "      return (SemanticValue)(ths->" << actionFuncName(prod) << "("
