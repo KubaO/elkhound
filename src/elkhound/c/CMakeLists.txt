@@ -15,14 +15,14 @@ add_custom_command(
 # generate c.ast.gen.{cc,h}
 add_custom_command(
     OUTPUT c.ast.gen.cc c.ast.gen.h
-    COMMAND ${AST_DIR}/astgen -oc.ast.gen ${CMAKE_CURRENT_SOURCE_DIR}/c.ast
+    COMMAND astgen -oc.ast.gen ${CMAKE_CURRENT_SOURCE_DIR}/c.ast
     DEPENDS astgen c.ast
 )
 
 # generate c.gr.{cc,h}
 add_custom_command(
     OUTPUT c.gr.gen.cc c.gr.gen.h
-    COMMAND ${ELKHOUND_DIR}/elkhound -tr bison -o c.gr.gen ${CMAKE_CURRENT_SOURCE_DIR}/c.gr
+    COMMAND elkhound -tr bison -o c.gr.gen ${CMAKE_CURRENT_SOURCE_DIR}/c.gr
     DEPENDS elkhound c.tok c.gr
 )
 
