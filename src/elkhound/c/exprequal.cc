@@ -7,6 +7,8 @@
 #include "ohashtbl.h"          // OwnerHashTable
 #include "c_type.h"            // Type::equals
 
+#include <vector>              // std::vector
+
 
 // ------------------- VariablePair ---------------
 struct VariablePair {
@@ -165,7 +167,7 @@ bool equalExpr(OwnerHashTable<VariablePair> &equiv,
       // (i.e. "int x,y;" != "int x; int y;") and all declared
       // variables have the same type
       bool ret;
-      SObjList<Variable /*const*/> addedEquiv;
+      std::vector<Variable const*> addedEquiv;
       ASTListIter<Declaration> outerL(L.decls);
       ASTListIter<Declaration> outerR(R.decls);
       for (; !outerL.isDone(); outerL.adv(), outerR.adv()) {
@@ -191,7 +193,7 @@ bool equalExpr(OwnerHashTable<VariablePair> &equiv,
           equiv.add(varL, new VariablePair(varL, varR));
 
           // keep track of what gets added
-          addedEquiv.prepend(const_cast<Variable*>(varL));
+          addedEquiv.push_back(varL);
         }
       }
 
@@ -202,9 +204,10 @@ bool equalExpr(OwnerHashTable<VariablePair> &equiv,
 
     cleanup:
       // remove the equivalences we added
-      while (addedEquiv.isNotEmpty()) {
-        delete equiv.remove(addedEquiv.removeFirst());
+      for (auto ae = addedEquiv.rbegin(); ae != addedEquiv.rend(); ae++) {
+        delete equiv.remove(*ae);
       }
+      addedEquiv.clear();
 
       return ret;
 
