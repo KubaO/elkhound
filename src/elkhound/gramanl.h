@@ -115,17 +115,6 @@ public:	    // funcs
   OSTREAM_OPERATOR(DottedProduction)
 };
 
-// lists of dotted productions
-typedef ObjList<DottedProduction> DProductionList;
-typedef ObjListIter<DottedProduction> DProductionListIter;
-typedef SObjList<DottedProduction> SDProductionList;
-typedef SObjListIter<DottedProduction> SDProductionListIter;
-
-#define FOREACH_DOTTEDPRODUCTION(list, iter) FOREACH_OBJLIST(DottedProduction, list, iter)
-#define MUTATE_EACH_DOTTEDPRODUCTION(list, iter) MUTATE_EACH_OBJLIST(DottedProduction, list, iter)
-#define SFOREACH_DOTTEDPRODUCTION(list, iter) SFOREACH_OBJLIST(DottedProduction, list, iter)
-#define SMUTATE_EACH_DOTTEDPRODUCTION(list, iter) SMUTATE_EACH_OBJLIST(DottedProduction, list, iter)
-
 
 // --------------- LRItem ---------------
 // a dotted production with a lookahead; whereas each production
@@ -392,7 +381,7 @@ protected:  // data
   // symbol on the LHS; so let's index produtions by LHS symbol index;
   // this array has 'numNonterms' elements, mapping each nonterminal to
   // the list of productions with that nonterminal on the LHS
-  SObjList<Production> *productionsByLHS;    // (owner ptr to array)
+  std::vector<std::vector<Production*>> productionsByLHS;    // (array of arrays of serfs)
 
   // map of production x dotPosition -> DottedProduction;
   // each element of the 'dottedProds' array is a pointer to an

@@ -940,11 +940,6 @@ GrammarAnalysis::~GrammarAnalysis()
     delete indexedTerms;
   }
 
-  if (productionsByLHS != NULL) {
-    // empties all lists automatically because of "[]"
-    delete[] productionsByLHS;
-  }
-
   if (indexedProds != NULL) {
     delete[] indexedProds;
   }
@@ -1254,7 +1249,7 @@ void GrammarAnalysis::resetFirstFollow()
 void GrammarAnalysis::computeProductionsByLHS()
 {
   // map: nonterminal -> productions with that nonterm on LHS
-  productionsByLHS = new SObjList<Production> [numNonterms];
+  productionsByLHS.resize(numNonterms);
 
   // map: prodIndex -> production
   numProds = productions.count();
@@ -1267,7 +1262,7 @@ void GrammarAnalysis::computeProductionsByLHS()
       int LHSindex = prod.data()->left->ntIndex;
       xassert(LHSindex < numNonterms);
 
-      productionsByLHS[LHSindex].append(prod.data());
+      productionsByLHS[LHSindex].push_back(prod.data());
       indexedProds[prod.data()->prodIndex] = prod.data();
     }
   }
@@ -1981,8 +1976,9 @@ void GrammarAnalysis
   //TerminalSet newItemLA(numTerminals());
 
   // for each production "B -> gamma"
-  SMUTATE_EACH_PRODUCTION(productionsByLHS[nontermIndex], prodIter) {    // (constness)
-    Production &prod = *(prodIter.data());
+  for (Production *pprod : productionsByLHS[nontermIndex]) {   // (constness)
+    Production const& prod = *pprod;
+
     if (tr) {
       trs << "    considering production " << prod << std::endl;
     }
@@ -2596,9 +2592,9 @@ void GrammarAnalysis::computeReachableDFS(Nonterminal *nt)
   nt->reachable = true;
 
   // iterate over this nonterminal's rules
-  SFOREACH_PRODUCTION(productionsByLHS[nt->ntIndex], iter) {
+  for (Production const *prod : productionsByLHS[nt->ntIndex]) {
     // iterate over symbols in the rule RHS
-    FOREACH_OBJLIST(Production::RHSElt, iter.data()->right, jter) {
+    FOREACH_OBJLIST(Production::RHSElt, prod->right, jter) {
       Production::RHSElt const *elt = jter.data();
 
       if (elt->sym->isNonterminal()) {
