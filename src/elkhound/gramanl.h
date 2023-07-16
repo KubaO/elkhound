@@ -360,6 +360,8 @@ public:     // funcs
 };
 
 
+using ReductionStack = std::vector<Production*>;
+
 // ---------------------- GrammarAnalysis -------------------
 class GrammarAnalysis : public Grammar {
 protected:  // data
@@ -535,9 +537,9 @@ private:    // funcs
   void leftContext(SymbolList &output, ItemSet const *state) const;
   TerminalList rewriteAsTerminals(SymbolList const &input) const;
   bool rewriteAsTerminalsHelper(TerminalList &output, SymbolList const &input,
-				ProductionList &reductionStack) const;
+				ReductionStack &reductionStack) const;
   bool rewriteSingleNTAsTerminals(TerminalList &output, Nonterminal const *nonterminal,
-				  ProductionList &reductionStack) const;
+				  ReductionStack &reductionStack) const;
 
   // let's try this .. it needs to access 'itemSets'
   friend void ItemSet::xferSerfs(Flatten &flat, GrammarAnalysis &g);

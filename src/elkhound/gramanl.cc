@@ -3511,7 +3511,7 @@ TerminalList GrammarAnalysis::rewriteAsTerminals(SymbolList const &input) const
   TerminalList output;
   // we detect looping by noticing if we ever reduce via the same
   // production more than once in a single vertical recursive slice
-  ProductionList reductionStack;      // starts empty
+  ReductionStack reductionStack;      // starts empty
 
   // start the recursive version
   if (!rewriteAsTerminalsHelper(output, input, reductionStack)) {
@@ -3526,7 +3526,7 @@ TerminalList GrammarAnalysis::rewriteAsTerminals(SymbolList const &input) const
 // unchanged from when the function was invoked
 bool GrammarAnalysis::
   rewriteAsTerminalsHelper(TerminalList &output, SymbolList const &input,
-                           ProductionList &reductionStack) const
+                           ReductionStack &reductionStack) const
 {
   // remember the initial 'output' length so we can restore
   int origLength = output.size();
@@ -3569,7 +3569,7 @@ bool GrammarAnalysis::
 int compareProductionsForRewriting(Production const *p1, Production const *p2,
                                    void *extra)
 {
-  ProductionList *reductionStack = (ProductionList*)extra;
+  ReductionStack *reductionStack = (ReductionStack*)extra;
 
   bool p1RHSSeen=false, p2RHSSeen=false;
   for (Production const *iter : *reductionStack) {
@@ -3595,7 +3595,7 @@ int compareProductionsForRewriting(Production const *p1, Production const *p2,
 // CONSTNESS: want 'reductionStack' to be list of const ptrs
 bool GrammarAnalysis::
   rewriteSingleNTAsTerminals(TerminalList &output, Nonterminal const *nonterminal,
-                             ProductionList &reductionStack) const
+                             ReductionStack &reductionStack) const
 {
   // get all of 'nonterminal's productions that are not recursive
   ProductionList candidates;
@@ -3637,7 +3637,7 @@ bool GrammarAnalysis::
   for (Production const *prod : candidates) {
 
     // add chosen production to the stack
-    reductionStack.push_front(const_cast<Production*>(prod));
+    reductionStack.push_back(const_cast<Production*>(prod));
 
     // now, the chosen rule provides a RHS, which is a sequence of
     // terminals and nonterminals; recursively reduce that sequence
@@ -3646,8 +3646,8 @@ bool GrammarAnalysis::
     retval = rewriteAsTerminalsHelper(output, rhsSymbols, reductionStack);
 
     // remove chosen production from stack
-    Production *temp = reductionStack.front();
-    reductionStack.pop_front();
+    Production *temp = reductionStack.back();
+    reductionStack.pop_back();
     xassert(temp == prod);
 
     if (retval) {
