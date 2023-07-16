@@ -4,9 +4,10 @@
 #ifndef __GRAMPAR_H
 #define __GRAMPAR_H
 
+#include <map>            // std::map<string, TF_nonterm>
+
 #include "typ.h"          // NULL
 #include "exc.h"          // xBase
-#include "strsobjdict.h"  // StringSObjDict
 #include "locstr.h"       // LocString
 
 // linkdepend: grampar.tab.cc
@@ -78,7 +79,7 @@ public:      // data
 
   // maps from a nonterminal name to its declaration, if that
   // nonterminal has in fact been declared already
-  StringSObjDict<TF_nonterm> nontermDecls;
+  std::map<string, TF_nonterm*> nontermDecls;
 
   // count of recoverable errors; only the one in the
   // topmost environment is used

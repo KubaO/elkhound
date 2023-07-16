@@ -75,31 +75,30 @@ void CFGEnv::popBreaks()
 // -------- labels --------
 void CFGEnv::addLabel(StringRef name, S_label *target)
 {
-  labels.add(name, target);
+  labels[name] = target;
 }
 
 void CFGEnv::addPendingGoto(StringRef name, S_goto *source)
 {
-  gotos.add(name, source);
+  gotos[name] = source;;
 }
 
 void CFGEnv::resolveGotos()
 {
   // go over all the gotos and find their corresponding target
-  for (StringSObjDict<S_goto>::Iter iter(gotos);
-       !iter.isDone(); iter.next()) {
-    S_label *target = labels.queryif(iter.key().c_str());
-    if (target) {
-      iter.value()->next = makeNextPtr(target, false);
+  for (auto &iter : gotos) {
+    auto target = labels.find(iter.first);
+    if (target != labels.end()) {
+      iter.second->next = makeNextPtr(target->second, false);
     }
     else {
-      err(stringc << "goto to undefined label: " << iter.key());
+      err(stringc << "goto to undefined label: " << iter.first);
     }
   }
 
   // empty both dictionaries
-  labels.empty();
-  gotos.empty();
+  labels.clear();
+  gotos.clear();
 }
 
 
@@ -180,10 +179,10 @@ Env::~Env()
 {
   // explicitly free things, for easier debugging of dtor sequence
   scopes.clear();
-  typedefs.empty();
-  compounds.empty();
-  enums.empty();
-  enumerators.empty();
+  typedefs.clear();
+  compounds.clear();
+  enums.clear();
+  enumerators.clear();
 }
 
 
@@ -299,7 +298,7 @@ void Env::addVariable(StringRef name, Variable *decl)
       decl->flags = (DeclFlags)(decl->flags | DF_GLOBAL);
     }
 
-    scopes.top().variables.add(name, decl);
+    scopes.top().variables[name] = decl;
   }
 }
 
@@ -309,9 +308,10 @@ Variable *Env::getVariable(StringRef name, bool innerOnly)
   // TODO: add enums to what we search
 
   for (auto const &scope : scopes) {
-    Variable *v;
-    if (scope.variables.query(name, v)) {
-      return v;
+    auto& variables = scope.variables;
+    auto v = variables.find(name);
+    if (v != variables.end()) {
+      return v->second;
     }
 
     if (innerOnly) {
@@ -345,15 +345,15 @@ void Env::addTypedef(StringRef name, Type const *type)
         "'");
     }
   }
-  typedefs.add(name, const_cast<Type*>(type));
+  typedefs[name] = const_cast<Type*>(type);
 }
 
 
 Type const *Env::getTypedef(StringRef name)
 {
-  Type *t;
-  if (typedefs.query(name, t)) {
-    return t;
+  auto t = typedefs.find(name);
+  if (t != typedefs.end()) {
+    return t->second;
   }
   else {
     return NULL;
@@ -364,14 +364,14 @@ Type const *Env::getTypedef(StringRef name)
 // ----------------------- compounds -------------------
 CompoundType *Env::addCompound(StringRef name, CompoundType::Keyword keyword)
 {
-  if (name && compounds.isMapped(name)) {
+  if (name && compounds.find(name) != compounds.end()) {
     errThrow(stringc << "compound already declared: " << name);
   }
 
   CompoundType *ret = new CompoundType(keyword, name);
   //grabAtomic(ret);
   if (name) {
-    compounds.add(name, ret);
+    compounds[name] = ret;
   }
 
   return ret;
@@ -391,13 +391,13 @@ void Env::addCompoundField(CompoundType *ct, Variable *decl)
 
 CompoundType *Env::getCompound(StringRef name)
 {
-  CompoundType *e;
-  if (name && compounds.query(name, e)) {
-    return e;
+  if (name) {
+    auto e = compounds.find(name);
+    if (e != compounds.end()) {
+      return e->second;
+    }
   }
-  else {
-    return NULL;
-  }
+  return NULL;
 }
 
 
@@ -419,13 +419,13 @@ CompoundType *Env::getOrAddCompound(StringRef name, CompoundType::Keyword keywor
 // ---------------------- enums ---------------------
 EnumType *Env::addEnum(StringRef name)
 {
-  if (name && enums.isMapped(name)) {
+  if (name && enums.find(name) != enums.end()) {
     errThrow(stringc << "enum already declared: " << name);
   }
 
   EnumType *ret = new EnumType(name);
   if (name) {
-    enums.add(name, ret);
+    enums[name] = ret;
   }
   return ret;
 }
@@ -433,13 +433,13 @@ EnumType *Env::addEnum(StringRef name)
 
 EnumType *Env::getEnum(StringRef name)
 {
-  EnumType *ret;
-  if (name && enums.query(name, ret)) {
-    return ret;
+  if (name) {
+    auto e = enums.find(name);
+    if (e != enums.end()) {
+      return e->second;
+    }
   }
-  else {
-    return NULL;
-  }
+  return NULL;
 }
 
 
@@ -459,21 +459,21 @@ EnumType *Env::getOrAddEnum(StringRef name)
 EnumType::Value *Env::addEnumerator(StringRef name, EnumType *et, int value,
                                     Variable *decl)
 {
-  if (enumerators.isMapped(name)) {
+  if (enumerators.find(name) != enumerators.end()) {
     errThrow(stringc << "duplicate enumerator: " << name);
   }
 
   EnumType::Value *ret = et->addValue(name, value, decl);
-  enumerators.add(name, ret);
+  enumerators[name] = ret;
   return ret;
 }
 
 
 EnumType::Value *Env::getEnumerator(StringRef name)
 {
-  EnumType::Value *ret;
-  if (enumerators.query(name, ret)) {
-    return ret;
+  auto ev = enumerators.find(name);
+  if (ev != enumerators.end()) {
+    return ev->second;
   }
   else {
     return NULL;
@@ -717,17 +717,16 @@ SourceLoc Env::currentLoc() const
 // ---------------------- debugging ---------------------
 string Env::toString() const
 {
-  stringBuilder sb;
+  string ret;
 
   // for now, just the variables
   for (auto const& scope : scopes) {
-    StringSObjDict<Variable>::IterC iter(scope.variables);
-    for (; !iter.isDone(); iter.next()) {
-      sb << iter.value()->toString() << " ";
+    for (auto& iter : scope.variables) {
+      ret << iter.second->toString() << " ";
     }
   }
 
-  return sb;
+  return ret;
 }
 
 

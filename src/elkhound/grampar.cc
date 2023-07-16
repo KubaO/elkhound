@@ -313,13 +313,14 @@ void astParseGrammar(Grammar &g, GrammarAST *ast)
       TF_nonterm *nt = iter.data()->asTF_nonterm();
 
       // check for already declared
-      if (env.nontermDecls.isMapped(nt->name)) {
+      auto ntd = env.nontermDecls.find(nt->name.str);
+      if (ntd != env.nontermDecls.end()) {
         if (!ast->allowContinuedNonterminals) {
           astParseError(nt->name, "nonterminal already declared");
         }
         else {
           // check for consistent type
-          if (!nt->type.equals(env.nontermDecls.queryf(nt->name)->type)) {
+          if (!nt->type.equals(ntd->second->type)) {
             astParseError(nt->name, "continued nonterminal with different type");
           }
 
@@ -337,7 +338,7 @@ void astParseGrammar(Grammar &g, GrammarAST *ast)
       // 12/09/04: As far as I can tell, 'nontermDecls' is in fact not
       // used except for right here, to check whether a nonterminal
       // declaration is duplicated.
-      env.nontermDecls.add(nt->name, nt);
+      env.nontermDecls[nt->name.str] = nt;
     }
   }
 
