@@ -32,8 +32,8 @@ add_custom_command(
 # generate c.tok
 add_custom_command(
     OUTPUT c.tok
-    COMMAND lexer2 -myparser > c.tok
-    DEPENDS lexer2
+    COMMAND clexer2 -myparser > c.tok
+    DEPENDS clexer2
 )
 
 # all the files for libcparse
