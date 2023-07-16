@@ -29,7 +29,6 @@
 #include "objlist.h"     // ObjList
 #include "util.h"        // OSTREAM_OPERATOR, INTLOOP
 #include "locstr.h"      // LocString, StringRef
-#include "strobjdict.h"  // StringObjDict
 #include "owner.h"       // Owner
 #include "asockind.h"    // AssocKind
 
@@ -44,7 +43,6 @@ class DottedProduction;
 class Grammar;
 
 // transitional definitions
-typedef StringObjDict<LocString> LitCodeDict;
 typedef LocString LiteralCode;
 
 

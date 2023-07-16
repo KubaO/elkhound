@@ -8,8 +8,6 @@
 
 HashLineMap::HashLineMap(rostring pf)
   : ppFname(pf),
-    filenames(),     // empty
-    directives(),    // empty
     prev_ppLine(-1)  // user shouldn't have negative line numbers
 {}
 
@@ -25,13 +23,8 @@ void HashLineMap::addHashLine(int ppLine, int origLine, char const *origFname)
   prev_ppLine = ppLine;
 
   // map 'origFname' to a canonical reference
-  string *canon = filenames.queryif(origFname);
-  if (!canon) {
-    // add a new one
-    canon = new string(origFname);
-    filenames.add(origFname, canon);
-  }
-  origFname = canon->c_str();
+  auto canon = filenames.insert(origFname); // duplicates aren't inserted
+  origFname = canon.first->c_str();
 
   // add the entry to the array
   directives.push(HashLine(ppLine, origLine, origFname));

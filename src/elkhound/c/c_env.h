@@ -5,8 +5,6 @@
 #define C_ENV_H
 
 #include "c_type.h"       // Type, AtomicType, etc. (r)
-#include "strobjdict.h"   // StrObjDict
-#include "strsobjdict.h"  // StrSObjDict
 #include "owner.h"        // Owner
 #include "exc.h"          // xBase
 #include "c.ast.gen.h"    // C ast components
