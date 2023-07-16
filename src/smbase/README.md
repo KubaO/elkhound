@@ -119,8 +119,6 @@ If you have a function that can map from data to (string) key, then StringHash a
 
 The StringVoidDict and templates wrapped around it are more general. They do not require a function to map from data to key, support query-then-modify-result, and alphabetic iteration.
 
-* [strobjdict.h](strobjdict.h): StringObjDict, a case-sensitive map from strings to object pointers. The dictionary owns the referred-to objects.
-
 * [strsobjdict.h](strsobjdict.h): StringSObjDict, a case-sensitive map from strings to object pointers. The dictionary does _not_ own the referred-to objects.
 
 * [svdict.h](svdict.h), [svdict.cc](svdict.cc): StringVoidDict, a case-sensitive map from strings to void* pointers. Built on top of StringHash.
