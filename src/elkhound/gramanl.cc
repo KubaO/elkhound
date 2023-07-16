@@ -3455,7 +3455,7 @@ void GrammarAnalysis::leftContext(SymbolList &output,
     Symbol const *sym = inverseTransitionC(parent, state);
 
     // prepend that symbol's name to our current context
-    output.push_front(const_cast<Symbol*>(sym));
+    output.push_back(const_cast<Symbol*>(sym));
 
     // move to our parent and repeat
     state = parent;

@@ -22,6 +22,7 @@
 #define __GRAMMAR_H
 
 #include <deque>         // std::deque
+#include <vector>        // std::vector
 #include <iostream>      // std::ostream
 
 #include "str.h"         // string
@@ -127,10 +128,10 @@ public:      // funcs
 // We're casting from TerminalList to SymbolList.
 // That's an ugly hack, but at least this is a reminder
 // that those two lists must all use the same container.
-using SymbolList = std::deque<Symbol *>;
-using TerminalList = std::deque<Terminal*>;
+using SymbolList = std::vector<Symbol *>;
+using TerminalList = std::vector<Terminal*>;
 
-using NonterminalList = std::deque<Nonterminal*>;
+using NonterminalList = std::vector<Nonterminal*>;
 
 
 // format: "s1 s2 s3"
