@@ -23,7 +23,6 @@ add_library(smbase STATIC
     strhash.cc
     strtokp.cpp
     strutil.cc
-    svdict.cc
     syserr.cpp
     trace.cc
     trdelete.cc
