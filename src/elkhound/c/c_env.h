@@ -9,12 +9,9 @@
 #include "strsobjdict.h"  // StrSObjDict
 #include "owner.h"        // Owner
 #include "exc.h"          // xBase
-#include "sobjlist.h"     // SObjList
-#include "objstack.h"     // ObjStack
-#include "sobjstack.h"    // SObjStack
 #include "c.ast.gen.h"    // C ast components
 #include "c_variable.h"   // Variable (r)
-#include "array.h"        // ArrayStack
+#include "stack.h"        // sm::stack<...>, std::vector, std::deque
 
 class StringTable;        // strtable.h
 class CCLang;             // cc_lang.h
@@ -59,15 +56,14 @@ public:     // funcs
 // elements of the environment necessary for constructing the CFG
 class CFGEnv {
 private:    // data
-  ObjStack< SObjList<Statement> > pendingNexts;
-
-  ObjStack< SObjList<S_break> > breaks;
+  sm::stack< sm::stack<Statement *> > pendingNexts;
+  sm::stack< sm::stack<S_break *> > breaks;
 
   StringSObjDict<S_label> labels;       // goto targets
   StringSObjDict<S_goto> gotos;         // goto sources
 
-  SObjStack<S_switch> switches;
-  SObjStack<Statement> loops;
+  sm::stack<S_switch *> switches;
+  sm::stack<Statement *> loops;
 
 public:     // funcs
   CFGEnv();
@@ -111,14 +107,9 @@ public:     // funcs
 
 
 // elements of the environment which are scoped
-class ScopedEnv {
-public:
+struct ScopedEnv {
   // variables: map name -> Type
   StringSObjDict<Variable> variables;
-
-public:
-  ScopedEnv();
-  ~ScopedEnv();
 };
 
 
@@ -126,8 +117,8 @@ public:
 class Env : public CFGEnv {
 private:    // data
   // ----------- fundamental maps ---------------
-  // list of active scopes; element 0 is the innermost scope
-  ObjList<ScopedEnv> scopes;
+  // stack of active scopes
+  sm::stack<ScopedEnv, std::vector> scopes;
 
   // typedefs: map name -> Type
   StringSObjDict<Type /*const*/> typedefs;
@@ -147,13 +138,13 @@ private:    // data
   int warnings;
 
   // stack of compounds being constructed
-  SObjList<CompoundType> compoundStack;
+  sm::stack<CompoundType *> compoundStack;
 
   // current function
   TF_func *currentFunction;
 
   // stack of source locations considered 'current'
-  ArrayStack<SourceLoc> locationStack;
+  sm::stack<SourceLoc> locationStack;
 
 public:     // data
   // true in predicate expressions
@@ -256,14 +247,14 @@ public:     // funcs
 
 
   // ------------------- translation context ----------------
-  void pushStruct(CompoundType *ct)     { compoundStack.prepend(ct); }
-  void popStruct()                      { compoundStack.removeAt(0); }
+  void pushStruct(CompoundType *ct)     { compoundStack.push(ct); }
+  void popStruct()                      { compoundStack.pop(); }
 
   void setCurrentFunction(TF_func *f)   { currentFunction = f; }
   TF_func *getCurrentFunction()         { return currentFunction; }
   Type const *getCurrentRetType();
 
-  bool isGlobalEnv() const              { return scopes.count() <= 1; }
+  bool isGlobalEnv() const              { return scopes.size() <= 1; }
 
   void pushLocation(SourceLoc loc);
   void popLocation()                    { locationStack.pop(); }
