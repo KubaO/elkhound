@@ -3,10 +3,12 @@
 
 // included in generated header
 verbatim {
-  #include "sobjlist.h"      // SObjList
   #include "c_variable.h"    // Variable
   #include "cc_flags.h"      // CVFlags, DeclFlags, etc. (r)
   #include "c_type.h"        // Type, FunctonType, CompoundType
+
+  #include <set>             // std::set
+  #include <vector>          // std::vector
 
   class Env;                 // cc_env.h
   class AEnv;                // aenv.h
@@ -49,16 +51,16 @@ class TopForm (SourceLoc loc) {
        public StringRef name() const;
 
        // list of all parameters, and then all locals
-       public SObjList<Variable> params;
-       public SObjList<Variable> locals;
+       public std::vector<Variable *> params;
+       public std::vector<Variable *> locals;
 
        // list of all global variables referenced in this function;
        // also all the struct fields referenced, since they get
        // modeled sort of like global variables too
-       public SObjList<Variable> globalRefs;
+       public std::set<Variable *> globalRefs;
 
        // list of all the path starting points
-       public SObjList<Statement> roots;
+       public std::vector<Statement *> roots;
 
        // total # of paths, the sum from all roots
        public int numPaths;
@@ -284,13 +286,13 @@ class Statement (SourceLoc loc) {
   pure_virtual void itcheck(Env &env);
 
   pure_virtual void vcgen(STMT_VCGEN_PARAMS) const;
-  public void vcgenPath(AEnv &env, SObjList<Statement /*const*/> &path,
+  public void vcgenPath(AEnv &env, std::vector<Statement /*const*/ *> &path,
                         int index, bool isContinue) const;
 
   // given 'facts' known at the start of this node (reached via
   // 'isContinue'), update 'facts' to reflect the obvious facts after
   // execution flows through this node and down the 'succPtr' edge
-  pure_virtual void factFlow(SObjList<Expression> &facts, bool isContinue,
+  pure_virtual void factFlow(std::vector<Expression *> &facts, bool isContinue,
                              NextPtr succPtr) const;
 
   // embedded control flow successor edge (for some constructs, like
@@ -330,7 +332,7 @@ class Statement (SourceLoc loc) {
      }
   -> S_switch(Expression expr, Statement branches) {
        // pointers to all of the cases (& default) in this switch
-       public SObjList<Statement> cases;
+       public std::vector<Statement *> cases;
        public virtual void getSuccessors(VoidList &dest, bool isContinue) const;
      }
   -> S_while(Expression cond, Statement body) {
@@ -356,7 +358,7 @@ class Statement (SourceLoc loc) {
   -> S_invariant(Expression expr) {
        // this is the set of facts inferred automatically for this
        // invariant point; it's a set of serf pointers into the AST
-       public SObjList<Expression> inferFacts;
+       public std::vector<Expression *> inferFacts;
 
        // retrieve a predicate expressing the conjunction of expr and
        // inferFacts

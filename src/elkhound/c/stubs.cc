@@ -74,24 +74,24 @@ Predicate *E_stringLit::vcgenPred(AEnv &, int) const { return NULL; }
 Predicate *E_floatLit::vcgenPred(AEnv &, int) const { return NULL; }
 Predicate *E_intLit::vcgenPred(AEnv &, int) const { return NULL; }
 
-void S_thmprv::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_invariant::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_assume::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_assert::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_decl::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_goto::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_return::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_continue::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_break::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_for::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_doWhile::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_while::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_switch::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_if::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_compound::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_expr::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_default::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_caseRange::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_case::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_label::factFlow(SObjList<Expression> &, bool, void *) const {}
-void S_skip::factFlow(SObjList<Expression> &, bool, void *) const {}
+void S_thmprv::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_invariant::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_assume::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_assert::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_decl::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_goto::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_return::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_continue::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_break::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_for::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_doWhile::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_while::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_switch::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_if::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_compound::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_expr::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_default::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_caseRange::factFlow(std::vector<Expression*> &, bool, void *) const {}
+void S_case::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_label::factFlow(std::vector<Expression *> &, bool, void *) const {}
+void S_skip::factFlow(std::vector<Expression *> &, bool, void *) const {}

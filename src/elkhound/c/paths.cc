@@ -18,8 +18,8 @@
 
 
 // prototypes
-void findPathRoots(SObjList<Statement> &list, TF_func const *func);
-void findPathRoots(SObjList<Statement> &list, Statement const *stmt);
+void findPathRoots(std::vector<Statement *> &list, TF_func const *func);
+void findPathRoots(std::vector<Statement *>& list, Statement const* stmt);
 int countPaths(Env &env, TF_func *func);
 int countPathsFrom(Env &env, SObjList<Statement> &path,
                    Statement *node, bool isContinue);
@@ -45,16 +45,14 @@ static int mult(int a, int b)
 
 
 // --------------------- finding roots ----------------------
-void findPathRoots(SObjList<Statement> &list, TF_func const *func)
+void findPathRoots(std::vector<Statement *>& list, TF_func const* func)
 {
-  list.reverse();
-  list.prepend(func->body);
+  list.push_back(func->body);
   findPathRoots(list, func->body);
-  list.reverse();
 }
 
 
-void findPathRoots(SObjList<Statement> &list, Statement const *stmt)
+void findPathRoots(std::vector<Statement *>& list, Statement const* stmt)
 {
   ASTSWITCHC(Statement, stmt) {
     ASTCASEC(S_label, l) {
@@ -92,7 +90,7 @@ void findPathRoots(SObjList<Statement> &list, Statement const *stmt)
       findPathRoots(list, f->body);
     }
     ASTNEXTC(S_invariant, i) {
-      list.prepend(const_cast<S_invariant*>(i));       // action!
+      list.push_back(const_cast<S_invariant*>(i));       // action!
     }
     ASTENDCASECD
   }
@@ -108,8 +106,7 @@ int countPaths(Env &env, TF_func *func)
   findPathRoots(func->roots, func);
 
   // enumerate all paths from each root
-  SMUTATE_EACH_OBJLIST(Statement, func->roots, iter) {
-    Statement *s = iter.data();
+  for (Statement *s : func->roots) {
 
     SObjList<Statement> path;
     countPathsFrom(env, path, s, false /*isContinue*/);
@@ -192,9 +189,8 @@ int countPathsFrom(Env &env, SObjList<Statement> &path,
 void printPaths(TF_func const *func)
 {
   // enumerate all paths from each root
-  SFOREACH_OBJLIST(Statement, func->roots, iter) {
-    Statement const *s = iter.data();
-    std::cout << "root at " << toString(iter.data()->loc) << ":\n";
+  for (Statement const *s : func->roots) {
+    std::cout << "root at " << toString(s->loc) << ":\n";
 
     // the whole point of counting the paths was so I could
     // so easily get a handle on all of them, to be able to
