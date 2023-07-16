@@ -136,9 +136,7 @@ Strings are sequences of characters.
 
 * [str.h](str.h), [str.cpp](str.cpp): The string class itself. Using the string class instead of char* makes handling strings as convenent as manipulating fundamental types like int or float. See also [string.txt](string.txt).
 
-* [stringset.h](stringset.h), [stringset.cc](stringset.cc): StringSet, a set of strings.
-
-* [strtokp.h](strtokp.h), [strtokp.cpp](strtokp.cpp): StrtokParse, a class that parses a string similar to how strtok() works, but provides a more convenient (and thread-safe) interface. Similar to Java's StringTokenizer.
+  [strtokp.h](strtokp.h), [strtokp.cpp](strtokp.cpp): StrtokParse, a class that parses a string similar to how strtok() works, but provides a more convenient (and thread-safe) interface. Similar to Java's StringTokenizer.
 
 * [strutil.h](strutil.h), [strutil.cc](strutil.cc): A set of generic string utilities, including replace(), translate(), trimWhitespace(), encodeWithEscapes(), etc.
 
