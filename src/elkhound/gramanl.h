@@ -295,9 +295,8 @@ public:     // funcs
   // of a production's LHS); parsing=true means we are actually
   // parsing input, so certain tracing output is appropriate;
   // 'reductions' is a list of const Productions
-  void getPossibleReductions(ProductionList &reductions,
-                             Terminal const *lookahead,
-                             bool parsing) const;
+  ProductionList getPossibleReductions(Terminal const *lookahead,
+                                       bool parsing) const;
 
 
   // assuming this itemset has at least one reduction ready (an assertion
@@ -534,7 +533,7 @@ private:    // funcs
 
   // sample input helpers
   void leftContext(SymbolList &output, ItemSet const *state) const;
-  bool rewriteAsTerminals(TerminalList &output, SymbolList const &input) const;
+  TerminalList rewriteAsTerminals(SymbolList const &input) const;
   bool rewriteAsTerminalsHelper(TerminalList &output, SymbolList const &input,
 				ProductionList &reductionStack) const;
   bool rewriteSingleNTAsTerminals(TerminalList &output, Nonterminal const *nonterminal,

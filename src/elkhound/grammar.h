@@ -21,11 +21,11 @@
 #ifndef __GRAMMAR_H
 #define __GRAMMAR_H
 
+#include <deque>         // std::deque
 #include <iostream>      // std::ostream
 
 #include "str.h"         // string
 #include "objlist.h"     // ObjList
-#include "sobjlist.h"    // SObjList
 #include "util.h"        // OSTREAM_OPERATOR, INTLOOP
 #include "locstr.h"      // LocString, StringRef
 #include "strobjdict.h"  // StringObjDict
@@ -124,15 +124,14 @@ public:      // funcs
   virtual string toString() const { return string(name); }
 };
 
-// I have several needs for serf lists of symbols, so let's use this for now
-typedef SObjList<Symbol> SymbolList;
-typedef SObjListIter<Symbol> SymbolListIter;
-typedef SObjListMutator<Symbol> SymbolListMutator;
+// We're casting from TerminalList to SymbolList.
+// That's an ugly hack, but at least this is a reminder
+// that those two lists must all use the same container.
+using SymbolList = std::deque<Symbol *>;
+using TerminalList = std::deque<Terminal*>;
 
-#define FOREACH_SYMBOL(list, iter) FOREACH_OBJLIST(Symbol, list, iter)
-#define MUTATE_EACH_SYMBOL(list, iter) MUTATE_EACH_OBJLIST(Symbol, list, iter)
-#define SFOREACH_SYMBOL(list, iter) SFOREACH_OBJLIST(Symbol, list, iter)
-#define SMUTATE_EACH_SYMBOL(list, iter) SMUTATE_EACH_OBJLIST(Symbol, list, iter)
+using NonterminalList = std::deque<Nonterminal*>;
+
 
 // format: "s1 s2 s3"
 string symbolSequenceToString(SymbolList const &list);
@@ -197,8 +196,6 @@ public:     // funcs
   virtual string toString(bool quoteAliases = false) const;
 };
 
-typedef SObjList<Terminal> TerminalList;
-typedef SObjListIter<Terminal> TerminalListIter;
 
 #define FOREACH_TERMINAL(list, iter) FOREACH_OBJLIST(Terminal, list, iter)
 #define MUTATE_EACH_TERMINAL(list, iter) MUTATE_EACH_OBJLIST(Terminal, list, iter)
@@ -283,7 +280,7 @@ public:
 
   bool maximal;             // if true, use maximal munch disambiguation
 
-  SObjList<Nonterminal> subsets;      // preferred subsets (for scannerless)
+  NonterminalList subsets;  // preferred subsets (for scannerless)
 
 protected:  // funcs
   virtual void internalPrintDDM(std::ostream &os) const;
@@ -310,8 +307,6 @@ public:     // data
   Nonterminal *superset; // inverse of 'subsets'
 };
 
-typedef SObjList<Nonterminal> NonterminalList;
-typedef SObjListIter<Nonterminal> NonterminalListIter;
 
 #define FOREACH_NONTERMINAL(list, iter) FOREACH_OBJLIST(Nonterminal, list, iter)
 #define MUTATE_EACH_NONTERMINAL(list, iter) MUTATE_EACH_OBJLIST(Nonterminal, list, iter)
@@ -433,8 +428,7 @@ public:     // data
   TerminalSet firstSet;         // First(RHS); computed by GrammarAnalysis::computeFirst
 };
 
-typedef SObjList<Production> ProductionList;
-typedef SObjListIter<Production> ProductionListIter;
+using ProductionList = std::deque<Production *>;
 
 #define FOREACH_PRODUCTION(list, iter) FOREACH_OBJLIST(Production, list, iter)
 #define MUTATE_EACH_PRODUCTION(list, iter) MUTATE_EACH_OBJLIST(Production, list, iter)
