@@ -3,6 +3,7 @@
 
 #include "gramanl.h"     // this module
 
+#include "algo.h"        // sm::contains
 #include "bit2d.h"       // Bit2d
 #include "bitarray.h"    // BitArray
 #include "strtokp.h"     // StrtokParse
@@ -17,6 +18,7 @@
 #include "ckheap.h"      // numMallocCalls
 #include "genml.h"       // emitMLActionCode
 
+#include <vector>        // std::vector
 #include <fstream>       // std::ofstream
 #include <stdlib.h>      // getenv
 #include <stdio.h>       // printf
@@ -2717,44 +2719,44 @@ void GrammarAnalysis::handleShiftReduceConflict(
 void GrammarAnalysis::computeBFSTree()
 {
   // for the BFS, we need a queue of states yet to be processed, and a
-  // pile of 'done' states
-  SObjList<ItemSet> queue;
-  SObjList<ItemSet> done;
+  // pile of 'done' states; this is kept in one vector for performance
+  std::vector<ItemSet*> queue;
+  // items with indices lower than the front are considered done;
+  // everything from queueFront onwards is work yet to do
+  size_t queueFront = 0;
 
   // initial entry in queue is root of BFS tree
-  queue.append(startState);
+  queue.push_back(startState);
 
   // it will be convenient to have all the symbols in a single list
   // for iteration purposes
-  SymbolList allSymbols;       	  // (const list)
+  std::vector <Symbol const *> allSymbols;
+  allSymbols.reserve(terminals.count() + nonterminals.count());
   {
     FOREACH_TERMINAL(terminals, t) {
-      allSymbols.append(const_cast<Terminal*>(t.data()));
+      allSymbols.push_back(t.data());
     }
     FOREACH_NONTERMINAL(nonterminals, nt) {
-      allSymbols.append(const_cast<Nonterminal*>(nt.data()));
+      allSymbols.push_back(nt.data());
     }
   }
 
   // loop until the queue is exhausted
-  while (queue.isNotEmpty()) {
-    // dequeue first element
-    ItemSet *source = queue.removeAt(0);
-
-    // mark it as done so we won't consider any more transitions to it
-    done.append(source);
+  while (queueFront < queue.size()) {
+    // take the first not-done element at the front of the queue
+    ItemSet *const source = queue[queueFront];
+    // mark it as done so we won't consider any more transitions to it;
+    queueFront++;
 
     // for each symbol...
-    SFOREACH_SYMBOL(allSymbols, sym) {
+    for (const Symbol *sym : allSymbols) {
       // get the transition on this symbol
-      ItemSet *target = source->transition(sym.data());
+      ItemSet *const target = source->transition(sym);
 
       // if the target is done or already enqueued, or there is no
       // transition on this symbol, we don't need to consider it
       // further
-      if (target == NULL ||
-          done.contains(target) ||
-          queue.contains(target)) {
+      if (target == NULL || sm::contains(queue, target)) {
         continue;
       }
 
@@ -2764,7 +2766,7 @@ void GrammarAnalysis::computeBFSTree()
       target->BFSparent = source;
 
       // finally, enqueue the target so we'll explore its targets too
-      queue.append(target);
+      queue.push_back(target);
     }
   }
 }
