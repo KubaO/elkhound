@@ -49,12 +49,6 @@ There are a couple of variants that support O(1) appending.
 
 * [astlist.h](astlist.h): ASTList, a list class for use in abstract syntax trees.
 
-Finally, two stacks implemented with lists. Recently, I've been preferring to use array-based stacks ([array.h](array.h)), so these are somewhat obsolete.
-
-* [objstack.h](objstack.h): ObjStack, a stack of owned objects. Built with a linked list.
-
-* [sobjstack.h](sobjstack.h): SObjStack, a stack of non-owned objects. Built with a linked list.
-
 Arrays
 ------
 
