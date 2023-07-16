@@ -23,30 +23,29 @@ CFGEnv::~CFGEnv()
 // -------- nexts -------
 void CFGEnv::pushNexts()
 {
-  pendingNexts.push(new SObjList<Statement>());
+  pendingNexts.emplace();           //  -- []
 }
 
 void CFGEnv::addPendingNext(Statement *source)
 {
-  pendingNexts.top()->prepend(source);    // O(n)
+  pendingNexts.top().push(source);  // [A] -- [A_]
 }
 
 void CFGEnv::popNexts()
 {
-  SObjList<Statement> *top = pendingNexts.pop();
-  pendingNexts.top()->concat(*top);    // empties 'top'
-  delete top;
+  pendingNexts.Swap();           // [2] [1] -- [1] [2]
+  pendingNexts.Concat();         // [1] [2] -- [12]
 }
 
 void CFGEnv::clearNexts()
 {
-  pendingNexts.top()->removeAll();
+  pendingNexts.top().clear();         // [...] -- []
 }
 
 void CFGEnv::resolveNexts(Statement *target, bool isContinue)
 {
-  SMUTATE_EACH_OBJLIST(Statement, *(pendingNexts.top()), iter) {
-    iter.data()->next = makeNextPtr(target, isContinue);
+  for (Statement *stmt : pendingNexts.top()) {
+    stmt->next = makeNextPtr(target, isContinue);
   }
   clearNexts();
 }
@@ -55,21 +54,21 @@ void CFGEnv::resolveNexts(Statement *target, bool isContinue)
 // -------- breaks --------
 void CFGEnv::pushBreaks()
 {
-  breaks.push(new SObjList<S_break>());
+  breaks.emplace();
 }
 
 void CFGEnv::addBreak(S_break *source)
 {
-  breaks.top()->prepend(source);     // O(n)
+  breaks.top().push(source);
 }
 
 void CFGEnv::popBreaks()
 {
   // all topmost breaks become pending nexts
-  SMUTATE_EACH_OBJLIST(S_break, *(breaks.top()), iter) {
-    addPendingNext(iter.data());
+  for (S_break *brk : breaks.top()) {
+    addPendingNext(brk);
   }
-  breaks.delPop();
+  breaks.pop();
 }
 
 
@@ -141,40 +140,25 @@ void CFGEnv::popLoop()
 // -------- end --------
 void CFGEnv::verifyFunctionEnd()
 {
-  xassert(pendingNexts.count() == 1);
-  xassert(pendingNexts.top()->count() == 0);
+  xassert(pendingNexts.size() == 1);
+  xassert(pendingNexts.top().empty());
 
-  xassert(breaks.count() == 1);
-  xassert(breaks.top()->count() == 0);
+  xassert(breaks.size() == 1);
+  xassert(breaks.top().empty());
 
   xassert(labels.size() == 0);
   xassert(gotos.size() == 0);
 
-  xassert(switches.count() == 0);
-  xassert(loops.count() == 0);
+  xassert(switches.empty());
+  xassert(loops.empty());
 }
-
-
-// --------------------- ScopedEnv ---------------------
-ScopedEnv::ScopedEnv()
-{}
-
-ScopedEnv::~ScopedEnv()
-{}
 
 
 // --------------------------- Env ----------------------------
 Env::Env(StringTable &table, CCLang &alang)
-  : scopes(),
-    typedefs(),
-    compounds(),
-    enums(),
-    enumerators(),
-    errors(0),
+  : errors(0),
     warnings(0),
-    compoundStack(),
     currentFunction(NULL),
-    locationStack(),
     inPredicate(false),
     strTable(table),
     lang(alang)
@@ -195,7 +179,7 @@ Env::Env(StringTable &table, CCLang &alang)
 Env::~Env()
 {
   // explicitly free things, for easier debugging of dtor sequence
-  scopes.deleteAll();
+  scopes.clear();
   typedefs.empty();
   compounds.empty();
   enums.empty();
@@ -205,12 +189,12 @@ Env::~Env()
 
 void Env::enterScope()
 {
-  scopes.prepend(new ScopedEnv());
+  scopes.emplace();
 }
 
 void Env::leaveScope()
 {
-  scopes.deleteAt(0);
+  scopes.pop();
 }
 
 
@@ -231,8 +215,8 @@ void Env::addVariable(StringRef name, Variable *decl)
   xassert(!(flags & DF_TYPEDEF));
 
   // special case for adding compound type members
-  if (compoundStack.isNotEmpty()) {
-    addCompoundField(compoundStack.first(), decl);
+  if (!compoundStack.empty()) {
+    addCompoundField(compoundStack.top(), decl);
     return;
   }
 
@@ -315,7 +299,7 @@ void Env::addVariable(StringRef name, Variable *decl)
       decl->flags = (DeclFlags)(decl->flags | DF_GLOBAL);
     }
 
-    scopes.first()->variables.add(name, decl);
+    scopes.top().variables.add(name, decl);
   }
 }
 
@@ -324,9 +308,9 @@ Variable *Env::getVariable(StringRef name, bool innerOnly)
 {
   // TODO: add enums to what we search
 
-  MUTATE_EACH_OBJLIST(ScopedEnv, scopes, iter) {
+  for (auto const &scope : scopes) {
     Variable *v;
-    if (iter.data()->variables.query(name, v)) {
+    if (scope.variables.query(name, v)) {
       return v;
     }
 
@@ -721,7 +705,7 @@ void Env::pushLocation(SourceLoc loc)
 
 SourceLoc Env::currentLoc() const
 {
-  if (locationStack.isEmpty()) {
+  if (locationStack.empty()) {
     return SL_UNKNOWN;      // no loc info
   }
   else {
@@ -736,8 +720,8 @@ string Env::toString() const
   stringBuilder sb;
 
   // for now, just the variables
-  FOREACH_OBJLIST(ScopedEnv, scopes, sc) {
-    StringSObjDict<Variable>::IterC iter(sc.data()->variables);
+  for (auto const& scope : scopes) {
+    StringSObjDict<Variable>::IterC iter(scope.variables);
     for (; !iter.isDone(); iter.next()) {
       sb << iter.value()->toString() << " ";
     }

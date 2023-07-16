@@ -621,7 +621,7 @@ bool Production::rhsHasSymbol(Symbol const *sym) const
 void Production::getRHSSymbols(SymbolList &output) const
 {
   FOREACH_OBJLIST(RHSElt, right, iter) {
-    output.append(iter.data()->sym);
+    output.push_back(iter.data()->sym);
   }
 }
 
@@ -1237,16 +1237,16 @@ string symbolSequenceToString(SymbolList const &list)
   stringBuilder sb;   // collects output
 
   bool first = true;
-  SFOREACH_SYMBOL(list, sym) {
+  for (Symbol const* sym : list) {
     if (!first) {
       sb << " ";
     }
 
-    if (sym.data()->isTerminal()) {
-      sb << sym.data()->asTerminalC().toString();
+    if (sym->isTerminal()) {
+      sb << sym->asTerminalC().toString();
     }
     else {
-      sb << sym.data()->name;
+      sb << sym->name;
     }
     first = false;
   }
@@ -1258,6 +1258,7 @@ string symbolSequenceToString(SymbolList const &list)
 string terminalSequenceToString(TerminalList const &list)
 {
   // this works because access is read-only
+  /*FIXME this is a bad hack*/
   return symbolSequenceToString(reinterpret_cast<SymbolList const&>(list));
 }
 

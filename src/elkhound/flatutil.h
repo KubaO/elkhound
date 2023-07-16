@@ -6,7 +6,6 @@
 
 #include "flatten.h"     // Flatten
 #include "objlist.h"     // ObjList
-#include "sobjlist.h"    // SObjList
 
 
 // ------------- xfer of owners -----------------
@@ -121,6 +120,8 @@ void xferObjList_readObj(Flatten &flat, ObjList <T> &list)
 }
 
 
+#if 0
+
 // ------------- xfer of serfs -----------------
 // xfer a list of serf pointers to objects, each object
 // could be in one of several owner lists
@@ -180,6 +181,7 @@ void xferSObjList(Flatten &flat, SObjList<T> &list, ObjList<T> &masterList)
   ObjList<T> *ptr = &masterList;
   xferSObjList_multi(flat, list, &ptr, 1 /*numMasters*/);
 }
+#endif // 0
 
 
 // xfer a pointer which points to something in a master list
@@ -307,7 +309,7 @@ inline void xferSerfPtr_twoLevelAccess(
 }
 #endif // 0
 
-
+#if 0
 template <class Root, class FirstLevel, class Leaf>
 void xferSObjList_twoLevelAccess(
   Flatten &flat,
@@ -345,6 +347,7 @@ void xferSObjList_twoLevelAccess(
     }
   }
 }
+#endif // 0
 
 
 template <class T>

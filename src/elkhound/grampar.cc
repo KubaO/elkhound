@@ -722,7 +722,7 @@ void astParseNonterm(Environment &env, TF_nonterm const *nt)
       // note that, since context-free language inclusion is
       // undecidable (Hopcroft/Ullman), we can't actually check that
       // the given nonterminals really are in the subset relation
-      nonterm->subsets.prepend(sub);
+      nonterm->subsets.push_back(sub);
     }
   }
 }

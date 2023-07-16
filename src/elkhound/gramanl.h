@@ -24,6 +24,8 @@
 #include "glrconfig.h"    // SOURCELOC
 #include "parsetables.h"  // ParseTables, GrowArray
 
+#include <vector>         // std::vector
+
 // forward decls
 class Bit2d;              // bit2d.h
 class BitArray;           // bitarray.h
@@ -112,17 +114,6 @@ public:	    // funcs
   void print(std::ostream &os/*, GrammarAnalysis const &g*/) const;
   OSTREAM_OPERATOR(DottedProduction)
 };
-
-// lists of dotted productions
-typedef ObjList<DottedProduction> DProductionList;
-typedef ObjListIter<DottedProduction> DProductionListIter;
-typedef SObjList<DottedProduction> SDProductionList;
-typedef SObjListIter<DottedProduction> SDProductionListIter;
-
-#define FOREACH_DOTTEDPRODUCTION(list, iter) FOREACH_OBJLIST(DottedProduction, list, iter)
-#define MUTATE_EACH_DOTTEDPRODUCTION(list, iter) MUTATE_EACH_OBJLIST(DottedProduction, list, iter)
-#define SFOREACH_DOTTEDPRODUCTION(list, iter) SFOREACH_OBJLIST(DottedProduction, list, iter)
-#define SMUTATE_EACH_DOTTEDPRODUCTION(list, iter) SMUTATE_EACH_OBJLIST(DottedProduction, list, iter)
 
 
 // --------------- LRItem ---------------
@@ -281,8 +272,7 @@ public:     // funcs
   bool operator== (ItemSet const &obj) const;
 
   // sometimes it's convenient to have all items mixed together
-  // (CONSTNESS: allows modification of items...)
-  void getAllItems(SObjList<LRItem> &dest, bool nonkernel=true) const;
+  std::vector<LRItem const *> getAllItems(bool nonkernel=true) const;
 
   // used for sorting by id
   static int diffById(ItemSet const *left, ItemSet const *right, void*);
@@ -305,9 +295,8 @@ public:     // funcs
   // of a production's LHS); parsing=true means we are actually
   // parsing input, so certain tracing output is appropriate;
   // 'reductions' is a list of const Productions
-  void getPossibleReductions(ProductionList &reductions,
-                             Terminal const *lookahead,
-                             bool parsing) const;
+  ProductionList getPossibleReductions(Terminal const *lookahead,
+                                       bool parsing) const;
 
 
   // assuming this itemset has at least one reduction ready (an assertion
@@ -371,6 +360,8 @@ public:     // funcs
 };
 
 
+using ReductionStack = std::vector<Production*>;
+
 // ---------------------- GrammarAnalysis -------------------
 class GrammarAnalysis : public Grammar {
 protected:  // data
@@ -391,7 +382,7 @@ protected:  // data
   // symbol on the LHS; so let's index produtions by LHS symbol index;
   // this array has 'numNonterms' elements, mapping each nonterminal to
   // the list of productions with that nonterminal on the LHS
-  SObjList<Production> *productionsByLHS;    // (owner ptr to array)
+  std::vector<std::vector<Production*>> productionsByLHS;    // (array of arrays of serfs)
 
   // map of production x dotPosition -> DottedProduction;
   // each element of the 'dottedProds' array is a pointer to an
@@ -544,11 +535,11 @@ private:    // funcs
 
   // sample input helpers
   void leftContext(SymbolList &output, ItemSet const *state) const;
-  bool rewriteAsTerminals(TerminalList &output, SymbolList const &input) const;
+  TerminalList rewriteAsTerminals(SymbolList const &input) const;
   bool rewriteAsTerminalsHelper(TerminalList &output, SymbolList const &input,
-				ProductionList &reductionStack) const;
+				ReductionStack &reductionStack) const;
   bool rewriteSingleNTAsTerminals(TerminalList &output, Nonterminal const *nonterminal,
-				  ProductionList &reductionStack) const;
+				  ReductionStack &reductionStack) const;
 
   // let's try this .. it needs to access 'itemSets'
   friend void ItemSet::xferSerfs(Flatten &flat, GrammarAnalysis &g);

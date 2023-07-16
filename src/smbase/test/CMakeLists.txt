@@ -8,7 +8,6 @@ project(voidlist)
 project(vdtllist)
 project(taillist_test)
 project(tobjlist)
-project(tsobjlist)
 project(bit2d)
 project(growbuf)
 project(svdict)
@@ -51,11 +50,6 @@ add_executable(taillist_test
 # files for tobjlist
 add_executable(tobjlist
     ../tobjlist.cc
-)
-
-# files for tsobjlist
-add_executable(tsobjlist
-    ../tsobjlist.cc
 )
 
 # files for bit2d
@@ -168,7 +162,6 @@ target_link_libraries(voidlist smbase)
 target_link_libraries(vdtllist smbase)
 target_link_libraries(taillist_test smbase)
 target_link_libraries(tobjlist smbase)
-target_link_libraries(tsobjlist smbase)
 target_link_libraries(bit2d smbase)
 target_link_libraries(growbuf smbase)
 target_link_libraries(svdict smbase)
@@ -190,7 +183,6 @@ add_test(NAME voidlist COMMAND ./voidlist)
 add_test(NAME vdtllist COMMAND ./vdtllist)
 add_test(NAME taillist_test COMMAND ./taillist_test)
 add_test(NAME tobjlist COMMAND ./tobjlist)
-add_test(NAME tsobjlist COMMAND ./tsobjlist)
 add_test(NAME bit2d COMMAND ./bit2d)
 add_test(NAME growbuf COMMAND ./growbuf)
 add_test(NAME strdict COMMAND ./strdict)

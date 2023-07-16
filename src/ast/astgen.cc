@@ -7,12 +7,12 @@
 #include "owner.h"         // Owner
 #include "ckheap.h"        // checkHeap
 #include "strutil.h"       // replace, translate, localTimeString
-#include "sobjlist.h"      // SObjList
 #include "stringset.h"     // StringSet
 #include "srcloc.h"        // SourceLocManager
 #include "strtokp.h"       // StrtokParse
 #include "exc.h"           // xfatal
 
+#include <vector>          // std::vector
 #include <string.h>        // strncmp
 #include <fstream>         // std::ofstream
 #include <ctype.h>         // isalnum
@@ -75,7 +75,7 @@ ASTSpecFile *wholeAST = NULL;
 
 // list of all TF_classes in the input, useful for certain
 // applications which don't care about other forms
-SObjList<TF_class> allClasses;
+std::vector<TF_class *> allClasses;
 
 // list of all ASTList "list classes"
 StringSet listClassesSet;
@@ -192,8 +192,7 @@ TreeNodeKind getTreeNodePtrKind(rostring type)
 TreeNodeKind getTreeNodeKind(rostring base)
 {
   // search among defined classes for this name
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *c = iter.data();
+  for (TF_class const *c : allClasses) {
 
     if (c->super->name == base) {
       // found it in a superclass
@@ -215,8 +214,7 @@ TreeNodeKind getTreeNodeKind(rostring base)
 
 string getSuperTypeOf(rostring sub)
 {
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *c = iter.data();
+  for (TF_class const *c : allClasses) {
 
     // look among the subclasses
     FOREACH_ASTLIST(ASTClass, c->ctors, ctor) {
@@ -1566,8 +1564,7 @@ void HGen::emitVisitorInterface()
       << "class " << visitorName << " {\n";
   emitVisitorInterfacePrelude(visitorName);
 
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *c = iter.data();
+  for (TF_class const *c : allClasses) {
 
     out << "  virtual bool visit" << c->super->name << "("
         <<   c->super->name << " *obj);\n"
@@ -1605,8 +1602,7 @@ void CGen::emitVisitorImplementation()
   out << "// ---------------------- " << visitorName << " ---------------------\n";
   out << "// default no-op visitor\n";
   out << visitorName << "::~" << visitorName << "() {}\n";
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *c = iter.data();
+  for (TF_class const *c : allClasses) {
 
     out << "bool " << visitorName << "::visit" << c->super->name << "("
         <<   c->super->name << " *obj) { return true; }\n"
@@ -1637,8 +1633,7 @@ void CGen::emitVisitorImplementation()
   out << "\n\n";
 
   // implementations of traversal functions
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *c = iter.data();
+  for (TF_class const *c : allClasses) {
 
     // superclass traversal
     emitTraverse(c->super, NULL /*super*/, c->hasChildren());
@@ -1799,8 +1794,7 @@ void HGen::emitDVisitorInterface()
   out << "\n";
 
   // visitor methods
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *c = iter.data();
+  for (TF_class const *c : allClasses) {
     out << "  virtual bool visit" << c->super->name << "("
         <<   c->super->name << " *obj);\n"
         << "  virtual void postvisit" << c->super->name << "("
@@ -1859,8 +1853,7 @@ void CGen::emitDVisitorImplementation()
   emitDVisitorImplVisitedCheck("wasVisitedList_FakeList");
 
   out << "// default no-op delegator-visitor\n";
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *c = iter.data();
+  for (TF_class const *c : allClasses) {
 
     out << "bool " << dvisitorName << "::visit" << c->super->name
         << "(" << c->super->name << " *obj) {\n"
@@ -2121,8 +2114,7 @@ void HGen::emitXmlVisitorInterface()
   out << "\n";
 
   // visitor methods
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *c = iter.data();
+  for (TF_class const *c : allClasses) {
     out << "  virtual bool visit" << c->super->name << "("
         <<   c->super->name << " *obj);\n"
         << "  virtual void postvisit" << c->super->name << "("
@@ -2186,8 +2178,7 @@ void CGen::emitXmlVisitorImplementation()
   out << "}\n\n";
 
   out << "// default xml-visitor\n";
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *c = iter.data();
+  for (TF_class const *c : allClasses) {
 
     out << "bool " << xmlVisitorName << "::visit" << c->super->name;
     out << "(" << c->super->name << " *obj) {\n";
@@ -2331,8 +2322,7 @@ void HGen::emitMVisitorInterface()
       << "class " << mvisitorName << " {\n";
   emitVisitorInterfacePrelude(mvisitorName);
 
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *c = iter.data();
+  for (TF_class const *c : allClasses) {
 
     out << "  virtual bool visit" << c->super->name << "("
         <<   c->super->name << " *&obj);\n"
@@ -2360,8 +2350,7 @@ void CGen::emitMVisitorImplementation()
 
   out << mvisitorName << "::~" << mvisitorName << "() {}\n\n";
 
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *c = iter.data();
+  for (TF_class const *c : allClasses) {
 
     out << "bool " << mvisitorName << "::visit" << c->super->name << "("
         <<   c->super->name << " *&obj) { return true; }\n"
@@ -2795,8 +2784,7 @@ void XmlParserGen::emitXmlParserImplementation()
   parser1_defs << "  switch(kind) {\n";
   parser1_defs << "  default: return false; // don't know this kind\n";
 
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *c = iter.data();
+  for (TF_class const *c : allClasses) {
 
     tokensOutH  << "  XTOK_" << c->super->name << ", // \"" << c->super->name << "\"\n";
     tokensOutCC << "  \"XTOK_" << c->super->name << "\",\n";
@@ -2851,8 +2839,8 @@ void XmlParserGen::emitXmlParserImplementation()
   parser1_defs << "  return true;\n";
   parser1_defs << "}\n";
 
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *c = iter.data();
+  for (TF_class const *c : allClasses) {
+
     if (c->hasChildren()) {
       FOREACH_ASTLIST(ASTClass, c->ctors, iter) {
         ASTClass const *clazz = iter.data();
@@ -2874,8 +2862,8 @@ void XmlParserGen::emitXmlParserImplementation()
   parser1_defs << "\nbool ASTXmlReader::recordKind(int kind, bool& answer) {\n";
   parser1_defs << "  switch(kind) {\n";
   parser1_defs << "  default: return false; break;\n";
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *c = iter.data();
+  for (TF_class const *c : allClasses) {
+
     if (c->hasChildren()) {
       FOREACH_ASTLIST(ASTClass, c->ctors, iter) {
         string name = iter.data()->name;
@@ -2901,8 +2889,8 @@ void XmlParserGen::emitXmlParserImplementation()
   parser1_defs << "(void *obj, int kind, void **target, int targetKind) {\n";
   parser1_defs << "  switch(kind) {\n";
   parser1_defs << "  default: return false; break;\n";
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *c = iter.data();
+  for (TF_class const *c : allClasses) {
+
     if (c->hasChildren()) {
       FOREACH_ASTLIST(ASTClass, c->ctors, iter) {
         parser1_defs << "  case XTOK_" << iter.data()->name << ":\n";
@@ -2925,8 +2913,8 @@ void XmlParserGen::emitXmlParserImplementation()
   parser1_defs << "(void *obj, int kind, void *target) {\n";
   parser1_defs << "  switch(kind) {\n";
   parser1_defs << "  default: return false; break;\n";
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *c = iter.data();
+  for (TF_class const *c : allClasses) {
+
     if (c->hasChildren()) {
       FOREACH_ASTLIST(ASTClass, c->ctors, iter) {
         parser1_defs << "  case XTOK_" << iter.data()->name << ":\n";
@@ -3218,8 +3206,7 @@ void getListClasses(ASTClass const *c) {
 }
 
 void getListClasses() {
-  SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-    TF_class const *cls = iter.data();
+  for (TF_class const *cls : allClasses) {
     getListClasses(cls->super);
     FOREACH_ASTLIST(ASTClass, cls->ctors, ctorIter) {
       getListClasses(ctorIter.data());
@@ -3369,13 +3356,10 @@ void entry(int argc, char **argv)
       }
 
       else if (iter.data()->isTF_class()) {
-        allClasses.prepend(iter.data()->asTF_class());
+        allClasses.push_back(iter.data()->asTF_class());
       }
     }
   }
-
-  // I built it in reverse for O(n) performance
-  allClasses.reverse();
 
   // generate the header
   string base = replace(srcFname, ".ast", "");
@@ -3410,8 +3394,7 @@ void entry(int argc, char **argv)
     // used if one of the generation routines asks for it by name, so
     // a mistyped custom section name would not yet have been noticed
     {
-      SFOREACH_OBJLIST(TF_class, allClasses, iter) {
-        TF_class const *c = iter.data();
+      for (TF_class const *c : allClasses) {
         checkUnusedCustoms(c->super);
 
         FOREACH_ASTLIST(ASTClass, c->ctors, subIter) {

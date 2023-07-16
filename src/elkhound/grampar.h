@@ -5,7 +5,6 @@
 #define __GRAMPAR_H
 
 #include "typ.h"          // NULL
-#include "sobjlist.h"     // SObjList
 #include "exc.h"          // xBase
 #include "strsobjdict.h"  // StringSObjDict
 #include "locstr.h"       // LocString

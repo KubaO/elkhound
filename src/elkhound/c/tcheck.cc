@@ -95,9 +95,8 @@ void TF_func::itcheck(Env &env)
       if (var->name) {
         env.addVariable(var->name, var);
       }
-      params.prepend(var);
+      params.push_back(var);
     }
-    params.reverse();
   }
 
   // (TODO) verify the pre/post don't have side effects, and
@@ -150,9 +149,6 @@ void TF_func::itcheck(Env &env)
   // check the body in the new environment
   body->tcheck(env);
 
-  // when the local are added, they are prepended
-  locals.reverse();
-
   // clean up
   env.resolveGotos();
   env.resolveNexts(NULL /*target*/, false /*isContinue*/);
@@ -173,13 +169,13 @@ void TF_func::itcheck(Env &env)
 }
 
 
-template <class T, class Y>      // Y is type of thing printed
-void printSObjList(std::ostream &os, int indent, char const *label,
-                   SObjList<T> const &list, Y (*map)(T const *t))
+template <class T, class Y, class C>      // Y is type of thing printed
+void printItems(std::ostream& os, int indent, char const* label,
+  C const& list, Y(*map)(T const* t))
 {
   ind(os, indent) << label << ":";
-  SFOREACH_OBJLIST(T, list, iter) {
-    os << " " << map(iter.data());
+  for (auto it : list) {
+    os << " " << map(it);
   }
   os << "\n";
 }
@@ -199,10 +195,10 @@ string stmtLoc(Statement const *s)
 
 void TF_func::printExtras(std::ostream &os, int indent) const
 {
-  printSObjList(os, indent, "params", params, varName);
-  printSObjList(os, indent, "locals", locals, varName);
-  printSObjList(os, indent, "globalRefs", globalRefs, varName);
-  printSObjList(os, indent, "roots", roots, stmtLoc);
+  printItems(os, indent, "params", params, varName);
+  printItems(os, indent, "locals", locals, varName);
+  printItems(os, indent, "globalRefs", globalRefs, varName);
+  printItems(os, indent, "roots", roots, stmtLoc);
 }
 
 
@@ -244,7 +240,7 @@ void Declaration::tcheck(Env &env)
     // we just declared a local variable, if we're in a function
     TF_func *func = env.getCurrentFunction();
     if (func) {
-      func->locals.prepend(d->var);
+      func->locals.push_back(d->var);
     }
   }
 }
@@ -650,7 +646,7 @@ void connectEnclosingSwitch(Env &env, Statement *stmt, char const *kind)
     env.err(stringc << kind << " can only appear in the context of a 'switch'");
   }
   else {
-    sw->cases.append(stmt);
+    sw->cases.push_back(stmt);
   }
 }
 
@@ -899,8 +895,8 @@ void S_if::getSuccessors(VoidList &dest, bool /*isContinue*/) const
 void S_switch::getSuccessors(VoidList &dest, bool /*isContinue*/) const
 {
   xassert(dest.isEmpty());
-  SFOREACH_OBJLIST(Statement, cases, iter) {
-    dest.prepend(makeNextPtr(iter.data(), false));
+  for (Statement const *stmt : cases) {
+    dest.prepend(makeNextPtr(stmt, false));
   }
   dest.reverse();
 }
@@ -1094,8 +1090,8 @@ Type const *E_variable::itcheck(Env &env)
   // it is referenced
   if (v->hasFlag(DF_GLOBAL) || v->hasFlag(DF_MEMBER)) {
     TF_func *f = env.getCurrentFunction();
-    if (f) {                          // might not be in a function
-      f->globalRefs.appendUnique(v);    // append if not already present
+    if (f) {                      // might not be in a function
+      f->globalRefs.insert(v);    // append if not already present
     }
   }
 

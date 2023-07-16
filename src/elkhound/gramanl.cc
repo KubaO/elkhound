@@ -3,6 +3,7 @@
 
 #include "gramanl.h"     // this module
 
+#include "algo.h"        // sm::... algorithms
 #include "bit2d.h"       // Bit2d
 #include "bitarray.h"    // BitArray
 #include "strtokp.h"     // StrtokParse
@@ -17,6 +18,8 @@
 #include "ckheap.h"      // numMallocCalls
 #include "genml.h"       // emitMLActionCode
 
+#include <memory>        // std::make_unique
+#include <vector>        // std::vector
 #include <fstream>       // std::ofstream
 #include <stdlib.h>      // getenv
 #include <stdio.h>       // printf
@@ -590,18 +593,21 @@ void ItemSet::removeReduce(Production const *prod, Terminal const *sym)
 }
 
 
-void ItemSet::getAllItems(SObjList<LRItem> &dest, bool nonkernel) const
+std::vector<LRItem const *> ItemSet::getAllItems(bool nonkernel) const
 {
-  SObjListMutator<LRItem> mut(dest);
+  std::vector<LRItem const *> ret;
+  ret.resize(kernelItems.count() + (nonkernel ? nonkernelItems.count() : 0));
 
+  auto it = ret.begin();
   FOREACH_OBJLIST(LRItem, kernelItems, k) {
-    mut.append(const_cast<LRItem*>(k.data()));
+    *it++ = k.data();
   }
   if (nonkernel) {
     FOREACH_OBJLIST(LRItem, nonkernelItems, n) {
-      mut.append(const_cast<LRItem*>(n.data()));
+      *it++ = n.data();
     }
   }
+  return ret;
 }
 
 
@@ -637,10 +643,11 @@ void ItemSet::deleteNonReductions(ObjList<LRItem> &list)
 
 // return the reductions that are ready in this state, given
 // that the next symbol is 'lookahead'
-void ItemSet::getPossibleReductions(ProductionList &reductions,
-                                    Terminal const *lookahead,
-                                    bool parsing) const
+ProductionList ItemSet
+  ::getPossibleReductions(Terminal const *lookahead,
+                          bool parsing) const
 {
+  ProductionList reductions;
   // for each item with dot at end
   loopi(numDotsAtEnd) {
     LRItem const *item = dotsAtEnd[i];
@@ -680,8 +687,9 @@ void ItemSet::getPossibleReductions(ProductionList &reductions,
     }
 
     // ok, this one's ready
-    reductions.append(const_cast<Production*>(item->getProd()));       // (constness)
+    reductions.push_back(const_cast<Production*>(item->getProd()));       // (constness)
   }
+  return reductions;
 }
 
 
@@ -740,15 +748,12 @@ void ItemSet::changedItems()
 {
   // -- recompute dotsAtEnd --
   // collect all items
-  SObjList<LRItem> items;      // (constness) 'items' shouldn't be used to modify the elements
-  getAllItems(items);
+  std::vector<LRItem const *> items = getAllItems();
 
   // count number with dots at end
   int count = 0;
   {
-    SFOREACH_OBJLIST(LRItem, items, itemIter) {
-      LRItem const *item = itemIter.data();
-
+    for (LRItem const *item : items) {
       if (item->isDotAtEnd()) {
         count++;
       }
@@ -772,9 +777,7 @@ void ItemSet::changedItems()
 
   // fill array
   int index = 0;
-  SFOREACH_OBJLIST(LRItem, items, itemIter) {
-    LRItem const *item = itemIter.data();
-
+  for (LRItem const *item : items) {
     if (item->isDotAtEnd()) {
       dotsAtEnd[index] = item;
       index++;
@@ -821,12 +824,10 @@ void ItemSet::print(std::ostream &os, GrammarAnalysis const &g,
   os << "ItemSet " << id << ":\n";
 
   // collect all items
-  SObjList<LRItem> items;     // (constness) don't use 'item' to modify elements
-  getAllItems(items, nonkernel);
+  std::vector<LRItem const *> items = getAllItems(nonkernel);
 
   // for each item
-  SFOREACH_OBJLIST(LRItem, items, itemIter) {
-    LRItem const *item = itemIter.data();
+  for (LRItem const *item : items) {
 
     // print its text
     os << "  ";
@@ -877,12 +878,10 @@ void ItemSet::writeGraph(std::ostream &os, GrammarAnalysis const &g) const
     // rest of desc will follow
 
   // collect all items
-  SObjList<LRItem> items;         // (constness) don't use 'items' to modify elements
-  getAllItems(items);
+  std::vector<LRItem const *> items = getAllItems();
 
   // for each item, print the item text
-  SFOREACH_OBJLIST(LRItem, items, itemIter) {
-    LRItem const *item = itemIter.data();
+  for (LRItem const *item : items) {
 
     // print its text
     os << "   ";
@@ -942,11 +941,6 @@ GrammarAnalysis::~GrammarAnalysis()
 
   if (indexedTerms != NULL) {
     delete indexedTerms;
-  }
-
-  if (productionsByLHS != NULL) {
-    // empties all lists automatically because of "[]"
-    delete[] productionsByLHS;
   }
 
   if (indexedProds != NULL) {
@@ -1258,7 +1252,7 @@ void GrammarAnalysis::resetFirstFollow()
 void GrammarAnalysis::computeProductionsByLHS()
 {
   // map: nonterminal -> productions with that nonterm on LHS
-  productionsByLHS = new SObjList<Production> [numNonterms];
+  productionsByLHS.resize(numNonterms);
 
   // map: prodIndex -> production
   numProds = productions.count();
@@ -1271,7 +1265,7 @@ void GrammarAnalysis::computeProductionsByLHS()
       int LHSindex = prod.data()->left->ntIndex;
       xassert(LHSindex < numNonterms);
 
-      productionsByLHS[LHSindex].append(prod.data());
+      productionsByLHS[LHSindex].push_back(prod.data());
       indexedProds[prod.data()->prodIndex] = prod.data();
     }
   }
@@ -1534,8 +1528,7 @@ void GrammarAnalysis::computeSupersets()
   FOREACH_OBJLIST_NC(Nonterminal, nonterminals, iter1) {
     Nonterminal *super = iter1.data();
 
-    SFOREACH_OBJLIST_NC(Nonterminal, super->subsets, iter2) {
-      Nonterminal *sub = iter2.data();
+    for (Nonterminal *sub : super->subsets) {
 
       // for now, only handle 'super' as a partial function
       if (sub->superset != NULL) {
@@ -1760,7 +1753,7 @@ void GrammarAnalysis::computePredictiveParsingTable()
   int numNonterms = numNonterminals();
 
   // the table will be a 2d array of lists of productions
-  ProductionList *table = new ProductionList[numTerms * numNonterms];     // (owner)
+  auto table = std::make_unique<ProductionList[]>(numTerms * numNonterms);
   #define TABLE(term,nt) table[(term) + (nt)*numNonterms]
 
   // for each production 'prod' (non-const iter because adding them
@@ -1775,7 +1768,10 @@ void GrammarAnalysis::computePredictiveParsingTable()
       if (!firsts.contains(termIndex)) continue;
 
       // add 'prod' to table[LHS,term]
-      TABLE(prod->left->ntIndex, termIndex).prependUnique(prod);
+      auto &tbl = TABLE(prod->left->ntIndex, termIndex);
+      if (!sm::contains(tbl, &*prod)) {
+        tbl.push_front(&*prod);
+      }
     }
 
     // if RHS ->* emptyString, ...
@@ -1785,7 +1781,10 @@ void GrammarAnalysis::computePredictiveParsingTable()
         if (!firsts.contains(termIndex)) continue;
 
         // ... add 'prod' to table[LHS,term]
-        TABLE(prod->left->ntIndex, termIndex).prependUnique(prod);
+        auto &tbl = TABLE(prod->left->ntIndex, termIndex);
+        if (!sm::contains(tbl, &*prod)) {
+          tbl.push_front(&*prod);
+        }
       }
     }
   }
@@ -1803,9 +1802,9 @@ void GrammarAnalysis::computePredictiveParsingTable()
       os << "  Column " << indexedTerms[term]->name << ":";
 
       // for each production in table[nonterm,term]
-      SFOREACH_PRODUCTION(TABLE(nonterm,term), prod) {
+      for (Production const *prod : TABLE(nonterm,term)) {
         os << "   ";
-        prod.data()->print(os);
+        prod->print(os);
       }
 
       os << std::endl;
@@ -1814,7 +1813,6 @@ void GrammarAnalysis::computePredictiveParsingTable()
 
   // cleanup
   #undef TABLE
-  delete[] table;
 }
 
 
@@ -1985,8 +1983,9 @@ void GrammarAnalysis
   //TerminalSet newItemLA(numTerminals());
 
   // for each production "B -> gamma"
-  SMUTATE_EACH_PRODUCTION(productionsByLHS[nontermIndex], prodIter) {    // (constness)
-    Production &prod = *(prodIter.data());
+  for (Production *pprod : productionsByLHS[nontermIndex]) {   // (constness)
+    Production const& prod = *pprod;
+
     if (tr) {
       trs << "    considering production " << prod << std::endl;
     }
@@ -2600,9 +2599,9 @@ void GrammarAnalysis::computeReachableDFS(Nonterminal *nt)
   nt->reachable = true;
 
   // iterate over this nonterminal's rules
-  SFOREACH_PRODUCTION(productionsByLHS[nt->ntIndex], iter) {
+  for (Production const *prod : productionsByLHS[nt->ntIndex]) {
     // iterate over symbols in the rule RHS
-    FOREACH_OBJLIST(Production::RHSElt, iter.data()->right, jter) {
+    FOREACH_OBJLIST(Production::RHSElt, prod->right, jter) {
       Production::RHSElt const *elt = jter.data();
 
       if (elt->sym->isNonterminal()) {
@@ -2717,44 +2716,44 @@ void GrammarAnalysis::handleShiftReduceConflict(
 void GrammarAnalysis::computeBFSTree()
 {
   // for the BFS, we need a queue of states yet to be processed, and a
-  // pile of 'done' states
-  SObjList<ItemSet> queue;
-  SObjList<ItemSet> done;
+  // pile of 'done' states; this is kept in one vector for performance
+  std::vector<ItemSet*> queue;
+  // items with indices lower than the front are considered done;
+  // everything from queueFront onwards is work yet to do
+  size_t queueFront = 0;
 
   // initial entry in queue is root of BFS tree
-  queue.append(startState);
+  queue.push_back(startState);
 
   // it will be convenient to have all the symbols in a single list
   // for iteration purposes
-  SymbolList allSymbols;       	  // (const list)
+  std::vector <Symbol const *> allSymbols;
+  allSymbols.reserve(terminals.count() + nonterminals.count());
   {
     FOREACH_TERMINAL(terminals, t) {
-      allSymbols.append(const_cast<Terminal*>(t.data()));
+      allSymbols.push_back(t.data());
     }
     FOREACH_NONTERMINAL(nonterminals, nt) {
-      allSymbols.append(const_cast<Nonterminal*>(nt.data()));
+      allSymbols.push_back(nt.data());
     }
   }
 
   // loop until the queue is exhausted
-  while (queue.isNotEmpty()) {
-    // dequeue first element
-    ItemSet *source = queue.removeAt(0);
-
-    // mark it as done so we won't consider any more transitions to it
-    done.append(source);
+  while (queueFront < queue.size()) {
+    // take the first not-done element at the front of the queue
+    ItemSet *const source = queue[queueFront];
+    // mark it as done so we won't consider any more transitions to it;
+    queueFront++;
 
     // for each symbol...
-    SFOREACH_SYMBOL(allSymbols, sym) {
+    for (const Symbol *sym : allSymbols) {
       // get the transition on this symbol
-      ItemSet *target = source->transition(sym.data());
+      ItemSet *const target = source->transition(sym);
 
       // if the target is done or already enqueued, or there is no
       // transition on this symbol, we don't need to consider it
       // further
-      if (target == NULL ||
-          done.contains(target) ||
-          queue.contains(target)) {
+      if (target == NULL || sm::contains(queue, target)) {
         continue;
       }
 
@@ -2764,7 +2763,7 @@ void GrammarAnalysis::computeBFSTree()
       target->BFSparent = source;
 
       // finally, enqueue the target so we'll explore its targets too
-      queue.append(target);
+      queue.push_back(target);
     }
   }
 }
@@ -2784,7 +2783,7 @@ void GrammarAnalysis::resolveConflicts(
   int &sr, int &rr)            // (inout) counts of S/R and R/R conflicts, resp.
 {
   // how many actions are there?
-  int actions = (shiftDest? 1 : 0) + reductions.count();
+  int actions = (shiftDest? 1 : 0) + reductions.size();
   if (actions <= 1) {
     return;      // no conflict
   }
@@ -2798,9 +2797,8 @@ void GrammarAnalysis::resolveConflicts(
     // situation in which prec/assoc specifications are used; consider
     // all the possible reductions, so we can resolve S/R conflicts
     // even when there are R/R conflicts present too
-    SObjListMutator<Production> mut(reductions);
-    while (!mut.isDone() && shiftDest != NULL) {
-      Production const *prod = mut.data();
+    for (auto mut = reductions.begin(); mut != reductions.end() && shiftDest != NULL; ) {
+      Production const *prod = *mut;
 
       bool keepShift=true, keepReduce=true, dontWarn=false;
       handleShiftReduceConflict(keepShift, keepReduce, dontWarn, state, prod, sym);
@@ -2812,10 +2810,10 @@ void GrammarAnalysis::resolveConflicts(
 
       if (!keepReduce) {
         actions--;
-        mut.remove();          // remove the reduction
+        mut = reductions.erase(mut);  // remove the reduction
       }
       else {
-        mut.adv();
+        mut++;
       }
 
       if (dontWarn) {
@@ -2834,11 +2832,11 @@ void GrammarAnalysis::resolveConflicts(
   }
 
   // static disambiguation for R/R conflicts
-  if (reductions.count() > 1) {
+  if (reductions.size() > 1) {
     // find the highest precedence
     int highestPrec = 0;
-    SFOREACH_PRODUCTION(reductions, iter) {
-      int p = iter.data()->precedence;
+    for (Production const *prod : reductions) {
+      int p = prod->precedence;
 
       if (p && p>highestPrec) {
         highestPrec = p;
@@ -2846,26 +2844,25 @@ void GrammarAnalysis::resolveConflicts(
     }
 
     // remove any productions that are lower than 'highestPrec'
-    SObjListMutator<Production> mut(reductions);
-    while (!mut.isDone()) {
-      int p = mut.data()->precedence;
+    for (auto mut = reductions.begin(); mut != reductions.end(); ) {
+      int p = (*mut)->precedence;
 
       if (p && p<highestPrec) {
         trace("prec")
           << "in state " << state->id << ", R/R conflict on token "
-          << sym->name << ", removed production " << *(mut.data())
+          << sym->name << ", removed production " << *(*mut)
           << " because " << p << "<" << highestPrec << std::endl;
-        mut.remove();
+        mut = reductions.erase(mut);
         actions--;
       }
       else {
-        mut.adv();
+        mut++;
       }
     }
   }
 
   // additional R/R resolution using subset directives
-  if (reductions.count() > 1) {
+  if (reductions.size() > 1) {
     actions -= subsetDirectiveResolution(state, sym, reductions);
   }
 
@@ -2909,8 +2906,8 @@ void GrammarAnalysis::resolveConflicts(
     }
 
     if (canPrint) {
-      SFOREACH_PRODUCTION(reductions, prod) {
-        trace("conflict") << "  reduce by rule " << *(prod.data()) << std::endl;
+      for (Production const *prod : reductions) {
+        trace("conflict") << "  reduce by rule " << *prod << std::endl;
       }
     }
   }
@@ -2920,20 +2917,23 @@ void GrammarAnalysis::resolveConflicts(
     //   - prefer shift to reduce
     //   - prefer the reduction which occurs first in the grammar file
     if (shiftDest) {
-      reductions.removeAll();
+      reductions.clear();
     }
     else {
-      while (reductions.count() >= 2) {
+      // FIXME This is not efficient. All we need is to get 2 values
+      // at the end of the loop. The repeated list modifications are
+      // expensive.
+      while (reductions.size() >= 2) {
         // compare first and second
-        Production const *first = reductions.nth(0);
-        Production const *second = reductions.nth(1);
+        auto first = reductions.begin();
+        auto second = std::next(first);
 
         // production indices happen to be assigned in file order
-        if (first->prodIndex < second->prodIndex) {
-          reductions.removeItem(second);
+        if ((*first)->prodIndex < (*second)->prodIndex) {
+          second = reductions.erase(second);
         }
         else {
-          reductions.removeItem(first);
+          first = reductions.erase(first);
         }
       }
     }
@@ -2974,8 +2974,7 @@ int GrammarAnalysis::subsetDirectiveResolution(
   BitArray map(numNonterms);
   bool anyWithSuper = false;
   {
-    SFOREACH_PRODUCTION(reductions, iter) {
-      Production const *p = iter.data();
+    for (Production const *p : reductions) {
       if (p->left->superset) {
         map.set(p->left->ntIndex);
         anyWithSuper = true;
@@ -2989,27 +2988,25 @@ int GrammarAnalysis::subsetDirectiveResolution(
 
   // walk over the reductions, removing those that have reductions
   // to subsets also in the list
-  SObjListMutator<Production> mut(reductions);
-  while (!mut.isDone()) {
-    Production const *prod = mut.data();
+  for (auto mut = reductions.begin(); mut != reductions.end(); ) {
+    Production const *prod = *mut;
 
-    SFOREACH_OBJLIST(Nonterminal, prod->left->subsets, iter) {
-      Nonterminal const *sub = iter.data();
+    for (Nonterminal const *sub : prod->left->subsets) {
       if (map.test(sub->ntIndex)) {
-        trace("prec")
+      trace("prec")
           << "in state " << state->id
           << ", R/R conflict on token " << sym->name
           << ", removed production yielding " << prod->left->name
           << " b/c another yields subset " << sub->name
           << std::endl;
-        mut.remove();
+        mut = reductions.erase(mut);
         removed++;
         goto continue_outer_loop;
       }
     }
 
     // didn't remove, must manually advance
-    mut.adv();
+    mut++;
 
     continue_outer_loop:;
   }
@@ -3134,15 +3131,16 @@ STATICDEF int GrammarAnalysis::renumberStatesDiff
 
   // finally, order by possible reductions
   FOREACH_OBJLIST(Terminal, gramanl->terminals, termIter) {
-    ProductionList lpl, rpl;
-    left->getPossibleReductions(lpl, termIter.data(), false /*parsing*/);
-    right->getPossibleReductions(rpl, termIter.data(), false /*parsing*/);
+    ProductionList
+      lpl = left->getPossibleReductions(termIter.data(), false /*parsing*/),
+      rpl = right->getPossibleReductions(termIter.data(), false /*parsing*/);
 
     // sort the productions before we can compare them...
-    lpl.insertionSort(&GrammarAnalysis::arbitraryProductionOrder);
-    rpl.insertionSort(&GrammarAnalysis::arbitraryProductionOrder);
+    sm::sortSList(lpl, &GrammarAnalysis::arbitraryProductionOrder);
+    sm::sortSList(rpl, &GrammarAnalysis::arbitraryProductionOrder);
 
-    ret = lpl.compareAsLists(rpl, &GrammarAnalysis::arbitraryProductionOrder);
+    // compareAsLists
+    ret = sm::compareSortedSLists(lpl, rpl, &GrammarAnalysis::arbitraryProductionOrder);
     if (ret) return ret;
   }
 
@@ -3244,9 +3242,8 @@ void GrammarAnalysis::computeParseTables(bool allowAmbig)
       ItemSet const *shiftDest = state->transitionC(terminal);
 
       // can reduce?
-      ProductionList reductions;
-      state->getPossibleReductions(reductions, terminal,
-                                   false /*parsing*/);
+      ProductionList reductions =
+        state->getPossibleReductions(terminal, false /*parsing*/);
 
       // try to resolve conflicts; this may print warnings about
       // the conflicts, depending on various factors; if 'allowAmbig'
@@ -3258,7 +3255,7 @@ void GrammarAnalysis::computeParseTables(bool allowAmbig)
       ActionEntry cellAction;
 
       // still conflicts?
-      int actions = (shiftDest? 1 : 0) + reductions.count();
+      int actions = (shiftDest? 1 : 0) + reductions.size();
       if (actions >= 2) {
         // make a new ambiguous-action entry-set
         ArrayStack<ActionEntry> set;
@@ -3267,8 +3264,8 @@ void GrammarAnalysis::computeParseTables(bool allowAmbig)
         if (shiftDest) {
           set.push(tables->encodeShift(shiftDest->id, termId));
         }
-        SFOREACH_PRODUCTION(reductions, prodIter) {
-          set.push(tables->encodeReduce(prodIter.data()->prodIndex, state->id));
+        for (Production const *prod : reductions) {
+          set.push(tables->encodeReduce(prod->prodIndex, state->id));
         }
         xassert(set.length() == actions);
 
@@ -3278,12 +3275,12 @@ void GrammarAnalysis::computeParseTables(bool allowAmbig)
       else {
         // single action
         if (shiftDest) {
-          xassert(reductions.count() == 0);
+          xassert(reductions.empty());
           cellAction = tables->encodeShift(shiftDest->id, termId);
         }
-        else if (reductions.isNotEmpty()) {
-          xassert(reductions.count() == 1);
-          cellAction = tables->encodeReduce(reductions.first()->prodIndex, state->id);
+        else if (!reductions.empty()) {
+          xassert(reductions.size() == 1);
+          cellAction = tables->encodeReduce(reductions.front()->prodIndex, state->id);
         }
         else {
           cellAction = tables->encodeError();
@@ -3458,7 +3455,7 @@ void GrammarAnalysis::leftContext(SymbolList &output,
     Symbol const *sym = inverseTransitionC(parent, state);
 
     // prepend that symbol's name to our current context
-    output.prepend(const_cast<Symbol*>(sym));
+    output.push_back(const_cast<Symbol*>(sym));
 
     // move to our parent and repeat
     state = parent;
@@ -3494,8 +3491,8 @@ string GrammarAnalysis::sampleInput(ItemSet const *state) const
   leftContext(symbols, state);
 
   // reduce the nonterminals to terminals
-  TerminalList terminals;
-  if (!rewriteAsTerminals(terminals, symbols)) {
+  TerminalList terminals = rewriteAsTerminals(symbols);
+  if (terminals.empty()) {
     return string("(failed to reduce!!)");
   }
 
@@ -3509,14 +3506,18 @@ string GrammarAnalysis::sampleInput(ItemSet const *state) const
 // terminals only; return true if it works, false if we get stuck
 // in an infinite loop
 // CONSTNESS: ideally, 'output' would contain const ptrs to terminals
-bool GrammarAnalysis::rewriteAsTerminals(TerminalList &output, SymbolList const &input) const
+TerminalList GrammarAnalysis::rewriteAsTerminals(SymbolList const &input) const
 {
+  TerminalList output;
   // we detect looping by noticing if we ever reduce via the same
   // production more than once in a single vertical recursive slice
-  ProductionList reductionStack;      // starts empty
+  ReductionStack reductionStack;      // starts empty
 
   // start the recursive version
-  return rewriteAsTerminalsHelper(output, input, reductionStack);
+  if (!rewriteAsTerminalsHelper(output, input, reductionStack)) {
+    output.clear();
+  }
+  return output;
 }
 
 
@@ -3525,15 +3526,14 @@ bool GrammarAnalysis::rewriteAsTerminals(TerminalList &output, SymbolList const 
 // unchanged from when the function was invoked
 bool GrammarAnalysis::
   rewriteAsTerminalsHelper(TerminalList &output, SymbolList const &input,
-                           ProductionList &reductionStack) const
+                           ReductionStack &reductionStack) const
 {
   // remember the initial 'output' length so we can restore
-  int origLength = output.count();
+  int origLength = output.size();
 
   // walk down the input list, creating the output list by copying
   // terminals and reducing nonterminals
-  SFOREACH_SYMBOL(input, symIter) {
-    Symbol const *sym = symIter.data();
+  for (Symbol const *sym : input) {
 
     if (sym->isEmptyString) {
       // easy; no-op
@@ -3541,7 +3541,7 @@ bool GrammarAnalysis::
 
     else if (sym->isTerminal()) {
       // no sweat, just copy it (er, copy the pointer)
-      output.append(const_cast<Terminal*>(&sym->asTerminalC()));
+      output.push_back(const_cast<Terminal*>(&sym->asTerminalC()));
     }
 
     else {
@@ -3550,9 +3550,7 @@ bool GrammarAnalysis::
       if (!rewriteSingleNTAsTerminals(output, &sym->asNonterminalC(),
                                       reductionStack)) {
         // oops.. restore 'output'
-        while (output.count() > origLength) {
-          output.removeAt(origLength);
-        }
+        output.resize(origLength);
         return false;
       }
     }
@@ -3571,14 +3569,14 @@ bool GrammarAnalysis::
 int compareProductionsForRewriting(Production const *p1, Production const *p2,
                                    void *extra)
 {
-  ProductionList *reductionStack = (ProductionList*)extra;
+  ReductionStack *reductionStack = (ReductionStack*)extra;
 
   bool p1RHSSeen=false, p2RHSSeen=false;
-  SFOREACH_PRODUCTION(*reductionStack, iter) {
-    if (p1->rhsHasSymbol( iter.data()->left )) {
+  for (Production const *iter : *reductionStack) {
+    if (p1->rhsHasSymbol( iter->left )) {
       p1RHSSeen = true;
     }
-    if (p2->rhsHasSymbol( iter.data()->left )) {
+    if (p2->rhsHasSymbol( iter->left )) {
       p2RHSSeen = true;
     }
   }
@@ -3597,7 +3595,7 @@ int compareProductionsForRewriting(Production const *p1, Production const *p2,
 // CONSTNESS: want 'reductionStack' to be list of const ptrs
 bool GrammarAnalysis::
   rewriteSingleNTAsTerminals(TerminalList &output, Nonterminal const *nonterminal,
-                             ProductionList &reductionStack) const
+                             ReductionStack &reductionStack) const
 {
   // get all of 'nonterminal's productions that are not recursive
   ProductionList candidates;
@@ -3613,15 +3611,15 @@ bool GrammarAnalysis::
     }
 
     // if this production has already been used, don't use it again
-    if (reductionStack.contains(prod)) {
+    if (sm::contains(reductionStack, &*prod)) {
       continue;
     }
 
     // it's a candidate
-    candidates.prepend(const_cast<Production*>(prod));   // constness
+    candidates.push_front(const_cast<Production*>(&*prod));   // constness
   }
 
-  if (candidates.isEmpty()) {
+  if (candidates.empty()) {
     // I don't expect this... either the NT doesn't have any rules,
     // or all of them are recursive (which means the language doesn't
     // have any finite sentences)
@@ -3631,16 +3629,15 @@ bool GrammarAnalysis::
   }
 
   // sort them into order of preference
-  candidates.mergeSort(compareProductionsForRewriting, &reductionStack);
+  sm::sortSList(candidates, compareProductionsForRewriting, &reductionStack);
 
   // try each in turn until one succeeds; this effectively uses
   // backtracking when one fails
   bool retval = false;
-  SFOREACH_PRODUCTION(candidates, candIter) {
-    Production const *prod = candIter.data();
+  for (Production const *prod : candidates) {
 
     // add chosen production to the stack
-    reductionStack.prepend(const_cast<Production*>(prod));
+    reductionStack.push_back(const_cast<Production*>(prod));
 
     // now, the chosen rule provides a RHS, which is a sequence of
     // terminals and nonterminals; recursively reduce that sequence
@@ -3649,7 +3646,8 @@ bool GrammarAnalysis::
     retval = rewriteAsTerminalsHelper(output, rhsSymbols, reductionStack);
 
     // remove chosen production from stack
-    Production *temp = reductionStack.removeFirst();
+    Production *temp = reductionStack.back();
+    reductionStack.pop_back();
     xassert(temp == prod);
 
     if (retval) {

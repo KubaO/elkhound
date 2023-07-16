@@ -31,15 +31,13 @@ Linked Lists
 
 Linked lists are sequences of objects with O(1) insertion at the front and iterators for traversal. Most also have _mutators_ for traversing and modifying.
 
-The two main lists classes are ObjList and SObjList. Both are lists of pointers to objects; the former _owns_ the objects, and will delete them when it goes away, while the latter does not.
+The main list class is ObjList. It is a list of pointers to objects. It _owns_ the objects, and will delete them when it goes away.
 
 * [objlist.h](objlist.h): ObjList, a general linked list of objects. ObjList considers itself to "own" (be responsible for deallocating) the things on its list. See also [sobjlist.h](sobjlist.h).
 
-* [sobjlist.h](sobjlist.h): SObjList, a general linked list of objects. SObjList does _not_ consider itself the owner of the list elements. The "s" in the name stands for "serf", which I use to mean the opposite of "owner". See also [objlist.h](objlist.h).
+* [xobjlist.h](xobjlist.h): This file is processed by [M4](http://www.gnu.org/software/m4/) to make [objlist.h](objlist.h).
 
-* [xobjlist.h](xobjlist.h): This file is processed by [M4](http://www.gnu.org/software/m4/) to make [objlist.h](objlist.h) and [sobjlist.h](sobjlist.h).
-
-* [voidlist.h](voidlist.h), [voidlist.cc](voidlist.cc): The core of the linked list implementation used by [objlist.h](objlist.h) and [sobjlist.h](sobjlist.h).
+* [voidlist.h](voidlist.h), [voidlist.cc](voidlist.cc): The core of the linked list implementation used by [objlist.h](objlist.h).
 
 There are a couple of variants that support O(1) appending.
 
@@ -48,12 +46,6 @@ There are a couple of variants that support O(1) appending.
 * [taillist.h](taillist.h): Template class built on top of VoidTailList ([vdtllist.h](vdtllist.h)).
 
 * [astlist.h](astlist.h): ASTList, a list class for use in abstract syntax trees.
-
-Finally, two stacks implemented with lists. Recently, I've been preferring to use array-based stacks ([array.h](array.h)), so these are somewhat obsolete.
-
-* [objstack.h](objstack.h): ObjStack, a stack of owned objects. Built with a linked list.
-
-* [sobjstack.h](sobjstack.h): SObjStack, a stack of non-owned objects. Built with a linked list.
 
 Arrays
 ------

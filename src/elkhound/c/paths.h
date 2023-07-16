@@ -8,7 +8,6 @@
 #define PATHS_H
 
 #include "c.ast.gen.h"      // C AST elements
-#include "sobjlist.h"       // SObjList
 
 class Env;                  // cc_env.h
 
@@ -19,8 +18,6 @@ int countPaths(Env &env, TF_func *func);
 
 // print all paths in this function
 void printPaths(TF_func const *func);
-void printPathFrom(SObjList<Statement /*const*/> &path, int index,
-                   Statement const *node, bool isContinue);
 
 // count/print for statements
 int countExprPaths(Statement const *stmt, bool isContinue);

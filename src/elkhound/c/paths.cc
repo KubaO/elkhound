@@ -4,11 +4,13 @@
 #include "paths.h"       // this module
 
 #include "c.ast.gen.h"   // C AST
-#include "sobjlist.h"    // SObjList
+#include "algo.h"        // sm::contains
 #include "objlist.h"     // ObjList
 #include "c_env.h"       // Env
 #include "trace.h"       // tracingSys
 #include "treeout.h"     // treeOut
+
+#include <vector>
 
 
 // one thing to note about constness: when an AST node contains a field
@@ -17,17 +19,13 @@
 // is declared to accept a const*
 
 
-// prototypes
-void findPathRoots(SObjList<Statement> &list, TF_func const *func);
-void findPathRoots(SObjList<Statement> &list, Statement const *stmt);
-int countPaths(Env &env, TF_func *func);
-int countPathsFrom(Env &env, SObjList<Statement> &path,
+// local prototypes
+void findPathRoots(std::vector<Statement *> &list, TF_func const *func);
+void findPathRoots(std::vector<Statement *> &list, Statement const* stmt);
+int countPathsFrom(Env &env, std::vector<Statement *> &path,
                    Statement *node, bool isContinue);
-int countExprPaths(Initializer *init);
-void printPaths(TF_func const *func);
-void printPathFrom(SObjList<Statement /*const*/> &path, int index,
+void printPathFrom(std::vector<Statement /*const*/ *> &path, int index,
                    Statement const *node, bool isContinue);
-void printPath(SObjList<Statement /*const*/> &path, char const *label);
 
 
 // watch for overflow
@@ -45,16 +43,14 @@ static int mult(int a, int b)
 
 
 // --------------------- finding roots ----------------------
-void findPathRoots(SObjList<Statement> &list, TF_func const *func)
+void findPathRoots(std::vector<Statement *>& list, TF_func const* func)
 {
-  list.reverse();
-  list.prepend(func->body);
+  list.push_back(func->body);
   findPathRoots(list, func->body);
-  list.reverse();
 }
 
 
-void findPathRoots(SObjList<Statement> &list, Statement const *stmt)
+void findPathRoots(std::vector<Statement *>& list, Statement const* stmt)
 {
   ASTSWITCHC(Statement, stmt) {
     ASTCASEC(S_label, l) {
@@ -92,7 +88,7 @@ void findPathRoots(SObjList<Statement> &list, Statement const *stmt)
       findPathRoots(list, f->body);
     }
     ASTNEXTC(S_invariant, i) {
-      list.prepend(const_cast<S_invariant*>(i));       // action!
+      list.push_back(const_cast<S_invariant*>(i));       // action!
     }
     ASTENDCASECD
   }
@@ -102,16 +98,17 @@ void findPathRoots(SObjList<Statement> &list, Statement const *stmt)
 // ------------------------ counting paths ------------------
 int countPaths(Env &env, TF_func *func)
 {
+  // keep the path allocated, reuse it
+  std::vector<Statement *> path;
+
   func->numPaths=0;
 
   // enumerate the roots
   findPathRoots(func->roots, func);
 
   // enumerate all paths from each root
-  SMUTATE_EACH_OBJLIST(Statement, func->roots, iter) {
-    Statement *s = iter.data();
-
-    SObjList<Statement> path;
+  for (Statement *s : func->roots) {
+    path.resize(0);
     countPathsFrom(env, path, s, false /*isContinue*/);
     func->numPaths += s->numPaths;
   }
@@ -122,26 +119,26 @@ int countPaths(Env &env, TF_func *func)
 
 // need the 'path' to detect circularity;
 // this function has similar structure to 'printPathFrom', below
-int countPathsFrom(Env &env, SObjList<Statement> &path,
+int countPathsFrom(Env &env, std::vector<Statement *> &path,
                    Statement *node, bool isContinue)
 {
   if (node->kind() != Statement::S_INVARIANT &&
-      path.contains(node)) {
+      sm::contains(path, node)) {
     env.warnLoc(node->loc, "circular path");
     if (tracingSys("circular")) {
       // print the circular path
-      SFOREACH_OBJLIST(Statement, path, iter) {
-        std::cout << "  " << toString(iter.data()->loc) << std::endl;
+      for (Statement const *stmt : path) {
+        std::cout << "  " << toString(stmt->loc) << std::endl;
       }
     }
     return 1;
   }
 
-  path.prepend(node);
+  path.push_back(node);
   int ret;
 
   if (node->kind() == Statement::S_INVARIANT &&
-      path.count() > 1) {
+      path.size() > 1) {
     // we've reached an invariant point, so the path stops here;
     // but we don't change node->paths since that is for the #
     // of paths from 'node' as a path *start*, not end
@@ -183,7 +180,7 @@ int countPathsFrom(Env &env, SObjList<Statement> &path,
     node->numPaths = ret;
   }
 
-  path.removeFirst();
+  path.pop_back();
   return ret;
 }
 
@@ -191,17 +188,19 @@ int countPathsFrom(Env &env, SObjList<Statement> &path,
 // ---------------------- printing paths ---------------------
 void printPaths(TF_func const *func)
 {
+  // keep the path allocated, we reuse it
+  std::vector<Statement /*const*/ *> path;
+
   // enumerate all paths from each root
-  SFOREACH_OBJLIST(Statement, func->roots, iter) {
-    Statement const *s = iter.data();
-    std::cout << "root at " << toString(iter.data()->loc) << ":\n";
+  for (Statement const *s : func->roots) {
+    std::cout << "root at " << toString(s->loc) << ":\n";
 
     // the whole point of counting the paths was so I could
     // so easily get a handle on all of them, to be able to
     // write a nice loop like this:
     for (int i=0; i < s->numPaths; i++) {
       std::cout << "  path " << i << ":\n";
-      SObjList<Statement /*const*/> path;
+      path.resize(0);
       printPathFrom(path, i, s, false /*isContinue*/);
     }
   }
@@ -224,7 +223,7 @@ int numPathsThrough(Statement const *stmt)
 
 // want 'path' to detect circularity (for debugging);
 // this function has similar structure to 'countPathsFrom', above
-void printPathFrom(SObjList<Statement /*const*/> &path, int index,
+void printPathFrom(std::vector<Statement /*const*/ *> &path, int index,
                    Statement const *node, bool isContinue)
 {
   // validate 'index'
@@ -239,11 +238,11 @@ void printPathFrom(SObjList<Statement /*const*/> &path, int index,
           << node->kindName() << std::endl;
 
   // debugging check
-  if (path.contains(node)) {
+  if (sm::contains(path, node)) {
     PATHOUT << "CIRCULAR path\n";
     return;
   }
-  path.prepend(const_cast<Statement*>(node));
+  path.push_back(const_cast<Statement*>(node));
 
   // follow one expression path in this statement
   printExprPath(index % exprPaths, node, isContinue);
@@ -293,7 +292,7 @@ void printPathFrom(SObjList<Statement /*const*/> &path, int index,
     xassert(index == 0);
   }
 
-  path.removeFirst();
+  path.pop_back();
 }
 
 
