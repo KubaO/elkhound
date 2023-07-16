@@ -6,11 +6,8 @@
 project(nonport)
 project(voidlist)
 project(vdtllist)
-project(taillist_test)
 project(tobjlist)
 project(bit2d)
-project(growbuf)
-project(svdict)
 project(str)
 project(strutil)
 project(strhash)
@@ -24,7 +21,6 @@ project(hashline)
 project(gprintf)
 project(testarray)
 project(autofile)
-project(bitarray)
 
 # files for nonport
 add_executable(nonport
@@ -42,11 +38,6 @@ add_executable(vdtllist
     ../vdtllist.cc
 )
 
-# files for taillist_test
-add_executable(taillist_test
-    ../taillist_test.cc
-)
-
 # files for tobjlist
 add_executable(tobjlist
     ../tobjlist.cc
@@ -55,16 +46,6 @@ add_executable(tobjlist
 # files for bit2d
 add_executable(bit2d
     ../bit2d.cc
-)
-
-# files for growbuf
-add_executable(growbuf
-    ../growbuf.cc
-)
-
-# files for svdict
-add_executable(svdict
-    ../svdict.cc
 )
 
 # files for str
@@ -132,18 +113,11 @@ add_executable(autofile
     ../autofile.cc
 )
 
-# files for bitarray
-add_executable(bitarray
-    ../bitarray.cc
-)
-
 # extra compile options
 target_compile_options(nonport PRIVATE -DTEST_NONPORT)
 target_compile_options(voidlist PRIVATE -DTEST_VOIDLIST)
 target_compile_options(vdtllist PRIVATE -DTEST_VDTLLIST)
 target_compile_options(bit2d PRIVATE -DTEST_BIT2D)
-target_compile_options(growbuf PRIVATE -DTEST_GROWBUF)
-target_compile_options(svdict PRIVATE -DTEST_SVDICT)
 target_compile_options(str PRIVATE -DTEST_STR)
 target_compile_options(strutil PRIVATE -DTEST_STRUTIL)
 target_compile_options(strhash PRIVATE -DTEST_STRHASH)
@@ -155,16 +129,12 @@ target_compile_options(srcloc PRIVATE -DTEST_SRCLOC)
 target_compile_options(hashline PRIVATE -DTEST_HASHLINE)
 target_compile_options(gprintf PRIVATE -DTEST_GPRINTF)
 target_compile_options(autofile PRIVATE -DTEST_AUTOFILE)
-target_compile_options(bitarray PRIVATE -DTEST_BITARRAY)
 
 # link options
 target_link_libraries(voidlist smbase)
 target_link_libraries(vdtllist smbase)
-target_link_libraries(taillist_test smbase)
 target_link_libraries(tobjlist smbase)
 target_link_libraries(bit2d smbase)
-target_link_libraries(growbuf smbase)
-target_link_libraries(svdict smbase)
 target_link_libraries(str smbase)
 target_link_libraries(strutil smbase)
 target_link_libraries(strhash smbase)
@@ -175,17 +145,13 @@ target_link_libraries(srcloc smbase)
 target_link_libraries(hashline smbase)
 target_link_libraries(testarray smbase)
 target_link_libraries(autofile smbase)
-target_link_libraries(bitarray smbase)
 
 # add the tests
 add_test(NAME nonport COMMAND ./nonport)
 add_test(NAME voidlist COMMAND ./voidlist)
 add_test(NAME vdtllist COMMAND ./vdtllist)
-add_test(NAME taillist_test COMMAND ./taillist_test)
 add_test(NAME tobjlist COMMAND ./tobjlist)
 add_test(NAME bit2d COMMAND ./bit2d)
-add_test(NAME growbuf COMMAND ./growbuf)
-add_test(NAME svdict COMMAND ./svdict)
 add_test(NAME str COMMAND ./str)
 add_test(NAME strutil COMMAND ./strutil)
 add_test(NAME strhash COMMAND ./strhash)
@@ -199,7 +165,6 @@ add_test(NAME hashline COMMAND ./hashline)
 add_test(NAME gprintf COMMAND ./gprintf)
 add_test(NAME testarray COMMAND ./testarray)
 add_test(NAME autofile COMMAND ./autofile)
-add_test(NAME bitarray COMMAND ./bitarray)
 
 # dependencies for srcloc test
 add_custom_command(TARGET srcloc POST_BUILD

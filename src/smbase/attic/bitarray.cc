@@ -7,192 +7,134 @@
 #include <string.h>       // memset
 
 
-BitArray::BitArray(int n)
-  : numBits(n)
+BitArray::BitArray(int count, bool value)
 {
-  allocBits();
-  clearAll();
-}
-
-void BitArray::allocBits()
-{
-  bits = new unsigned char[allocdBytes()];
+  allocBits(count, value);
 }
 
 
-BitArray::~BitArray()
+void BitArray::allocBits(int count, bool value)
 {
-  delete[] bits;
+  bits.clear();
+  bits.resize((count + 7) >> 3, value ? 0xFF : 0x00);
+  if (value)
+    ensureInvariant();
+  numBits = count;
 }
 
 
-BitArray::BitArray(Flatten&)
-  : bits(NULL)
-{}
+void BitArray::ensureInvariant() noexcept
+{
+  if (numBits & 7)
+    bits.back() &= 0xFF >> (8 - (numBits & 7));
+}
+
 
 void BitArray::xfer(Flatten &flat)
 {
-  flat.xferInt(numBits);
+  int count = this->numBits;
+  flat.xferInt(count);
 
   if (flat.reading()) {
-    allocBits();
+    allocBits(count);
   }
-  flat.xferSimple(bits, allocdBytes());
+  flat.xferSimple(bits.data(), bits.size());
 }
 
 
-BitArray::BitArray(BitArray const &obj)
-  : numBits(obj.numBits)
+// these rely on the invariant that the unused trailing
+// bits are always set to 0
+bool BitArray::operator== (BitArray const &obj) const noexcept
 {
-  allocBits();
-  memcpy(bits, obj.bits, allocdBytes());
+  return numBits == obj.numBits && bits == obj.bits;
 }
 
-void BitArray::operator=(BitArray const &obj)
+bool BitArray::operator!= (BitArray const& obj) const noexcept
 {
-  if (numBits != obj.numBits) {
-    delete[] bits;
-    numBits = obj.numBits;
-    allocBits();
-  }
-  memcpy(bits, obj.bits, allocdBytes());
+  return numBits != obj.numBits || bits != obj.bits;
 }
 
 
-bool BitArray::operator== (BitArray const &obj) const
+void BitArray::clearAll() noexcept
 {
-  if (numBits != obj.numBits) {
-    return false;
-  }
-
-  // this relies on the invariant that the unused trailing
-  // bits are always set to 0
-  return 0==memcmp(bits, obj.bits, allocdBytes());
+  if (numBits)
+    memset(bits.data(), 0, bits.size());
 }
 
 
-void BitArray::clearAll()
+BitArray& BitArray::flip() noexcept
 {
-  memset(bits, 0, allocdBytes());
-}
-
-
-void BitArray::invert()
-{
-  int allocd = allocdBytes();
-  for (int i=0; i<allocd; i++) {
-    bits[i] = ~(bits[i]);
-  }
-
-  if (numBits & 7) {
-    // there are some trailing bits that I need to flip back
-    unsigned char mask = (1 << (numBits & 7)) - 1;     // bits to *not* flip
-    bits[allocd-1] ^= ~mask;
-  }
+  for (uint8_t& byte : bits)
+    byte ^= 0xFF;
+  ensureInvariant();
+  return *this;
 }
 
 
 void BitArray::selfCheck() const
 {
+  // check that enough bytes are allocated
+  xassert(bits.size() == (numBits + 7) >> 3);
   if (numBits & 7) {
     // there are some trailing bits that I need to check
     unsigned char mask = (1 << (numBits & 7)) - 1;     // bits to *not* check
-    unsigned char zero = bits[allocdBytes()-1] & ~mask;
+    unsigned char zero = bits.back() & ~mask;
     xassert(zero == 0);
   }
 }
 
 
-void BitArray::unionWith(BitArray const &obj)
+BitArray& BitArray::unionWith(BitArray const &obj)
 {
   xassert(numBits == obj.numBits);
-
-  int allocd = allocdBytes();
-  for (int i=0; i<allocd; i++) {
+  for (int i=0; i<bits.size(); i++) {
     bits[i] |= obj.bits[i];
   }
+  return *this;
 }
 
 
-void BitArray::intersectWith(BitArray const &obj)
+BitArray& BitArray::intersectWith(BitArray const &obj) noexcept
 {
   xassert(numBits == obj.numBits);
-
-  int allocd = allocdBytes();
-  for (int i=0; i<allocd; i++) {
+  for (int i=0; i<bits.size(); i++) {
     bits[i] &= obj.bits[i];
   }
+  return *this;
 }
 
 
-// it's a little strange to export this function, since it is not
-// very general-purpose, but that is the price of encapsulation
-bool BitArray::anyEvenOddBitPair() const
+bool BitArray::anyEvenOddBitPair() const noexcept
 {
-  int allocd = allocdBytes();
-  for (int i=0; i<allocd; i++) {
-    unsigned char b = bits[i];
+  for (uint8_t b : bits) {
     if (b & (b >> 1) & 0x55) {        // 01010101
       return true;
     }
   }
-
   return false;    // no such pair
 }
 
 
-BitArray stringToBitArray(char const *src)
+BitArray stringToBitArray(string_view src)
 {
-  int len = strlen(src);
-  BitArray ret(len);
-  for (int i=0; i<len; i++) {
+  BitArray ret(src.size());
+  for (int i=0; i<src.size(); i++) {
     if (src[i]=='1') {
-      ret.set(i);
+      ret[i] = true;
     }
   }
   return ret;
 }
 
-string toString(BitArray const &b)
+string toString(BitArray const &src)
 {
-  int len = b.length();
-  stringBuilder ret(len, '0');
-  for (int i=0; i<len; i++) {
-    ret[i] = b.test(i)? '1' : '0';
+  string ret(src.length(), '0');
+  for (int i=0; i<ret.length(); i++) {
+    if (src[i])
+      ret[i] = '1';
   }
   return ret;
 }
-
-
-// ----------------------- BitArray::Iter ------------------------
-void BitArray::Iter::adv()
-{
-  curBit++;
-
-  while (curBit < arr.numBits) {
-    if ((curBit & 7) == 0) {
-      // beginning a new byte; is it entirely empty?
-      while (arr.bits[curBit >> 3] == 0) {
-        // yes, skip to next
-        curBit += 8;
-
-        if (curBit >= arr.numBits) {
-          return;     // done iterating
-        }
-      }
-    }
-
-    // this could be made a little faster by using the trick to scan
-    // for the first nonzero bit.. but since I am only going to scan
-    // within a single byte, it shouldn't make that much difference
-    if (arr.test(curBit)) {
-      return;         // found element
-    }
-
-    curBit++;
-  }
-}
-
 
 // -------------------- test code -------------------
 #ifdef TEST_BITARRAY
@@ -201,24 +143,13 @@ void BitArray::Iter::adv()
 
 string toStringViaIter(BitArray const &b)
 {
-  stringBuilder sb;
-  int index = 0;
+  string ret;
+  ret.reserve(b.length());
 
-  for (BitArray::Iter iter(b); !iter.isDone(); iter.adv()) {
-    while (index < iter.data()) {
-      sb << "0";
-      index++;
-    }
-    sb << "1";
-    index++;
+  for (bool bit : b) {
+    ret.push_back(bit ? '1' : '0');
   }
-
-  while (index < b.length()) {
-    sb << "0";
-    index++;
-  }
-
-  return sb;
+  return ret;
 }
 
 

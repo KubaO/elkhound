@@ -5,11 +5,12 @@
 #ifndef C_TYPE_H
 #define C_TYPE_H
 
+#include <map>            // std::map
+
 #include "str.h"          // string
 #include "objlist.h"      // ObjList
 #include "cc_flags.h"     // CVFlags, DeclFlags, SimpleTypeId
 #include "strtable.h"     // StringRef
-#include "strsobjdict.h"  // StrSObjDict
 
 // below, the type language refers to the AST language in exactly
 // one place: function pre/post conditions; the type language treats
@@ -150,9 +151,9 @@ public:      // types
   };
 
 private:     // data
-  ObjList<Field> fields;               // fields in this type
-  StringSObjDict<Field> fieldIndex;    // dictionary for name lookup
-  int fieldCounter;                    // # of fields
+  ObjList<Field> fields;                // fields in this type
+  std::map<string, Field*> fieldIndex;  // dictionary for name lookup
+  int fieldCounter;                     // # of fields
 
 public:      // data
   bool forward;               // true when it's only fwd-declared
@@ -204,9 +205,9 @@ public:     // types
   };
 
 public:     // data
-  ObjList<Value> values;              // values in this enumeration
-  StringSObjDict<Value> valueIndex;   // name-based lookup
-  int nextValue;                      // next value to assign to elements automatically
+  ObjList<Value> values;                // values in this enumeration
+  std::map<string, Value*> valueIndex;  // name-based lookup
+  int nextValue;                        // next value to assign to elements automatically
 
 public:     // funcs
   EnumType(StringRef n) : NamedAtomicType(n), nextValue(0) {}

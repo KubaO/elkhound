@@ -5,7 +5,6 @@
 
 #include "algo.h"        // sm::... algorithms
 #include "bit2d.h"       // Bit2d
-#include "bitarray.h"    // BitArray
 #include "strtokp.h"     // StrtokParse
 #include "syserr.h"      // xsyserror
 #include "trace.h"       // tracing system
@@ -23,6 +22,13 @@
 #include <fstream>       // std::ofstream
 #include <stdlib.h>      // getenv
 #include <stdio.h>       // printf
+
+
+class BitArray : public std::vector<bool>
+{
+public:
+  using std::vector<bool>::vector;
+};
 
 // for ParseTables::emitConstructionCode:
 //   linkdepend: parsetables.cc
@@ -2976,7 +2982,7 @@ int GrammarAnalysis::subsetDirectiveResolution(
   {
     for (Production const *p : reductions) {
       if (p->left->superset) {
-        map.set(p->left->ntIndex);
+        map[p->left->ntIndex] = true;
         anyWithSuper = true;
       }
     }
@@ -2992,7 +2998,7 @@ int GrammarAnalysis::subsetDirectiveResolution(
     Production const *prod = *mut;
 
     for (Nonterminal const *sub : prod->left->subsets) {
-      if (map.test(sub->ntIndex)) {
+      if (map[sub->ntIndex]) {
       trace("prec")
           << "in state " << state->id
           << ", R/R conflict on token " << sym->name
@@ -3376,13 +3382,13 @@ void GrammarAnalysis::topologicalSort(
   NtIndex current,   // current nonterminal to expand
   BitArray &seen)    // set of nonterminals we've already seen
 {
-  if (seen.test(current)) {
+  if (seen[current]) {
     // already expanded this one
     return;
   }
 
   // don't expand this one again
-  seen.set(current);
+  seen[current] = true;
 
   // look at all nonterminals this one can derive
   for (int nt=0; nt < numNonterms; nt++) {

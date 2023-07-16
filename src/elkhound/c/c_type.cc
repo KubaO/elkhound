@@ -414,9 +414,9 @@ CompoundType::Field const *CompoundType::getNthField(int index) const
 
 CompoundType::Field const *CompoundType::getNamedField(StringRef name) const
 {
-  Field *f;
-  if (fieldIndex.query(name, f)) {
-    return f;
+  auto f = fieldIndex.find(name);
+  if (f != fieldIndex.end()) {
+    return f->second;
   }
   else {
     return NULL;
@@ -427,11 +427,11 @@ CompoundType::Field const *CompoundType::getNamedField(StringRef name) const
 CompoundType::Field *CompoundType::
   addField(StringRef name, Type const *type, Variable *decl)
 {
-  xassert(!fieldIndex.isMapped(name));
+  xassert(fieldIndex.find(name) == fieldIndex.end());
 
   Field *f = new Field(name, fieldCounter++, type, this, decl);
   fields.append(f);
-  fieldIndex.add(name, f);
+  fieldIndex[name] = f;
 
   return f;
 }
@@ -478,11 +478,11 @@ int EnumType::reprSize() const
 
 EnumType::Value *EnumType::addValue(StringRef name, int value, Variable *decl)
 {
-  xassert(!valueIndex.isMapped(name));
+  xassert(valueIndex.find(name) == valueIndex.end());
 
   Value *v = new Value(name, this, value, decl);
   values.append(v);
-  valueIndex.add(name, v);
+  valueIndex[name] = v;
 
   return v;
 }
@@ -490,9 +490,9 @@ EnumType::Value *EnumType::addValue(StringRef name, int value, Variable *decl)
 
 EnumType::Value const *EnumType::getValue(StringRef name) const
 {
-  Value *v;
-  if (valueIndex.query(name, v)) {
-    return v;
+  auto v = valueIndex.find(name);
+  if (v != valueIndex.end()) {
+    return v->second;
   }
   else {
     return NULL;

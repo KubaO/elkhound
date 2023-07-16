@@ -23,11 +23,11 @@
 /* C++ declarations */
 /********************/
 
-  #include "growbuf.h"       // GrowBuffer
-  GrowBuffer collector;      // place to assemble big tokens
+  #include <string>           // std::string
+  std::string collector;      // place to assemble big tokens
 
   // used for 2nd and 3rd arguments to lexer1Emit
-  #define COLLECTOR (char*)collector.getDataC(), collector.getDataLen()
+  #define COLLECTOR collector.data(), collector.length()
 
   // declare the interface to the lexer
   #define YY_DECL int lexer1_inner_lex(Lexer1 &lexer)
@@ -138,7 +138,7 @@ PPCHAR        ([^\\\n]|{BACKSL}{NOTNL})
   /* ----- string literal ------- */
   /* intial */
 "L"?{QUOTE}   {
-  collector.setFromBlock(yytext, yyleng);
+  collector.assign(yytext, yyleng);
   BEGIN(ST_STRING);
 }
 
@@ -222,7 +222,7 @@ PPCHAR        ([^\\\n]|{BACKSL}{NOTNL})
   /* ------- C comment --------- */
   /* initial */
 "/""*"     {
-  collector.setFromBlock(yytext, yyleng);
+  collector.assign(yytext, yyleng);
   BEGIN(ST_C_COMMENT);
 }
 
@@ -316,7 +316,7 @@ int lexer1_lex(Lexer1 &lexer, FILE *inputFile)
   /* ------- preprocessor ---------- */
   /* initial */
 {BOL}{SPTAB}*"#"    {
-  collector.setFromBlock(yytext, yyleng);
+  collector.assign(yytext, yyleng);
   BEGIN(ST_PREPROC);
 }
 

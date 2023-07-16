@@ -6,6 +6,8 @@ Introduction
 
 "smbase" stands for Scott McPeak's Base Library (sorry, naming things is not my specialty). It's a bunch of utility modules I use in virtually all of my projects. The entire library is in the public domain.
 
+*Functionality that overlaps the C++ Standard Library is being removed to ease maintenance.*
+
 There is some overlap in functionality between smbase and the C++ Standard Library. Partly this is because smbase predates the standard library, and partly this is because that library has aspects to its design that I disagree with (for example, I think it is excessively templatized, given flaws in the C++ template mechanism). However, the intent is that client code can use smbase and the standard library at the same time.
 
 smbase has developed organically, in response to specific needs. While each module individually has been reasonably carefully designed, the library as a whole has not. Consequently, the modules to not always orthogonally cover a given design space, and some of the modules are now considered obsolete (marked below as such).
@@ -15,11 +17,7 @@ Some of the links below refer to generated documentation files. If you are readi
 Build Instructions
 ==================
 
-    $ ./configure
-    $ make
-    $ make check
-
-[./configure](configure.pl) understands [these options](gendoc/configure.txt). You can also look at the [Makefile](Makefile.in).
+SMBase is a static library. The build is configured by cmake.
 
 Modules
 =======
@@ -42,10 +40,30 @@ The main list class is ObjList. It is a list of pointers to objects. It _owns_ t
 There are a couple of variants that support O(1) appending.
 
 * [vdtllist.h](vdtllist.h), [vdtllist.cc](vdtllist.cc): VoidTailList, the core of a linked list implementation which maintains a pointer to the last node for O(1) appends. Used by [astlist.h](astlist.h) and [taillist.h](taillist.h).
-
-* [taillist.h](taillist.h): Template class built on top of VoidTailList ([vdtllist.h](vdtllist.h)).
-
 * [astlist.h](astlist.h): ASTList, a list class for use in abstract syntax trees.
+
+
+Algorithms
+----------
+
+* [algo.h](algo.h): Some useful algorithms, in the style of the standard `<algorithm>` header.
+
+  - `bool contains(container, value)` - a less verbose alternative to `std::find` when only a yes/no answer is needed
+  - `int compareSortedSLists(a, b, diff, [extra])` - compares two sorted lists using a provided int-returning comparison function, the returned value has the same meaning as in `strcmp` and `memcmp`.
+  - `void sortSList(container, diff, [extra])` - sorts the given container using a provided int-returning comparison function
+
+  The `S` in `SList` means "serf" - a non-owning pointers. `SList` is a general term that refers to a vector of pointers, a deque of pointers, etc.
+
+
+Container Adapters
+------------------
+
+* [stack.h](stack.h): An equivalent of C++ standard `<stack>` adapter, with a bit more functionality.
+  - Iteration in stack order (top-to-bottom) and reverse order (bottom-to-top) is supported
+  - `clear()` is available to remove all items from the stack
+  - `pusher()` provides a push-iterator that pushes items on top of the stack, in the spirit of `std::back_inserter`
+  - There's less verbosity in the template arguments: the container type is a free template; scalar value types get `std::vector` by default as the backing storage, whereas non-scalar types get `std::deque`. For safety it's presumed that the non-scalar values may be referenced outside of the stack through pointers, so a non-pointer-preserving container like vector can't be used.
+
 
 Arrays
 ------
@@ -56,18 +74,6 @@ The main array header, [array.h](array.h), contains several array classes. GrowA
 
 * [array.h](array.h): Several array-like template classes, including growable arrays.
 
-The other array modules are less-used.
-
-* [arrayqueue.h](arrayqueue.h): ArrayQueue, a template class implementing a queue with an array. Supports O(1) enqueue and dequeue.
-
-* [datablok.h](datablok.h), [datablok.cpp](datablok.cpp): DataBlock, an array of characters of a given length. Useful when the data may contain NUL ('\\0') bytes.
-
-* [growbuf.h](growbuf.h), [growbuf.cc](growbuf.cc): Extension of DataBlock ([datablok.h](datablok.h)) that provides an append() function.
-
-This is obsolete.
-
-* [arraymap.h](arraymap.h): ArrayMap, a map from integers to object pointers. Obsolete.
-
 Arrays of Bits
 --------------
 
@@ -75,20 +81,11 @@ Arrays of bits are handled specially, because they are implemented by storing mu
 
 * [bit2d.h](bit2d.h), [bit2d.cc](bit2d.cc): Two-dimensional array of bits.
 
-* [bitarray.h](bitarray.h), [bitarray.cc](bitarray.cc): One-dimensional array of bits.
 
 Hash Tables and Maps
 --------------------
 
 Maps support mapping from arbitrary domains to arbitrary ranges. Mappings can be added and queried in amortized O(1) time, but the constant factor is considerably higher than for arrays and lists.
-
-Probably the most common map is the PtrMap template, which will map from pointers to pointers, for arbitrary pointed-to types.
-
-* [ptrmap.h](ptrmap.h): Template class built on top of VoidPtrMap ([vptrmap.h](vptrmap.h)).
-
-* [objmap.h](objmap.h): Variant of PtrMap ([ptrmap.h](ptrmap.h)) that owns the values.
-
-* [vptrmap.h](vptrmap.h), [vptrmap.cc](vptrmap.cc): Hashtable-based map from void* to void*. Used by [ptrmap.h](ptrmap.h) and [objmap.h](objmap.h).
 
 If the key can always be derived from the data (for example, the key is stored in the data object), then it is inefficient to store both in the table. The following variants require a function pointer to map from data to keys.
 
@@ -117,13 +114,6 @@ If you have a function that can map from data to (string) key, then StringHash a
 
 * [strhash.h](strhash.h), [strhash.cc](strhash.cc): StringHash, a case-sensitive map from strings to void* pointers. Built on top of HashTable.
 
-The StringVoidDict and templates wrapped around it are more general. They do not require a function to map from data to key, support query-then-modify-result, and alphabetic iteration.
-
-* [strobjdict.h](strobjdict.h): StringObjDict, a case-sensitive map from strings to object pointers. The dictionary owns the referred-to objects.
-
-* [strsobjdict.h](strsobjdict.h): StringSObjDict, a case-sensitive map from strings to object pointers. The dictionary does _not_ own the referred-to objects.
-
-* [svdict.h](svdict.h), [svdict.cc](svdict.cc): StringVoidDict, a case-sensitive map from strings to void* pointers. Built on top of StringHash.
 
 Finally, there is a module to map from strings to strings.
 
@@ -136,13 +126,10 @@ Strings are sequences of characters.
 
 * [str.h](str.h), [str.cpp](str.cpp): The string class itself. Using the string class instead of char* makes handling strings as convenent as manipulating fundamental types like int or float. See also [string.txt](string.txt).
 
-* [stringset.h](stringset.h), [stringset.cc](stringset.cc): StringSet, a set of strings.
-
 * [strtokp.h](strtokp.h), [strtokp.cpp](strtokp.cpp): StrtokParse, a class that parses a string similar to how strtok() works, but provides a more convenient (and thread-safe) interface. Similar to Java's StringTokenizer.
 
 * [strutil.h](strutil.h), [strutil.cc](strutil.cc): A set of generic string utilities, including replace(), translate(), trimWhitespace(), encodeWithEscapes(), etc.
 
-* [smregexp.h](smregexp.h), [smregexp.cc](smregexp.cc): Regular expression matching.
 
 System Utilities
 ----------------
@@ -157,11 +144,8 @@ The following modules provide access to or wrappers around various low-level sys
 
 * [mypopen.h](mypopen.h), [mypopen.c](mypopen.c): Open a process, yielding two pipes: one for writing, one for reading.
 
-* [mysig.h](mysig.h), [mysig.cc](mysig.cc): Some signal-related utilities.
-
 * [syserr.h](syserr.h), [syserr.cpp](syserr.cpp): Intended to be a portable encapsulation of system-dependent error facilities like UNIX's errno and Win32's GetLastError(). It's not very complete right now.
 
-* [unixutil.h](unixutil.h), [unixutil.c](unixutil.c): Some utilities on top of unix functions: writeAll(), readString().
 
 Portability
 -----------
@@ -181,9 +165,8 @@ These modules provide additional control over the allocator.
 
 * [ckheap.h](ckheap.h): Interface to check heap integrity. The underlying malloc implementation must support these entry points for it to work. I've extended Doug Lea's malloc ([malloc.c](malloc.c)) to do so.
 
-* [malloc.c](malloc.c): Version 2.7.0 of [Doug Lea's malloc](http://gee.cs.oswego.edu/dl/html/malloc.html). I've made some modifications to help with debugging of memory errors in client code.
-
 * [objpool.h](objpool.h): ObjPool, a custom allocator for fixed-size objects with embedded 'next' links.
+
 
 Exceptions
 ----------
@@ -212,9 +195,8 @@ smbase has a number of modules that are of use to programs that read and/or writ
 
 * [srcloc.h](srcloc.h), [srcloc.cc](srcloc.cc): This module maintains a one-word data type called SourceLoc. SourceLoc is a location within some file, e.g. line/col or character offset information. SourceLoc also encodes _which_ file it refers to. This type is very useful for language processors (like compilers) because it efficiently encodes location formation. Decoding this into human-readable form is slower than incrementally updating it, but decoding is made somewhat efficient with some appropriate index structures.
 
-* [boxprint.h](boxprint.h) [boxprint.cc](boxprint.cc): BoxPrint functions as an output stream (sort of like cout) with operations to indicate structure within the emitted text, so that it can break lines intelligently. It's used as part of a source-code pretty-printer.
-
 * [warn.h](warn.h), [warn.cpp](warn.cpp): Intended to provide a general interface for user-level warnings; the design never really worked well.
+
 
 Testing and Debugging
 ---------------------
@@ -243,21 +225,10 @@ Test Drivers
 
 Test drivers. Below are the modules that are purely test drivers for other modules. They're separated out from the list above to avoid the clutter.
 
-* [testmalloc.cc](testmalloc.cc): A program to test the interface exposed by [ckheap.h](ckheap.h).
-
-* [tmalloc.c](tmalloc.c): Test my debugging enhancements to [malloc.c](malloc.c).
-
-* [tarrayqueue.cc](tarrayqueue.cc): Test driver for [arrayqueue.h](arrayqueue.h).
-
 * [testarray.cc](testarray.cc): Test driver for [array.h](array.h).
-
 * [testcout.cc](testcout.cc): This is a little test program for use by [configure.pl](configure.pl).
-
 * [tobjlist.cc](tobjlist.cc): Test driver for [objlist.h](objlist.h).
-
 * [tobjpool.cc](tobjpool.cc) Test driver for [objpool.h](objpool.h).
-
-* [tsobjlist.cc](tsobjlist.cc): Test driver for [sobjlist.h](sobjlist.h).
 
 Utility Scripts
 ---------------

@@ -4,9 +4,9 @@
 #ifndef C_ENV_H
 #define C_ENV_H
 
+#include <map>            // std::map<...>
+
 #include "c_type.h"       // Type, AtomicType, etc. (r)
-#include "strobjdict.h"   // StrObjDict
-#include "strsobjdict.h"  // StrSObjDict
 #include "owner.h"        // Owner
 #include "exc.h"          // xBase
 #include "c.ast.gen.h"    // C ast components
@@ -59,8 +59,8 @@ private:    // data
   sm::stack< sm::stack<Statement *> > pendingNexts;
   sm::stack< sm::stack<S_break *> > breaks;
 
-  StringSObjDict<S_label> labels;       // goto targets
-  StringSObjDict<S_goto> gotos;         // goto sources
+  std::map<string, S_label*> labels;       // goto targets
+  std::map<string, S_goto*> gotos;         // goto sources
 
   sm::stack<S_switch *> switches;
   sm::stack<Statement *> loops;
@@ -109,7 +109,7 @@ public:     // funcs
 // elements of the environment which are scoped
 struct ScopedEnv {
   // variables: map name -> Type
-  StringSObjDict<Variable> variables;
+  std::map<string, Variable*> variables;
 };
 
 
@@ -121,16 +121,16 @@ private:    // data
   sm::stack<ScopedEnv, std::vector> scopes;
 
   // typedefs: map name -> Type
-  StringSObjDict<Type /*const*/> typedefs;
+  std::map<string, Type* /*const*/> typedefs;
 
   // compounds: map name -> CompoundType
-  StringSObjDict<CompoundType> compounds;
+  std::map<string, CompoundType*> compounds;
 
   // enums: map name -> EnumType
-  StringSObjDict<EnumType> enums;
+  std::map<string, EnumType*> enums;
 
   // enumerators: map name -> EnumType::Value
-  StringSObjDict<EnumType::Value> enumerators;
+  std::map<string, EnumType::Value*> enumerators;
 
   // -------------- miscellaneous ---------------
   // count of reported errors

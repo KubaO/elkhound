@@ -8,15 +8,12 @@ add_library(smbase STATIC
     autofile.cc
     bflatten.cc
     bit2d.cc
-    bitarray.cc
     breaker.cpp
     crc.cpp
     cycles.c
-    datablok.cpp
     exc.cpp
     flatten.cc
     gprintf.c
-    growbuf.cc
     hashline.cc
     hashtbl.cc
     nonport.cpp
@@ -24,10 +21,8 @@ add_library(smbase STATIC
     srcloc.cc
     str.cpp
     strhash.cc
-    stringset.cc
     strtokp.cpp
     strutil.cc
-    svdict.cc
     syserr.cpp
     trace.cc
     trdelete.cc

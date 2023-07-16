@@ -10,8 +10,9 @@
 #ifndef HASHLINE_H
 #define HASHLINE_H
 
-#include "strobjdict.h"     // StringObjDict
+#include <set>              // std::set<string>
 #include "array.h"          // ArrayStack
+#include "str.h"            // string, rostring
 
 // map from lines in some given pp source file to lines in
 // orig source files; there should be one HashLineMap object
@@ -39,10 +40,8 @@ private:    // data
   // before any #line is encountered
   string ppFname;
 
-  // map for canonical storage of orig filenames; I don't rely on
-  // an external string table because I don't want the extra
-  // dependency
-  StringObjDict<string> filenames;
+  // set for canonical storage of orig filenames
+  std::set<string> filenames;
 
   // growable array of HashLine objects
   ArrayStack<HashLine> directives;

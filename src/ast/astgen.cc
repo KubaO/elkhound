@@ -7,14 +7,14 @@
 #include "owner.h"         // Owner
 #include "ckheap.h"        // checkHeap
 #include "strutil.h"       // replace, translate, localTimeString
-#include "stringset.h"     // StringSet
 #include "srcloc.h"        // SourceLocManager
 #include "strtokp.h"       // StrtokParse
 #include "exc.h"           // xfatal
 
+#include <set>             // std::set
+#include <fstream>         // std::ofstream
 #include <vector>          // std::vector
 #include <string.h>        // strncmp
-#include <fstream>         // std::ofstream
 #include <ctype.h>         // isalnum
 
 // propertly a member of ListClass below, but I don't like nested
@@ -78,7 +78,7 @@ ASTSpecFile *wholeAST = NULL;
 std::vector<TF_class *> allClasses;
 
 // list of all ASTList "list classes"
-StringSet listClassesSet;
+std::set<string> listClassesSet;
 ASTList<ListClass> listClasses;
 
 // true if the user wants the xmlPrint stuff
@@ -971,7 +971,7 @@ public:
 
 // generation of xml parser
 class XmlParserGen {
-  StringSet attributeNames;     // names of attributes of AST nodes
+  std::set<string> attributeNames;     // names of attributes of AST nodes
 
   std::ofstream tokensOutH;
   std::ofstream tokensOutCC;
@@ -1582,11 +1582,11 @@ void HGen::emitVisitorInterface()
         << "(" << cls->kindName() << "<" << cls->elementClassName << ">*);\n";
   }
 
-  StringSet listItemClassesSet; // set of list item classes printed so far
+  std::set<string_view> listItemClassesSet; // set of list item classes printed so far
   FOREACH_ASTLIST(ListClass, listClasses, iter) {
     ListClass const *cls = iter.data();
-    xassert(!listItemClassesSet.contains(cls->classAndMemberName)); // should not repeat
-    listItemClassesSet.add(cls->classAndMemberName);
+    auto result = listItemClassesSet.insert(cls->classAndMemberName);
+    xassert(result.second); // should not repeat
     out << "  virtual bool visitListItem_" << cls->classAndMemberName
         << "(" << cls->elementClassName << "*);\n";
     out << "  virtual void postvisitListItem_" << cls->classAndMemberName
@@ -1619,11 +1619,11 @@ void CGen::emitVisitorImplementation()
         << "(" << cls->kindName() << "<" << cls->elementClassName << ">*) {}\n";
   }
 
-  StringSet listItemClassesSet; // set of list item classes printed so far
+  std::set<string_view> listItemClassesSet; // set of list item classes printed so far
   FOREACH_ASTLIST(ListClass, listClasses, iter) {
     ListClass const *cls = iter.data();
-    xassert(!listItemClassesSet.contains(cls->classAndMemberName)); // should not repeat
-    listItemClassesSet.add(cls->classAndMemberName);
+    auto result = listItemClassesSet.insert(cls->classAndMemberName);
+    xassert(result.second); // should not repeat
     out << "bool " << visitorName << "::visitListItem_" << cls->classAndMemberName
         << "(" << cls->elementClassName << "*) { return true; }\n";
     out << "void " << visitorName << "::postvisitListItem_" << cls->classAndMemberName
@@ -1810,11 +1810,11 @@ void HGen::emitDVisitorInterface()
         << "(" << cls->kindName() << "<" << cls->elementClassName << ">*);\n";
   }
 
-  StringSet listItemClassesSet; // set of list item classes printed so far
+  std::set<string_view> listItemClassesSet; // set of list item classes printed so far
   FOREACH_ASTLIST(ListClass, listClasses, iter) {
     ListClass const *cls = iter.data();
-    xassert(!listItemClassesSet.contains(cls->classAndMemberName)); // should not repeat
-    listItemClassesSet.add(cls->classAndMemberName);
+    auto result = listItemClassesSet.insert(cls->classAndMemberName);
+    xassert(result.second); // should not repeat
     out << "  virtual bool visitListItem_" << cls->classAndMemberName
         << "(" << cls->elementClassName << "*);\n";
     out << "  virtual void postvisitListItem_" << cls->classAndMemberName
@@ -1890,11 +1890,11 @@ void CGen::emitDVisitorImplementation()
     out << "}\n";
   }
 
-  StringSet listItemClassesSet; // set of list item classes printed so far
+  std::set<string_view> listItemClassesSet; // set of list item classes printed so far
   FOREACH_ASTLIST(ListClass, listClasses, iter) {
     ListClass const *cls = iter.data();
-    xassert(!listItemClassesSet.contains(cls->classAndMemberName)); // should not repeat
-    listItemClassesSet.add(cls->classAndMemberName);
+    auto result = listItemClassesSet.insert(cls->classAndMemberName);
+    xassert(result.second); // should not repeat
 
     // visit item
     out << "bool " << dvisitorName << "::visitListItem_" << cls->classAndMemberName
@@ -2130,11 +2130,11 @@ void HGen::emitXmlVisitorInterface()
         << "(" << cls->kindName() << "<" << cls->elementClassName << ">*);\n";
   }
 
-  StringSet listItemClassesSet; // set of list item classes printed so far
+  std::set<string_view> listItemClassesSet; // set of list item classes printed so far
   FOREACH_ASTLIST(ListClass, listClasses, iter) {
     ListClass const *cls = iter.data();
-    xassert(!listItemClassesSet.contains(cls->classAndMemberName)); // should not repeat
-    listItemClassesSet.add(cls->classAndMemberName);
+    auto result = listItemClassesSet.insert(cls->classAndMemberName);
+    xassert(result.second); // should not repeat
     out << "  virtual bool visitListItem_" << cls->classAndMemberName
         << "(" << cls->elementClassName << "*);\n";
     out << "  virtual void postvisitListItem_" << cls->classAndMemberName
@@ -2513,23 +2513,23 @@ void XmlParserGen::collectXmlParserField
   (rostring type, rostring name, char const *baseName, AccessMod*)
 {
   if (streq(type, "string")) {
-    attributeNames.add(name);
+    attributeNames.insert(name);
   }
   else if (streq(type, "StringRef")) {
-    attributeNames.add(name);
+    attributeNames.insert(name);
   }
   else if (streq(type, "bool")) {
-    attributeNames.add(name);
+    attributeNames.insert(name);
   }
 
   else if (isListType(type)) {
-    attributeNames.add(name);
+    attributeNames.insert(name);
   }
   else if (isFakeListType(type)) {
-    attributeNames.add(name);
+    attributeNames.insert(name);
   }
   else if (isTreeNode(type) || (isTreeNodePtr(type))) {
-    attributeNames.add(name);
+    attributeNames.insert(name);
   }
 
   // If you start being more selective, be sure to include the names
@@ -2538,7 +2538,7 @@ void XmlParserGen::collectXmlParserField
   else {
     // catch-all ..
 //      out << "  " << print << "_GENERIC(" << name << ");\n";
-    attributeNames.add(name);
+    attributeNames.insert(name);
   }
 }
 
@@ -2989,8 +2989,7 @@ void XmlParserGen::emitXmlParserImplementation()
   lexerOut << "\n";
   lexerOut << "  /* child attribute names */\n";
 
-  FOREACH_STRINGSET(attributeNames, attrIter) {
-    string const &attr = attrIter.data();
+  for(const string& attr : attributeNames) {
     tokensOutH  << "  XTOK_" << attr << ", // \"" << attr << "\"\n";
     tokensOutCC << "  \"XTOK_" << attr << "\",\n";
     lexerOut  << "\"" << attr << "\" return tok(XTOK_" << attr << ");\n";
@@ -3175,8 +3174,8 @@ void recordListClass(ListKind lkind, rostring className, CtorArg const *arg) {
   rostring argName = arg->name;
   ListClass *cls = new ListClass
     (lkind, stringc << className << "_" << argName, extractListType(arg->type));
-  if (!listClassesSet.contains(cls->classAndMemberName)) {
-    listClassesSet.add(cls->classAndMemberName);
+  auto result = listClassesSet.insert(cls->classAndMemberName);
+  if (result.second) {
     listClasses.append(cls);
   } else {
     delete cls;
