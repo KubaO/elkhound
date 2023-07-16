@@ -592,18 +592,21 @@ void ItemSet::removeReduce(Production const *prod, Terminal const *sym)
 }
 
 
-void ItemSet::getAllItems(SObjList<LRItem> &dest, bool nonkernel) const
+std::vector<LRItem const *> ItemSet::getAllItems(bool nonkernel) const
 {
-  SObjListMutator<LRItem> mut(dest);
+  std::vector<LRItem const *> ret;
+  ret.resize(kernelItems.count() + (nonkernel ? nonkernelItems.count() : 0));
 
+  auto it = ret.begin();
   FOREACH_OBJLIST(LRItem, kernelItems, k) {
-    mut.append(const_cast<LRItem*>(k.data()));
+    *it++ = k.data();
   }
   if (nonkernel) {
     FOREACH_OBJLIST(LRItem, nonkernelItems, n) {
-      mut.append(const_cast<LRItem*>(n.data()));
+      *it++ = n.data();
     }
   }
+  return ret;
 }
 
 
@@ -742,15 +745,12 @@ void ItemSet::changedItems()
 {
   // -- recompute dotsAtEnd --
   // collect all items
-  SObjList<LRItem> items;      // (constness) 'items' shouldn't be used to modify the elements
-  getAllItems(items);
+  std::vector<LRItem const *> items = getAllItems();
 
   // count number with dots at end
   int count = 0;
   {
-    SFOREACH_OBJLIST(LRItem, items, itemIter) {
-      LRItem const *item = itemIter.data();
-
+    for (LRItem const *item : items) {
       if (item->isDotAtEnd()) {
         count++;
       }
@@ -774,9 +774,7 @@ void ItemSet::changedItems()
 
   // fill array
   int index = 0;
-  SFOREACH_OBJLIST(LRItem, items, itemIter) {
-    LRItem const *item = itemIter.data();
-
+  for (LRItem const *item : items) {
     if (item->isDotAtEnd()) {
       dotsAtEnd[index] = item;
       index++;
@@ -823,12 +821,10 @@ void ItemSet::print(std::ostream &os, GrammarAnalysis const &g,
   os << "ItemSet " << id << ":\n";
 
   // collect all items
-  SObjList<LRItem> items;     // (constness) don't use 'item' to modify elements
-  getAllItems(items, nonkernel);
+  std::vector<LRItem const *> items = getAllItems(nonkernel);
 
   // for each item
-  SFOREACH_OBJLIST(LRItem, items, itemIter) {
-    LRItem const *item = itemIter.data();
+  for (LRItem const *item : items) {
 
     // print its text
     os << "  ";
@@ -879,12 +875,10 @@ void ItemSet::writeGraph(std::ostream &os, GrammarAnalysis const &g) const
     // rest of desc will follow
 
   // collect all items
-  SObjList<LRItem> items;         // (constness) don't use 'items' to modify elements
-  getAllItems(items);
+  std::vector<LRItem const *> items = getAllItems();
 
   // for each item, print the item text
-  SFOREACH_OBJLIST(LRItem, items, itemIter) {
-    LRItem const *item = itemIter.data();
+  for (LRItem const *item : items) {
 
     // print its text
     os << "   ";

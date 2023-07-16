@@ -24,6 +24,8 @@
 #include "glrconfig.h"    // SOURCELOC
 #include "parsetables.h"  // ParseTables, GrowArray
 
+#include <vector>         // std::vector
+
 // forward decls
 class Bit2d;              // bit2d.h
 class BitArray;           // bitarray.h
@@ -281,8 +283,7 @@ public:     // funcs
   bool operator== (ItemSet const &obj) const;
 
   // sometimes it's convenient to have all items mixed together
-  // (CONSTNESS: allows modification of items...)
-  void getAllItems(SObjList<LRItem> &dest, bool nonkernel=true) const;
+  std::vector<LRItem const *> getAllItems(bool nonkernel=true) const;
 
   // used for sorting by id
   static int diffById(ItemSet const *left, ItemSet const *right, void*);
