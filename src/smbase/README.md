@@ -75,7 +75,6 @@ Arrays of bits are handled specially, because they are implemented by storing mu
 
 * [bit2d.h](bit2d.h), [bit2d.cc](bit2d.cc): Two-dimensional array of bits.
 
-* [bitarray.h](bitarray.h), [bitarray.cc](bitarray.cc): One-dimensional array of bits.
 
 Hash Tables and Maps
 --------------------

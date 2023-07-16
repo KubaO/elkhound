@@ -8,7 +8,6 @@ add_library(smbase STATIC
     autofile.cc
     bflatten.cc
     bit2d.cc
-    bitarray.cc
     breaker.cpp
     crc.cpp
     cycles.c

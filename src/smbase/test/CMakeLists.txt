@@ -24,7 +24,6 @@ project(hashline)
 project(gprintf)
 project(testarray)
 project(autofile)
-project(bitarray)
 
 # files for nonport
 add_executable(nonport
@@ -132,11 +131,6 @@ add_executable(autofile
     ../autofile.cc
 )
 
-# files for bitarray
-add_executable(bitarray
-    ../bitarray.cc
-)
-
 # extra compile options
 target_compile_options(nonport PRIVATE -DTEST_NONPORT)
 target_compile_options(voidlist PRIVATE -DTEST_VOIDLIST)
@@ -155,7 +149,6 @@ target_compile_options(srcloc PRIVATE -DTEST_SRCLOC)
 target_compile_options(hashline PRIVATE -DTEST_HASHLINE)
 target_compile_options(gprintf PRIVATE -DTEST_GPRINTF)
 target_compile_options(autofile PRIVATE -DTEST_AUTOFILE)
-target_compile_options(bitarray PRIVATE -DTEST_BITARRAY)
 
 # link options
 target_link_libraries(voidlist smbase)
@@ -175,7 +168,6 @@ target_link_libraries(srcloc smbase)
 target_link_libraries(hashline smbase)
 target_link_libraries(testarray smbase)
 target_link_libraries(autofile smbase)
-target_link_libraries(bitarray smbase)
 
 # add the tests
 add_test(NAME nonport COMMAND ./nonport)
@@ -199,7 +191,6 @@ add_test(NAME hashline COMMAND ./hashline)
 add_test(NAME gprintf COMMAND ./gprintf)
 add_test(NAME testarray COMMAND ./testarray)
 add_test(NAME autofile COMMAND ./autofile)
-add_test(NAME bitarray COMMAND ./bitarray)
 
 # dependencies for srcloc test
 add_custom_command(TARGET srcloc POST_BUILD
