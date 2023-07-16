@@ -6,7 +6,7 @@ project(arith)
 # generate arith.gr.gen.{cc,h}
 add_custom_command(
     OUTPUT arith.gr.gen.cc arith.gr.gen.h
-    COMMAND ${ELKHOUND_DIR}/elkhound -o arith.gr.gen ${CMAKE_CURRENT_SOURCE_DIR}/arith.gr
+    COMMAND elkhound -o arith.gr.gen ${CMAKE_CURRENT_SOURCE_DIR}/arith.gr
     DEPENDS elkhound arith.gr
 )
 

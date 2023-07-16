@@ -25,7 +25,6 @@
 #include "srcloc.h"       // SourceLoc
 #include "strtable.h"     // StringRef
 #include "cc_flags.h"     // DeclFlags
-#include "sobjlist.h"     // SObjList
 
 class Type;               // c_type.h
 

@@ -10,14 +10,14 @@ if(PERL_EXECUTABLE)
     # generate gcom.{cc,h}
     add_custom_command(
         OUTPUT gcom.cc gcom.h
-        COMMAND ${ELKHOUND_DIR}/elkhound -o gcom ${CMAKE_CURRENT_SOURCE_DIR}/gcom.gr
+        COMMAND elkhound -o gcom ${CMAKE_CURRENT_SOURCE_DIR}/gcom.gr
         DEPENDS elkhound tokens.tok gcom.gr
     )
 
     # generate ast.{cc,h}
     add_custom_command(
         OUTPUT ast.cc ast.h
-        COMMAND ${AST_DIR}/astgen -o ast ${CMAKE_CURRENT_SOURCE_DIR}/gcom.ast
+        COMMAND astgen -o ast ${CMAKE_CURRENT_SOURCE_DIR}/gcom.ast
         DEPENDS astgen gcom.ast
     )
 

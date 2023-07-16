@@ -96,77 +96,77 @@ if(PERL_EXECUTABLE)
     # generate AdB.gr.gen.{cc,h}
     add_custom_command(
       OUTPUT AdB.gr.gen.cc AdB.gr.gen.h
-      COMMAND ${ELKHOUND_DIR}/elkhound -tr bison,NOconflict,lrtable -o AdB.gr.gen AdB.gr
+      COMMAND elkhound -tr bison,NOconflict,lrtable -o AdB.gr.gen AdB.gr
       DEPENDS elkhound AdB.gr
     )
 
     # generate CAdB.gr.gen.{cc,h}
     add_custom_command(
       OUTPUT CAdB.gr.gen.cc CAdB.gr.gen.h
-      COMMAND ${ELKHOUND_DIR}/elkhound -tr bison,NOconflict,lrtable -o CAdB.gr.gen CAdB.gr
+      COMMAND elkhound -tr bison,NOconflict,lrtable -o CAdB.gr.gen CAdB.gr
       DEPENDS elkhound CAdB.gr
     )
 
     # generate EEb.gr.gen.{cc,h}
     add_custom_command(
       OUTPUT EEb.gr.gen.cc EEb.gr.gen.h
-      COMMAND ${ELKHOUND_DIR}/elkhound -tr bison,NOconflict,lrtable -o EEb.gr.gen EEb.gr
+      COMMAND elkhound -tr bison,NOconflict,lrtable -o EEb.gr.gen EEb.gr
       DEPENDS elkhound EEb.gr
     )
 
     # generate EFa.gr.gen.{cc,h}
     add_custom_command(
       OUTPUT EFa.gr.gen.cc EFa.gr.gen.h
-      COMMAND ${ELKHOUND_DIR}/elkhound -tr bison,NOconflict,lrtable -o EFa.gr.gen EFa.gr
+      COMMAND elkhound -tr bison,NOconflict,lrtable -o EFa.gr.gen EFa.gr
       DEPENDS elkhound EFa.gr
     )
 
     # generate ESb.gr.gen.{cc,h}
     add_custom_command(
       OUTPUT ESb.gr.gen.cc ESb.gr.gen.h
-      COMMAND ${ELKHOUND_DIR}/elkhound -tr bison,NOconflict,lrtable -o ESb.gr.gen ESb.gr
+      COMMAND elkhound -tr bison,NOconflict,lrtable -o ESb.gr.gen ESb.gr
       DEPENDS elkhound ESb.gr
     )
 
     # generate SSSx.gr.gen.{cc,h}
     add_custom_command(
       OUTPUT SSSx.gr.gen.cc SSSx.gr.gen.h
-      COMMAND ${ELKHOUND_DIR}/elkhound -tr bison,NOconflict,lrtable -o SSSx.gr.gen SSSx.gr
+      COMMAND elkhound -tr bison,NOconflict,lrtable -o SSSx.gr.gen SSSx.gr
       DEPENDS elkhound SSSx.gr
     )
 
     # generate SSx.gr.gen.{cc,h}
     add_custom_command(
       OUTPUT SSx.gr.gen.cc SSx.gr.gen.h
-      COMMAND ${ELKHOUND_DIR}/elkhound -tr bison,NOconflict,lrtable -o SSx.gr.gen SSx.gr
+      COMMAND elkhound -tr bison,NOconflict,lrtable -o SSx.gr.gen SSx.gr
       DEPENDS elkhound SSx.gr
     )
 
     # generate aSEb.gr.gen.{cc,h}
     add_custom_command(
       OUTPUT aSEb.gr.gen.cc aSEb.gr.gen.h
-      COMMAND ${ELKHOUND_DIR}/elkhound -tr bison,NOconflict,lrtable -o aSEb.gr.gen aSEb.gr
+      COMMAND elkhound -tr bison,NOconflict,lrtable -o aSEb.gr.gen aSEb.gr
       DEPENDS elkhound aSEb.gr
     )
 
     # generate angle.gr.gen.{cc,h}
     add_custom_command(
       OUTPUT angle.gr.gen.cc angle.gr.gen.h
-      COMMAND ${ELKHOUND_DIR}/elkhound -tr bison,NOconflict,lrtable -o angle.gr.gen angle.gr
+      COMMAND elkhound -tr bison,NOconflict,lrtable -o angle.gr.gen angle.gr
       DEPENDS elkhound angle.gr
     )
 
     # generate ite.gr.gen.{cc,h}
     add_custom_command(
       OUTPUT ite.gr.gen.cc ite.gr.gen.h
-      COMMAND ${ELKHOUND_DIR}/elkhound -tr bison,NOconflict,lrtable -o ite.gr.gen ite.gr
+      COMMAND elkhound -tr bison,NOconflict,lrtable -o ite.gr.gen ite.gr
       DEPENDS elkhound ite.gr
     )
 
     # generate testRR.gr.gen.{cc,h}
     add_custom_command(
       OUTPUT testRR.gr.gen.cc testRR.gr.gen.h
-      COMMAND ${ELKHOUND_DIR}/elkhound -tr bison,NOconflict,lrtable -o testRR.gr.gen testRR.gr
+      COMMAND elkhound -tr bison,NOconflict,lrtable -o testRR.gr.gen testRR.gr
       DEPENDS elkhound testRR.gr
     )
 

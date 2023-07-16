@@ -6,7 +6,7 @@ project(cdecl)
 # generate cdecl.gr.gen.{cc,h}
 add_custom_command(
     OUTPUT cdecl.gr.gen.cc cdecl.gr.gen.h
-    COMMAND ${ELKHOUND_DIR}/elkhound -o cdecl.gr.gen ${CMAKE_CURRENT_SOURCE_DIR}/cdecl.gr
+    COMMAND elkhound -o cdecl.gr.gen ${CMAKE_CURRENT_SOURCE_DIR}/cdecl.gr
     DEPENDS elkhound cdecl.gr
 )
 

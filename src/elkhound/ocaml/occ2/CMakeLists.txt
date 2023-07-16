@@ -15,7 +15,7 @@ if(PERL_EXECUTABLE)
 
     # create occ2.ml
     add_custom_target(occ2 ALL
-        COMMAND ${ELKHOUND_DIR}/elkhound -o occ2 -ocaml ${CMAKE_CURRENT_SOURCE_DIR}/occ2.gr
+        COMMAND elkhound -o occ2 -ocaml ${CMAKE_CURRENT_SOURCE_DIR}/occ2.gr
         DEPENDS elkhound tokens.tok occ2.gr
     )
 else()

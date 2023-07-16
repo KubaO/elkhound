@@ -6,7 +6,7 @@ project(cc2)
 # generate cc2t.gr.gen.{cc,h}
 add_custom_command(
     OUTPUT cc2.gr.gen.cc cc2.gr.gen.h
-    COMMAND ${ELKHOUND_DIR}/elkhound -tr treebuild,lrtable -o cc2.gr.gen ${CMAKE_CURRENT_SOURCE_DIR}/cc2.gr
+    COMMAND elkhound -tr treebuild,lrtable -o cc2.gr.gen ${CMAKE_CURRENT_SOURCE_DIR}/cc2.gr
     DEPENDS elkhound cparse cc2.gr
 )
 
