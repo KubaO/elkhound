@@ -45,6 +45,8 @@ Algorithms
   - `bool contains(container, value)` - a less verbose alternative to `std::find` when only a yes/no answer is needed
   - `int compareSortedSLists(a, b, diff, [extra])` - compares two sorted lists using a provided int-returning comparison function, the returned value has the same meaning as in `strcmp` and `memcmp`.
   - `void sortSList(container, diff, [extra])` - sorts the given container using a provided int-returning comparison function
+  - `V* getPointerFromMap(map, key)` - returns the pointer-typed value for a given key, or nullptr
+  - `V* getPointerFromSet(set, val)` - returns val if the set contains it, or nullptr
 
   The `S` in `SList` means "serf" - a non-owning pointers. `SList` is a general term that refers to a vector of pointers, a deque of pointers, etc.
 
