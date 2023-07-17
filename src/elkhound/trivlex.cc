@@ -16,11 +16,8 @@ void trivialLexer(char const *fname, Lexer2 &dest)
 
   int ch;
   while ((ch = fgetc(fp)) != EOF) {
-    // abuse Lexer2 to hold chars
-    Lexer2Token *tok = new Lexer2Token((Lexer2TokenType)ch, loc);
-
-    // add it to list
-    dest.addToken(tok);
+    // abuse Lexer2 to hold chars, add it to list
+    dest.addToken((Lexer2TokenType)ch, loc);
 
     char aChar = ch;
     loc = SourceLocManager::instance()->advText(loc, &aChar, 1);

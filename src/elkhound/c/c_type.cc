@@ -3,6 +3,7 @@
 
 #include "c_type.h"     // this module
 #include "trace.h"      // tracingSys
+#include "xassert.h"    // xassert
 #include <assert.h>     // assert
 
 
@@ -304,9 +305,8 @@ string CompoundType::toStringWithFields() const
   sb << toCString();
   if (isComplete()) {
     sb << " { ";
-    FOREACH_OBJLIST(Field, fields, iter) {
-      Field const *f = iter.data();
-      sb << f->type->toCString(f->name) << "; ";
+    for (auto const& f : fields) {
+      sb << f.type->toCString(f.name) << "; ";
     }
     sb << "};";
   }
@@ -387,8 +387,8 @@ MLValue CompoundType::toMLContentsValue(int depth, CVFlags cv) const
 int CompoundType::reprSize() const
 {
   int total = 0;
-  FOREACH_OBJLIST(Field, fields, iter) {
-    int membSize = iter.data()->type->reprSize();
+  for (auto const& field : fields) {
+    int membSize = field.type->reprSize();
     if (keyword == K_UNION) {
       // representation size is max over field sizes
       total = max(total, membSize);
@@ -404,19 +404,19 @@ int CompoundType::reprSize() const
 
 int CompoundType::numFields() const
 {
-  return fields.count();
+  return fields.size();
 }
 
 CompoundType::Field const *CompoundType::getNthField(int index) const
 {
-  return fields.nthC(index);
+  return &fields[index];
 }
 
 CompoundType::Field const *CompoundType::getNamedField(StringRef name) const
 {
   auto f = fieldIndex.find(name);
   if (f != fieldIndex.end()) {
-    return f->second;
+    return &fields[f->second];
   }
   else {
     return NULL;
@@ -429,11 +429,10 @@ CompoundType::Field *CompoundType::
 {
   xassert(fieldIndex.find(name) == fieldIndex.end());
 
-  Field *f = new Field(name, fieldCounter++, type, this, decl);
-  fields.append(f);
-  fieldIndex[name] = f;
+  fields.emplace_back(name, fieldCounter++, type, this, decl);
+  fieldIndex[name] = fields.size() - 1;
 
-  return f;
+  return &fields.back();
 }
 
 
@@ -480,11 +479,10 @@ EnumType::Value *EnumType::addValue(StringRef name, int value, Variable *decl)
 {
   xassert(valueIndex.find(name) == valueIndex.end());
 
-  Value *v = new Value(name, this, value, decl);
-  values.append(v);
-  valueIndex[name] = v;
+  values.emplace_back(name, this, value, decl);
+  valueIndex[name] = values.size() - 1;
 
-  return v;
+  return &values.back();
 }
 
 
@@ -492,7 +490,7 @@ EnumType::Value const *EnumType::getValue(StringRef name) const
 {
   auto v = valueIndex.find(name);
   if (v != valueIndex.end()) {
-    return v->second;
+    return &values[v->second];
   }
   else {
     return NULL;
@@ -831,13 +829,13 @@ bool FunctionType::innerEquals(FunctionType const *obj) const
       //cv == obj->cv &&
       acceptsVarargs == obj->acceptsVarargs) {
     // so far so good, try the parameters
-    ObjListIter<Param> iter1(params);
-    ObjListIter<Param> iter2(obj->params);
-    for (; !iter1.isDone() && !iter2.isDone();
-         iter1.adv(), iter2.adv()) {
+    auto iter1 = params.begin();
+    auto iter2 = obj->params.begin();
+    for (; iter1 != params.end() && iter2 != obj->params.end();
+         ++iter1, ++iter2) {
       // parameter names do not have to match, but
       // the types do
-      if (iter1.data()->type->equals(iter2.data()->type)) {
+      if (iter1->type->equals(iter2->type)) {
         // ok
       }
       else {
@@ -845,7 +843,7 @@ bool FunctionType::innerEquals(FunctionType const *obj) const
       }
     }
 
-    return iter1.isDone() == iter2.isDone();
+    return (iter1 == params.end()) == (iter2 == params.end());
   }
   else {
     return false;
@@ -853,9 +851,10 @@ bool FunctionType::innerEquals(FunctionType const *obj) const
 }
 
 
-void FunctionType::addParam(Param *param)
+FunctionType::Param *FunctionType::addParam(StringRef name, Type const* type, Variable* decl)
 {
-  params.append(param);
+  params.emplace_back(name, type, decl);
+  return &params.back();
 }
 
 
@@ -874,11 +873,11 @@ string FunctionType::rightString() const
   // arguments
   sb << "(";
   int ct=0;
-  FOREACH_OBJLIST(Param, params, iter) {
+  for (auto const& param : params) {
     if (ct++ > 0) {
       sb << ", ";
     }
-    sb << iter.data()->toString();
+    sb << param.toString();
   }
 
   if (acceptsVarargs) {
@@ -910,12 +909,12 @@ string FunctionType::toCilString(int depth) const
   sb << "(";
 
   int ct=0;
-  FOREACH_OBJLIST(Param, params, iter) {
+  for (auto const& param : params) {
     if (++ct > 1) {
       sb << ", ";
     }
-    sb << iter.data()->name << ": "
-       << recurseCilString(iter.data()->type, depth);
+    sb << param.name << ": "
+       << recurseCilString(param.type, depth);
   }
 
   sb << ") -> " << recurseCilString(retType, depth);

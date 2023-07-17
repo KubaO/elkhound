@@ -2,60 +2,36 @@
 // code for trace.h
 
 #include "trace.h"     // this module
-#include "objlist.h"   // List
 #include "str.h"       // string
 #include "strtokp.h"   // StrtokParse
 #include "nonport.h"   // getMilliseconds()
+#include "xassert.h"   // xfailure
 
-#include <fstream>     // std::ofstream
-#include <stdlib.h>    // getenv
+#include <unordered_set> // std::unordered_set<string>
+#include <fstream>       // std::ofstream
+#include <stdlib.h>      // getenv
 
-
-// auto-init
-static bool inited = false;
 
 // list of active tracers, initially empty
-static ObjList<string> tracers;
+std::unordered_set<string> tracers;
 
 // stream connected to /dev/null
 std::ofstream devNullObj("/dev/null");
 static std::ostream *devNull = &devNullObj;
 
 
-// initialize
-static void init()
-{
-  if (inited) {
-    return;
-  }
-
-  // there's a more efficient way to do this, but I don't care to dig
-  // around and find out how
-  // this leaks, and now that I'm checking for them, it's a little
-  // annoying...
-  //devNull = new std::ofstream("/dev/null");
-
-  inited = true;
-}
-
-
 void traceAddSys(char const *sysName)
 {
-  init();
-
-  tracers.prepend(new string(sysName));
+  tracers.emplace(sysName);
 }
 
 
 void traceRemoveSys(char const *sysName)
 {
-  init();
-
-  MUTATE_EACH_OBJLIST(string, tracers, mut) {
-    if (*mut.data() == sysName) {
-      mut.deleteIt();
-      return;
-    }
+  auto it = tracers.find(sysName);
+  if (it != tracers.end()) {
+    tracers.erase(it);
+    return;
   }
   xfailure("traceRemoveSys: tried to remove system that isn't there");
 }
@@ -63,27 +39,18 @@ void traceRemoveSys(char const *sysName)
 
 bool tracingSys(char const *sysName)
 {
-  init();
-
-  FOREACH_OBJLIST(string, tracers, iter) {
-    if (*iter.data() == sysName) {
-      return true;
-    }
-  }
-  return false;
+  return tracers.find(sysName) != tracers.end();
 }
 
 
 void traceRemoveAll()
 {
-  tracers.deleteAll();
+  tracers.clear();
 }
 
 
 std::ostream &trace(char const *sysName)
 {
-  init();
-
   if (tracingSys(sysName)) {
     std::cout << "%%% " << sysName << ": ";
     return std::cout;

@@ -11,6 +11,7 @@
 #include "strtokp.h"       // StrtokParse
 #include "exc.h"           // xfatal
 
+#include <vector>          // std::vector
 #include <set>             // std::set
 #include <fstream>         // std::ofstream
 #include <vector>          // std::vector
@@ -103,14 +104,14 @@ enum TreeNodeKind { TKN_NONE, TKN_SUPERCLASS, TKN_SUBCLASS };
 
 class Gen {
 protected:        // data
-  string srcFname;                  // name of source file
-  ObjList<string> const &modules;   // extension modules
-  string destFname;                 // name of output file
-  std::ofstream out;                // output stream
-  ASTSpecFile const &file;          // AST specification
+  string srcFname;                    // name of source file
+  std::vector<string> const &modules; // extension modules
+  string destFname;                   // name of output file
+  std::ofstream out;                  // output stream
+  ASTSpecFile const &file;            // AST specification
 
 public:           // funcs
-  Gen(rostring srcFname, ObjList<string> const &modules,
+  Gen(rostring srcFname, std::vector<string> const &modules,
       rostring destFname, ASTSpecFile const &file);
   ~Gen();
 
@@ -122,7 +123,7 @@ public:           // funcs
 };
 
 
-Gen::Gen(rostring srcfn, ObjList<string> const &mods,
+Gen::Gen(rostring srcfn, std::vector<string> const &mods,
          rostring destfn, ASTSpecFile const &f)
   : srcFname(srcfn),
     modules(mods),
@@ -329,10 +330,10 @@ void Gen::headerComments()
   doNotEdit();
   out << "// generated automatically by astgen, from " << sm_basename(srcFname) << "\n";
 
-  if (modules.count()) {
+  if (modules.size()) {
     out << "// active extension modules:";
-    FOREACH_OBJLIST(string, modules, iter) {
-      out << " " << *(iter.data());
+    for (const auto& mod : modules) {
+      out << " " << *(mod.data());
     }
     out << "\n";
   }
@@ -386,7 +387,7 @@ private:        // funcs
   void emitMVisitorInterface();
 
 public:         // funcs
-  HGen(rostring srcFname, ObjList<string> const &modules,
+  HGen(rostring srcFname, std::vector<string> const &modules,
        rostring destFname, ASTSpecFile const &file)
     : Gen(srcFname, modules, destFname, file)
   {}
@@ -918,7 +919,7 @@ public:
   string hdrFname;      // name of associated .h file
 
 public:
-  CGen(rostring srcFname, ObjList<string> const &modules,
+  CGen(rostring srcFname, std::vector<string> const &modules,
        rostring destFname, ASTSpecFile const &file,
        rostring hdr)
     : Gen(srcFname, modules, destFname, file),
@@ -3309,12 +3310,12 @@ void entry(int argc, char **argv)
   wholeAST = ast;
 
   // parse and merge extension modules
-  ObjList<string> modules;
+  std::vector<string> modules;
   while (*argv) {
     char const *fname = *argv;
     argv++;
 
-    modules.append(new string(fname));
+    modules.emplace_back(fname);
 
     Owner<ASTSpecFile> extension;
     extension = readAbstractGrammar(fname);

@@ -280,7 +280,7 @@ void GrammarLexer::recursivelyProcess(rostring fname, std::istream *source)
   xassert(fileState.bufstate);
 
   // push current state
-  fileStack.prepend(new FileState(fileState));
+  fileStack.emplace_back(fileState);
 
   // reset current state
   fileState = FileState(fname, source);
@@ -309,9 +309,8 @@ void GrammarLexer::popRecursiveFile()
   delete fileState.source;
 
   // pop stack
-  FileState *st = fileStack.removeAt(0);
-  fileState = *st;
-  delete st;
+  fileState = std::move(fileStack.back());
+  fileStack.pop_back();
 
   // point flex at the new (old) buffer
   yy_switch_to_buffer(fileState.bufstate);
@@ -320,7 +319,7 @@ void GrammarLexer::popRecursiveFile()
 
 bool GrammarLexer::hasPendingFiles() const
 {
-  return fileStack.isNotEmpty();
+  return !fileStack.empty();
 }
 
 

@@ -6,8 +6,9 @@
 
 #include "strhash.h"       // StringHash
 #include "strtable.h"      // StringTable
-#include "objlist.h"       // ObjList
 #include "c.ast.gen.h"     // C AST, for action function signatures
+
+#include "stack.h"         // sm::stack
 
 class CCLang;
 
@@ -17,7 +18,7 @@ public:
   StringTable &str;               // string table
   StringRef intType;              // "int"
   StringRef strRefAttr;           // "attr"
-  ObjList<StringHash> types;      // stack of hashes which identify names of types
+  sm::stack<StringHash> types;    // stack of hashes which identify names of types
   CCLang &lang;                   // language options
 
 public:

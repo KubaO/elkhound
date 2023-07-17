@@ -21,9 +21,7 @@ Lexer1Token::Lexer1Token(Lexer1TokenType aType, char const *aText,
 {}
 
 Lexer1Token::~Lexer1Token()
-{
-  // 'text' deallocates its string
-}
+{}
 
 
 // map Lexer1TokenType to a string
@@ -65,9 +63,7 @@ void Lexer1Token::print() const
 Lexer1::Lexer1(char const *fname)
   : allowMultilineStrings(true),    // GNU extension
     loc(SourceLocManager::instance()->encodeBegin(fname)),
-    errors(0),
-    tokens(),
-    tokensMut(tokens)
+    errors(0)
 {}
 
 Lexer1::~Lexer1()
@@ -91,20 +87,18 @@ void Lexer1::error(char const *msg)
 void Lexer1::emit(Lexer1TokenType toktype, char const *tokenText, int length)
 {
   // construct object to represent this token
-  Lexer1Token *tok = new Lexer1Token(toktype, tokenText, length, loc);
+  // at the end of our running list of tokens
+  tokens.emplace_back(toktype, tokenText, length, loc);
 
   // (debugging) print it
   if (tracingSys("lexer1")) {
-    tok->print();
+    tokens.back().print();
   }
 
   // illegal tokens should be noted
   if (toktype == L1_ILLEGAL) {
     error(stringc << "illegal token: `" << tokenText << "'" << c_str);
   }
-
-  // add it to our running list of tokens
-  tokensMut.append(tok);
 
   // update line and column counters
   loc = SourceLocManager::instance()->advText(loc, tokenText, length);
@@ -127,7 +121,7 @@ int main(int argc, char **argv)
   lexer1_lex(lexer, fopen(argv[1], "r"));
 
   printf("%d token(s), %d error(s)\n",
-         lexer.tokens.count(), lexer.errors);
+         lexer.tokens.size(), lexer.errors);
 
   return 0;
 }

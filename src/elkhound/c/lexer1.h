@@ -5,9 +5,9 @@
 #ifndef __LEXER1_H
 #define __LEXER1_H
 
-#include "objlist.h"   // ObjList
 #include "srcloc.h"    // SourceLoc
 
+#include <deque>       // std::deque for token list
 #include <stdio.h>     // FILE
 
 // type of each L1 token
@@ -56,8 +56,7 @@ public:
   int errors;	                          // # of errors encountered so far
 
   // lexing results
-  ObjList<Lexer1Token> tokens;            // list of tokens produced
-  ObjListMutator<Lexer1Token> tokensMut;  // for appending to the 'tokens' list
+  std::deque<Lexer1Token> tokens;         // list of tokens produced
 
 public:
   Lexer1(char const *fname);

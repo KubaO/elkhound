@@ -2,11 +2,11 @@
 // test the array.h module
 
 #include "array.h"     // module to test
-#include "objlist.h"         // ObjList
-#include "ckheap.h"          // malloc_stats
+#include "ckheap.h"    // malloc_stats
 
-#include <stdio.h>           // printf
-#include <stdlib.h>          // exit
+#include <deque>       // std::deque as a reference
+#include <stdio.h>     // printf
+#include <stdlib.h>    // exit
 
 
 int maxLength = 0;
@@ -19,30 +19,30 @@ void round(int ops)
   ArrayStackEmbed<int, 10> arrayStackEmbed;
 
   // "trusted" implementation to compare with
-  ObjList<int> listStack;
+  std::deque<int> dequeStack;
 
   while (ops--) {
     // check that the arrays and list agree
     {
-      int length = listStack.count();
+      int length = dequeStack.size();
       if (length > 0) {
-        xassert(listStack.first()[0] == arrayStack.top());
-        xassert(listStack.first()[0] == arrayStackEmbed.top());
+        xassert(dequeStack.front() == arrayStack.top());
+        xassert(dequeStack.front() == arrayStackEmbed.top());
       }
 
       int index = length-1;
-      FOREACH_OBJLIST(int, listStack, iter) {
-        xassert(iter.data()[0] == arrayStack[index]);
-        xassert(iter.data()[0] == arrayStackEmbed[index]);
+      for (int ref : dequeStack) {
+        xassert(ref == arrayStack[index]);
+        xassert(ref == arrayStackEmbed[index]);
         index--;
       }
       xassert(index == -1);
       xassert(length == arrayStack.length());
       xassert(length == arrayStackEmbed.length());
-      xassert(arrayStack.isEmpty() == listStack.isEmpty());
-      xassert(arrayStackEmbed.isEmpty() == listStack.isEmpty());
-      xassert(arrayStack.isNotEmpty() == listStack.isNotEmpty());
-      xassert(arrayStackEmbed.isNotEmpty() == listStack.isNotEmpty());
+      xassert(arrayStack.isEmpty() == dequeStack.empty());
+      xassert(arrayStackEmbed.isEmpty() == dequeStack.empty());
+      xassert(arrayStack.isNotEmpty() == !dequeStack.empty());
+      xassert(arrayStackEmbed.isNotEmpty() == !dequeStack.empty());
 
       if (length > maxLength) {
         maxLength = length;
@@ -55,17 +55,17 @@ void round(int ops)
       // pop
       int i = arrayStack.pop();
       int j = arrayStackEmbed.pop();
-      int *k = listStack.removeFirst();
-      xassert(i == *k);
-      xassert(j == *k);
-      delete k;
+      int k = dequeStack.front();
+      dequeStack.pop_front();
+      xassert(i == k);
+      xassert(j == k);
     }
     else {
       // push
       int elt = rand() % 100;
       arrayStack.push(elt);
       arrayStackEmbed.push(elt);
-      listStack.prepend(new int(elt));
+      dequeStack.push_front(elt);
     }
   }
 }

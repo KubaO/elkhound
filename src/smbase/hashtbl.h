@@ -86,6 +86,7 @@ private:    // funcs
 public:     // funcs
   HashTable(GetKeyFn gk, HashFn hf, EqualKeyFn ek,
             int initSize = HashTable::defaultSize);
+  HashTable(HashTable&&) = default;
   ~HashTable();
 
   // return # of mapped entries

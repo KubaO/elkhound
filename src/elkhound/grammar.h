@@ -22,11 +22,11 @@
 #define __GRAMMAR_H
 
 #include <deque>         // std::deque
-#include <vector>        // std::vector
 #include <iostream>      // std::ostream
+#include <list>          // std::list
+#include <vector>        // std::vector
 
 #include "str.h"         // string
-#include "objlist.h"     // ObjList
 #include "util.h"        // OSTREAM_OPERATOR, INTLOOP
 #include "locstr.h"      // LocString, StringRef
 #include "owner.h"       // Owner
@@ -196,14 +196,6 @@ public:     // funcs
 };
 
 
-#define FOREACH_TERMINAL(list, iter) FOREACH_OBJLIST(Terminal, list, iter)
-#define MUTATE_EACH_TERMINAL(list, iter) MUTATE_EACH_OBJLIST(Terminal, list, iter)
-#define SFOREACH_TERMINAL(list, iter) SFOREACH_OBJLIST(Terminal, list, iter)
-#define SMUTATE_EACH_TERMINAL(list, iter) SMUTATE_EACH_OBJLIST(Terminal, list, iter)
-
-// casting aggregates
-inline ObjList<Symbol> const &toObjList(ObjList<Terminal> const &list)
-  { return reinterpret_cast< ObjList<Symbol>const& >(list); }
 
 // format: "t1 t2 t3"
 string terminalSequenceToString(TerminalList const &list);
@@ -301,15 +293,6 @@ public:     // data
 };
 
 
-#define FOREACH_NONTERMINAL(list, iter) FOREACH_OBJLIST(Nonterminal, list, iter)
-#define MUTATE_EACH_NONTERMINAL(list, iter) MUTATE_EACH_OBJLIST(Nonterminal, list, iter)
-#define SFOREACH_NONTERMINAL(list, iter) SFOREACH_OBJLIST(Nonterminal, list, iter)
-#define SMUTATE_EACH_NONTERMINAL(list, iter) SMUTATE_EACH_OBJLIST(Nonterminal, list, iter)
-
-// casting aggregates
-inline ObjList<Symbol> const &toObjList(ObjList<Nonterminal> const &list)
-  { return reinterpret_cast< ObjList<Symbol>const& >(list); }
-
 
 // ---------------- Production --------------------
 // a rewrite rule
@@ -337,7 +320,7 @@ public:     // types
 public:	    // data
   // fundamental context-free grammar (CFG) component
   Nonterminal * const left;     // (serf) left hand side; must be nonterminal
-  ObjList<RHSElt> right;        // right hand side; terminals & nonterminals
+  std::vector<RHSElt> right;    // right hand side; terminals & nonterminals
   int precedence;               // precedence level for disambiguation (0 for none specified)
   TerminalSet forbid;           // forbidden next tokens
 
@@ -428,9 +411,8 @@ using ProductionList = std::deque<Production *>;
 #define SFOREACH_PRODUCTION(list, iter) SFOREACH_OBJLIST(Production, list, iter)
 #define SMUTATE_EACH_PRODUCTION(list, iter) SMUTATE_EACH_OBJLIST(Production, list, iter)
 
-typedef ObjList<Production::RHSElt> RHSEltList;
-typedef ObjListIter<Production::RHSElt> RHSEltListIter;
-typedef ObjListMutator<Production::RHSElt> RHSEltListMutator;
+using RHSEltList = std::vector<Production::RHSElt>;
+using RHSEltListIter = std::vector<Production::RHSElt>::const_iterator;
 
 
 // ---------------- Grammar --------------------
@@ -438,9 +420,9 @@ typedef ObjListMutator<Production::RHSElt> RHSEltListMutator;
 class Grammar {
 // ------ representation ------
 public:	    // data
-  ObjList<Nonterminal> nonterminals;    // (owner list)
-  ObjList<Terminal> terminals;          // (owner list)
-  ObjList<Production> productions;      // (owner list)
+  std::list<Nonterminal> nonterminals;  // (owner list)
+  std::list<Terminal> terminals;        // (owner list)
+  std::vector<Production> productions;  // (owner list)
   Nonterminal *startSymbol;             // (serf) a particular nonterminal
 
   // the special terminal for the empty string; does not appear in the
@@ -453,7 +435,7 @@ public:	    // data
 
   // sections of verbatim code emitted into the interface file, before
   // the parser context class body
-  ObjList<LocString> verbatim;
+  std::deque<LocString> verbatim;
 
   // name of the class into which the action functions are placed
   LocString actionClassName;
@@ -461,10 +443,10 @@ public:	    // data
   // verbatim action class declaration, and additional codes from
   // extension modules to append to it (but see note of 11/13/04
   // in grampar.cc)
-  ObjList<LocString> actionClasses;
+  std::vector<LocString> actionClasses;
 
   // code emitted into the implementation file at the end
-  ObjList<LocString> implVerbatim;
+  std::vector<LocString> implVerbatim;
 
   // ---- declarative options ----
   // name of the target language; nominally "C++"
@@ -508,7 +490,7 @@ public:     // funcs
   //void addProduction(Nonterminal *lhs, Symbol *rhs, ...);
 
   // add a pre-constructed production
-  void addProduction(Production *prod);
+  void addProduction(Production &&prod);
 
   // ---------- outputting a grammar --------------
   // print the list of symbols with type annotations

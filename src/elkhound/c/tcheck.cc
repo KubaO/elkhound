@@ -506,13 +506,8 @@ void /*Type const * */D_func::itcheck(Env &env, Type const *rettype,
     StringRef /*nullable*/ paramName = ti->decl->var->name;
 
     // add it to the type description
-    FunctionType::Param *param =
-      new FunctionType::Param(paramName, paramType, ti->decl->var);
-    ft->params.prepend(param);    // build in wrong order initially..
+    ft->addParam(paramName, paramType, ti->decl->var);
   }
-
-  // correct the argument order; this preserves linear performance
-  ft->params.reverse();
 
   // pass the annotations along via the type language
   FOREACH_ASTLIST_NC(FuncAnnotation, ann, iter) {
@@ -1134,14 +1129,15 @@ Type const *E_funCall::itcheck(Env &env)
       "within predicates, function applications must be simple");
   }
 
-  ObjListIter<FunctionType::Param> param(ftype->params);
+  auto param = ftype->params.cbegin();
+  auto const end = ftype->params.cend();
 
   // check argument types
   FOREACH_ASTLIST_NC(Expression, args, iter) {
     Type const *atype = iter.data()->tcheck(env);
-    if (!param.isDone()) {
-      env.checkCoercible(atype, param.data()->type);
-      param.adv();
+    if (param != end) {
+      env.checkCoercible(atype, param->type);
+      std::advance(param, 1);
     }
     else if (!ftype->acceptsVarargs) {
       env.err("too many arguments");
@@ -1153,7 +1149,7 @@ Type const *E_funCall::itcheck(Env &env)
       checkBoolean(env, atype->asRval(), iter.data());
     }
   }
-  if (!param.isDone()) {
+  if (param != end) {
     env.err("too few arguments");
   }
 

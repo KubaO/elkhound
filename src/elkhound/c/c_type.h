@@ -6,9 +6,10 @@
 #define C_TYPE_H
 
 #include <map>            // std::map
+#include <vector>         // std::vector
 
 #include "str.h"          // string
-#include "objlist.h"      // ObjList
+#include "macros.h"       // STATS macros
 #include "cc_flags.h"     // CVFlags, DeclFlags, SimpleTypeId
 #include "strtable.h"     // StringRef
 
@@ -151,9 +152,9 @@ public:      // types
   };
 
 private:     // data
-  ObjList<Field> fields;                // fields in this type
-  std::map<string, Field*> fieldIndex;  // dictionary for name lookup
-  int fieldCounter;                     // # of fields
+  std::vector<Field> fields;         // fields in this type
+  std::map<string, int> fieldIndex;  // dictionary for name lookup
+  int fieldCounter;                  // # of fields
 
 public:      // data
   bool forward;               // true when it's only fwd-declared
@@ -205,9 +206,9 @@ public:     // types
   };
 
 public:     // data
-  ObjList<Value> values;                // values in this enumeration
-  std::map<string, Value*> valueIndex;  // name-based lookup
-  int nextValue;                        // next value to assign to elements automatically
+  std::vector<Value> values;         // values in this enumeration
+  std::map<string, int> valueIndex;  // name-based lookup
+  int nextValue;                     // next value to assign to elements automatically
 
 public:     // funcs
   EnumType(StringRef n) : NamedAtomicType(n), nextValue(0) {}
@@ -375,8 +376,8 @@ public:     // types
 
 public:     // data
   Type const *retType;         // (serf) type of return value
-  //CVFlags cv;                  // const/volatile for class member fns
-  ObjList<Param> params;       // list of function parameters
+  //CVFlags cv;                // const/volatile for class member fns
+  std::vector<Param> params;   // list of function parameters
   bool acceptsVarargs;         // true if add'l args are allowed
 
   // thmprv extensions
@@ -391,7 +392,7 @@ public:     // funcs
   bool innerEquals(FunctionType const *obj) const;
 
   // append a parameter to the parameters list
-  void addParam(Param *param);
+  Param *addParam(StringRef name, Type const* type, Variable* decl);
 
   virtual Tag getTag() const { return T_FUNCTION; }
   virtual string leftString() const;

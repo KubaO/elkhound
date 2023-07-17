@@ -461,10 +461,9 @@ void lexer2_lex(Lexer2 &dest, Lexer1 const &src, char const *fname)
   bool const debugLexer2 = tracingSys("lexer2");
 
   // iterate over all the L1 tokens
-  ObjListIter<Lexer1Token> L1_iter(src.tokens);
-  for (; !L1_iter.isDone(); L1_iter.adv()) {
+  for (auto const& L1ref : src.tokens) {
     // convenient renaming
-    Lexer1Token const *L1 = L1_iter.data();
+    Lexer1Token const * const L1 = &L1ref;
 
     if (L1->type == L1_PREPROCESSOR ||     // for now
         L1->type == L1_WHITESPACE   ||
@@ -489,8 +488,7 @@ void lexer2_lex(Lexer2 &dest, Lexer1 const &src, char const *fname)
 
     // create the object for the yielded token; don't know the type
     // yet at this point, so I use L2_NAME as a placeholder
-    Lexer2Token *L2 =
-      new Lexer2Token(L2_NAME, L1->loc);
+    Lexer2Token *L2 = dest.addToken(L2_NAME, L1->loc);
 
     try {
       switch (L1->type) {
@@ -573,7 +571,6 @@ void lexer2_lex(Lexer2 &dest, Lexer1 const &src, char const *fname)
     }
 
     // append this token to the running list
-    dest.addToken(L2);
     prevToken = L2;
 
     // (debugging) print it
@@ -592,9 +589,7 @@ Lexer2::Lexer2(CCLang &L)
   : myIdTable(new StringTable()),
     lang(L),
     idTable(*myIdTable),      // hope this works..
-    tokens(),
-    tokensMut(tokens),
-    currentToken(tokens)
+    currentToken(tokens.end())
 {
   init();
 }
@@ -603,9 +598,7 @@ Lexer2::Lexer2(CCLang &L, StringTable &extTable)
   : myIdTable(NULL),
     lang(L),
     idTable(extTable),
-    tokens(),
-    tokensMut(tokens),
-    currentToken(tokens)
+    currentToken(tokens.end())
 {
   init();
 }
@@ -629,8 +622,8 @@ Lexer2::~Lexer2()
 
 SourceLoc Lexer2::startLoc() const
 {
-  if (tokens.isNotEmpty()) {
-    return tokens.firstC()->loc;
+  if (!tokens.empty()) {
+    return tokens.front().loc;
   }
   else {
     return SL_UNKNOWN;
@@ -640,22 +633,22 @@ SourceLoc Lexer2::startLoc() const
 
 inline void Lexer2::copyFields()
 {
-  type = currentToken.data()->type;
-  sval = currentToken.data()->sval;
-  SOURCELOC( loc = currentToken.data()->loc; )
+  type = currentToken->type;
+  sval = currentToken->sval;
+  SOURCELOC( loc = currentToken->loc; )
 }
 
 
 void Lexer2::beginReading()
 {
-  currentToken.reset(tokens);
+  currentToken = tokens.begin();
   copyFields();
 }
 
 
 STATICDEF void Lexer2::nextToken(Lexer2 *ths)
 {
-  ths->currentToken.adv();
+  std::advance(ths->currentToken, 1);
   ths->copyFields();
 }
 
@@ -667,8 +660,8 @@ LexerInterface::NextTokenFunc Lexer2::getTokenFunc() const
 
 string Lexer2::tokenDesc() const
 {
-  return currentToken.data()->toStringType(false /*asSexp*/,
-                                           (Lexer2TokenType)LexerInterface::type);
+  return currentToken->toStringType(false /*asSexp*/,
+                                    (Lexer2TokenType)LexerInterface::type);
 }
 
 
@@ -689,7 +682,7 @@ Lexer2TokenType lexer2_gettoken()
 {
   static Lexer1 *lexer1 = NULL;
   static Lexer2 *lexer2 = NULL;
-  static ObjListIter<Lexer2Token> *iter = NULL;
+  static std::deque<Lexer2Token>::const_iterator *iter;
 
   if (!lexer1) {
     // do first phase
@@ -710,16 +703,16 @@ Lexer2TokenType lexer2_gettoken()
     lexer2_lex(*lexer2, *lexer1, "<stdin>");
 
     // prepare to return tokens
-    iter = new ObjListIter<Lexer2Token>(lexer2->tokens);
+    iter = new std::deque<Lexer2Token>::const_iterator(lexer2->tokens.cbegin());
   }
 
-  if (!iter->isDone()) {
+  if (*iter != lexer2->tokens.cend()) {
     // grab type to return
-    yylval = iter->data();
-    Lexer2TokenType ret = iter->data()->type;
+    yylval = &**iter;
+    Lexer2TokenType ret = (*iter)->type;
 
     // advance to next token
-    iter->adv();
+    std::advance(*iter, 1);
 
     // return one we just advanced past
     return ret;

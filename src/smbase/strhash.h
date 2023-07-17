@@ -24,7 +24,8 @@ private:    // funcs
   void operator==(StringHash&);
 
 public:     // funcs
-  StringHash(GetKeyFn getKey);
+  explicit StringHash(GetKeyFn getKey);
+  StringHash(StringHash&&) = default;
   ~StringHash();
 
   // utilities

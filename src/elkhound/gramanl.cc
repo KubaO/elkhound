@@ -153,13 +153,13 @@ void DottedProduction::setProdAndDot(Production const *p, int d)
   // computing this each time turned out to be significant
   // according to the profiler, so we store it instead
   bool dotAtEnd = (dot == prod->rhsLength());
-  afterDot = dotAtEnd? NULL : prod->right.nthC(dot)->sym;
+  afterDot = dotAtEnd? NULL : prod->right[dot].sym;
 }
 
 Symbol const *DottedProduction::symbolBeforeDotC() const
 {
   xassert(!isDotAtStart());
-  return prod->right.nthC(dot-1)->sym;
+  return prod->right[dot-1].sym;
 }
 
 #if 0
@@ -176,12 +176,12 @@ void DottedProduction::print(std::ostream &os) const
   os << prod->left->name << " ->";
 
   int position = 0;
-  for (ObjListIter<Production::RHSElt> iter(prod->right);
-       !iter.isDone(); iter.adv(), position++) {
+  for (auto const& elt : prod->right) {
     if (position == dot) {
       os << " .";
     }
-    os << " " << iter.data()->sym->toString();
+    os << " " << elt.sym->toString();
+    position++;
   }
   if (position == dot) {
     os << " .";
@@ -313,6 +313,14 @@ ItemSet::~ItemSet()
   if (dotsAtEnd) {
     delete[] dotsAtEnd;
   }
+
+  // We own those items
+  for (LRItem *k : kernelItems) {
+    delete k;
+  }
+  for (LRItem *n : nonkernelItems) {
+    delete n;
+  }
 }
 
 
@@ -328,8 +336,8 @@ ItemSet::ItemSet(Flatten &flat)
 
 Production *getNthProduction(Grammar *g, int n)
 {
-  if (0 <= n && n < g->productions.count()) {
-    return g->productions.nth(n);
+  if (0 <= n && n < g->productions.size()) {
+    return &g->productions[n];
   }
   else {
     // my access path functions' contract is to
@@ -359,8 +367,8 @@ DottedProduction *getNthDottedProduction(Production *p, int n)
 
 void ItemSet::xfer(Flatten &flat)
 {
-  xferObjList(flat, kernelItems);
-  xferObjList(flat, nonkernelItems);
+  /*FIXME*/ //xferObjList(flat, kernelItems);
+  /*FIXME*/ //xferObjList(flat, nonkernelItems);
 
   flat.xferInt(terms);
   flat.xferInt(nonterms);
@@ -382,11 +390,11 @@ void ItemSet::xferSerfs(Flatten &flat, GrammarAnalysis &g)
 {
   // xfer the 'prod' fields of the items
   {
-    MUTATE_EACH_OBJLIST(LRItem, kernelItems, k) {
-      k.data()->xferSerfs(flat, g);
+    for (LRItem *k : kernelItems) {
+      k->xferSerfs(flat, g);
     }
-    MUTATE_EACH_OBJLIST(LRItem, nonkernelItems, n) {
-      n.data()->xferSerfs(flat, g);
+    for (LRItem *n : nonkernelItems) {
+      n->xferSerfs(flat, g);
     }
   }
 
@@ -461,7 +469,7 @@ void ItemSet::xferSerfs(Flatten &flat, GrammarAnalysis &g)
 
   xferNullableSerfPtr(flat, stateSymbol);
 
-  xferNullableSerfPtrToList(flat, BFSparent, g.itemSets);
+  /*FIXME*/ //xferNullableSerfPtrToList(flat, BFSparent, g.itemSets);
 }
 
 
@@ -469,9 +477,9 @@ Symbol const *ItemSet::computeStateSymbolC() const
 {
   // need only check kernel items since all nonkernel items
   // have their dots at the left side
-  FOREACH_OBJLIST(LRItem, kernelItems, item) {
-    if (! item.data()->isDotAtStart() ) {
-      return item.data()->symbolBeforeDotC();
+  for (LRItem const *item : kernelItems) {
+    if (! item->isDotAtStart() ) {
+      return item->symbolBeforeDotC();
     }
   }
   return NULL;
@@ -521,17 +529,26 @@ void ItemSet::removeShift(Terminal const *sym)
 }
 
 
-void ItemSet::addKernelItem(LRItem *item)
+LRItem *ItemSet::addKernelItem(LRItem const &item)
 {
-  // add it
-  kernelItems.appendUnique(item);
+  LRItem *nitem = new LRItem(item);
+  kernelItems.push_back(nitem);
+  return nitem;
+}
+
+
+LRItem *ItemSet::addKernelItem(int numTerms, DottedProduction const* dp)
+{
+  LRItem* nitem = new LRItem(numTerms, dp);
+  kernelItems.push_back(nitem);
+  return nitem;
 }
 
 
 void ItemSet::sortKernelItems()
 {
   // sort the items to facilitate equality checks
-  kernelItems.mergeSort(LRItem::diff);
+  sm::sortSList(kernelItems, LRItem::diff);
 
   // note: the caller must call changedItems
 }
@@ -549,7 +566,7 @@ bool ItemSet::operator==(ItemSet const &obj) const
     // OLD: when pointer equality was sufficient
     //   return kernelItems.equalAsPointerLists(obj.kernelItems);
     // NEW: use deep equality check
-    return kernelItems.equalAsLists(obj.kernelItems, LRItem::diff);
+    return 0 == sm::compareSortedSLists(kernelItems, obj.kernelItems, LRItem::diff);
   }
   else {
     // can't possibly be equal if CRCs differ
@@ -558,27 +575,28 @@ bool ItemSet::operator==(ItemSet const &obj) const
 }
 
 
-void ItemSet::addNonkernelItem(LRItem *item)
+LRItem *ItemSet::addNonkernelItem(int numTerms, DottedProduction const *dp)
 {
-  nonkernelItems.appendUnique(item);
-
+  LRItem* nitem = new LRItem(numTerms, dp);
+  nonkernelItems.push_back(nitem);
+  return nitem;
   // note: the caller is supposed to call changedItems
 }
 
 
 void ItemSet::removeReduce(Production const *prod, Terminal const *sym)
 {
-  MUTATE_EACH_OBJLIST(LRItem, kernelItems, k) {
-    if (k.data()->isDotAtEnd() &&
-        k.data()->getProd() == prod) {
-      k.data()->laRemove(sym->termIndex);
+  for (LRItem *k : kernelItems) {
+    if (k->isDotAtEnd() &&
+        k->getProd() == prod) {
+      k->laRemove(sym->termIndex);
     }
   }
 
-  MUTATE_EACH_OBJLIST(LRItem, nonkernelItems, n) {
-    if (n.data()->isDotAtEnd() &&
-        n.data()->getProd() == prod) {
-      n.data()->laRemove(sym->termIndex);
+  for (LRItem *n : nonkernelItems) {
+    if (n->isDotAtEnd() &&
+        n->getProd() == prod) {
+      n->laRemove(sym->termIndex);
     }
   }
 
@@ -602,16 +620,12 @@ void ItemSet::removeReduce(Production const *prod, Terminal const *sym)
 std::vector<LRItem const *> ItemSet::getAllItems(bool nonkernel) const
 {
   std::vector<LRItem const *> ret;
-  ret.resize(kernelItems.count() + (nonkernel ? nonkernelItems.count() : 0));
+  ret.resize(kernelItems.size() + (nonkernel ? nonkernelItems.size() : 0));
 
   auto it = ret.begin();
-  FOREACH_OBJLIST(LRItem, kernelItems, k) {
-    *it++ = k.data();
-  }
+  it = std::copy(kernelItems.cbegin(), kernelItems.cend(), it);
   if (nonkernel) {
-    FOREACH_OBJLIST(LRItem, nonkernelItems, n) {
-      *it++ = n.data();
-    }
+    it = std::copy(nonkernelItems.cbegin(), nonkernelItems.cend(), it);
   }
   return ret;
 }
@@ -631,17 +645,18 @@ void ItemSet::throwAwayItems()
   deleteNonReductions(nonkernelItems);
 }
 
-void ItemSet::deleteNonReductions(ObjList<LRItem> &list)
+void ItemSet::deleteNonReductions(std::vector<LRItem *> &list)
 {
-  ObjListMutator<LRItem> mut(list);
-  while (!mut.isDone()) {
-    if (mut.data()->isDotAtEnd()) {
+  auto mut = list.begin();
+  while (mut != list.end()) {
+    if ((*mut)->isDotAtEnd()) {
       // keep it
-      mut.adv();
+      mut++;
     }
     else {
       // trash it
-      mut.deleteIt();     // also advances
+      delete *mut; // we're owning - must free the item
+      mut = list.erase(mut);  // FIXME this is probably not performing super well
     }
   }
 }
@@ -704,12 +719,17 @@ bool ItemSet::mergeLookaheadsInto(ItemSet &dest) const
   // will return true if any changes made
   bool changes = false;
 
+  // kernel list lengths are supposed to be the same
+  xassert(kernelItems.size() == dest.kernelItems.size());
+
   // iterate over both kernel lists simultaneously
-  ObjListIter<LRItem> srcIter(kernelItems);
-  ObjListMutator<LRItem> destIter(dest.kernelItems);
-  while (!srcIter.isDone() && !destIter.isDone()) {
-    LRItem const &srcItem = *(srcIter.data());
-    LRItem &destItem = *(destIter.data());
+  auto src = kernelItems.cbegin();
+  auto srcEnd = kernelItems.cend();
+  auto dst = dest.kernelItems.begin();
+
+  for (; src != srcEnd; src++, dst++) {
+    LRItem const &srcItem = **src;
+    LRItem &destItem = **dst;
 
     // the caller should already have established equality of the
     // non-lookahead components of the kernel items
@@ -719,13 +739,7 @@ bool ItemSet::mergeLookaheadsInto(ItemSet &dest) const
     if (destItem.laMerge(srcItem)) {
       changes = true;
     }
-
-    srcIter.adv();
-    destIter.adv();
   }
-
-  // kernel list lengths are supposed to be the same
-  xassert(srcIter.isDone() && destIter.isDone());
 
   return changes;
 }
@@ -733,11 +747,11 @@ bool ItemSet::mergeLookaheadsInto(ItemSet &dest) const
 
 bool ItemSet::hasExtendingShift(Nonterminal const *A, Terminal const *t) const
 {
-  FOREACH_OBJLIST(LRItem, kernelItems, iter1) {
-    if (iter1.data()->isExtendingShift(A, t)) { return true; }
+  for (LRItem const *k : kernelItems) {
+    if (k->isExtendingShift(A, t)) { return true; }
   }
-  FOREACH_OBJLIST(LRItem, nonkernelItems, iter2) {
-    if (iter2.data()->isExtendingShift(A, t)) { return true; }
+  for (LRItem const *n : nonkernelItems) {
+    if (n->isExtendingShift(A, t)) { return true; }
   }
   return false;
 }
@@ -805,7 +819,7 @@ void ItemSet::changedItems()
 
 void ItemSet::computeKernelCRC(GrowArray<DottedProduction const*> &array)
 {
-  int numKernelItems = kernelItems.count();
+  int numKernelItems = kernelItems.size();
 
   // expand as necessary, but don't get smaller
   array.ensureAtLeast(numKernelItems);
@@ -813,8 +827,8 @@ void ItemSet::computeKernelCRC(GrowArray<DottedProduction const*> &array)
   // we will crc the prod/dot fields, using the pointer representation
   // of 'dprod'; assumes the items have already been sorted!
   int index = 0;
-  FOREACH_OBJLIST(LRItem, kernelItems, kitem) {
-    array[index] = kitem.data()->dprod;
+  for (LRItem const *kitem : kernelItems) {
+    array[index] = kitem->dprod;
     index++;
   }
 
@@ -962,6 +976,10 @@ GrammarAnalysis::~GrammarAnalysis()
   if (tables) {
     delete tables;
   }
+
+  for (ItemSet* set : itemSets) {
+    delete set; // this is an owning set
+  }
 }
 
 
@@ -986,9 +1004,9 @@ Production const *GrammarAnalysis::getProduction(int index) const
 ItemSet const *GrammarAnalysis::getItemSet(int index) const
 {
   // no pretense of efficiency; this is only used interactively
-  FOREACH_OBJLIST(ItemSet, itemSets, iter) {
-    if (iter.data()->id == index) {
-      return iter.data();
+  for (ItemSet const *set : itemSets) {
+    if (set->id == index) {
+      return set;
     }
   }
   return NULL;
@@ -1006,8 +1024,8 @@ void GrammarAnalysis::xfer(Flatten &flat)
 
   flat.xferInt(nextItemSetId);
 
-  xferObjList(flat, itemSets);
-  xferSerfPtrToList(flat, startState, itemSets);
+  /*FIXME*/ //xferObjList(flat, itemSets);
+  /*FIXME*/ //xferSerfPtrToList(flat, startState, itemSets);
 
   flat.xferBool(cyclic);
 
@@ -1028,8 +1046,8 @@ void GrammarAnalysis::xfer(Flatten &flat)
   // do serfs after because if I want to compute the
   // nonkernel items instead of storing them, I need
   // the indices
-  MUTATE_EACH_OBJLIST(ItemSet, itemSets, iter) {
-    iter.data()->xferSerfs(flat, *this);
+  for (ItemSet *set : itemSets) {
+    set->xferSerfs(flat, *this);
   }
 
   flat.xferBool(initialized);
@@ -1051,18 +1069,15 @@ void GrammarAnalysis::
 {
   printProductions(os, printCode);
 
-  FOREACH_OBJLIST(ItemSet, itemSets, iter) {
-    iter.data()->print(os, *this);
+  for (ItemSet const *set : itemSets) {
+    set->print(os, *this);
   }
 }
 
 
-void printSymbols(std::ostream &os, ObjList<Symbol> const &list)
+void printSymbol(std::ostream &os, Symbol const &sym)
 {
-  for (ObjListIter<Symbol> iter(list);
-       !iter.isDone(); iter.adv()) {
-    os << "  " << *(iter.data()) << std::endl;
-  }
+  os << "  " << sym << std::endl;
 }
 
 
@@ -1143,20 +1158,19 @@ bool GrammarAnalysis::canDeriveEmpty(Nonterminal const *nonterm) const
 
 bool GrammarAnalysis::sequenceCanDeriveEmpty(RHSEltList const &list) const
 {
-  RHSEltListIter iter(list);
-  return iterSeqCanDeriveEmpty(iter);
+  return iterSeqCanDeriveEmpty(list.begin(), list.end());
 }
 
-bool GrammarAnalysis::iterSeqCanDeriveEmpty(RHSEltListIter iter) const
+bool GrammarAnalysis::iterSeqCanDeriveEmpty(RHSEltListIter iter, RHSEltListIter end) const
 {
   // look through the sequence beginning with 'iter'; if any members cannot
   // derive emptyString, fail
-  for (; !iter.isDone(); iter.adv()) {
-    if (iter.data()->sym->isTerminal()) {
+  for (; iter != end; ++iter) {
+    if (iter->sym->isTerminal()) {
       return false;    // terminals can't derive emptyString
     }
 
-    if (!canDeriveEmpty(&( iter.data()->sym->asNonterminalC() ))) {
+    if (!canDeriveEmpty(&( iter->sym->asNonterminalC() ))) {
       return false;    // nonterminal that can't derive emptyString
     }
   }
@@ -1214,10 +1228,10 @@ void GrammarAnalysis::computeIndexedNonterms()
   int index = emptyStringIndex;
   emptyString.ntIndex = index++;
 
-  for (ObjListMutator<Nonterminal> sym(nonterminals);
-       !sym.isDone(); index++, sym.adv()) {
-    indexedNonterms[index] = sym.data();    // map: index to symbol
-    sym.data()->ntIndex = index;            // map: symbol to index
+  for (auto& sym : nonterminals) {
+    indexedNonterms[index] = &sym;    // map: index to symbol
+    sym.ntIndex = index;              // map: symbol to index
+    index++;
   }
 }
 
@@ -1233,13 +1247,12 @@ void GrammarAnalysis::computeIndexedTerms()
   loopi(numTerminals()) {
     indexedTerms[i] = NULL;      // used to track id duplication
   }
-  for (ObjListMutator<Terminal> sym(terminals);
-       !sym.isDone(); sym.adv()) {
-    int index = sym.data()->termIndex;   // map: symbol to index
+  for (auto& sym : terminals) {
+    int index = sym.termIndex;   // map: symbol to index
     if (indexedTerms[index] != NULL) {
       xfailure(stringc << "terminal index collision at index " << index << c_str);
     }
-    indexedTerms[index] = sym.data();    // map: index to symbol
+    indexedTerms[index] = &sym;    // map: index to symbol
   }
 }
 
@@ -1247,9 +1260,9 @@ void GrammarAnalysis::computeIndexedTerms()
 // set the first/follow of all nonterminals to the correct size
 void GrammarAnalysis::resetFirstFollow()
 {
-  MUTATE_EACH_NONTERMINAL(nonterminals, sym) {
-    sym.data()->first.reset(numTerminals());
-    sym.data()->follow.reset(numTerminals());
+  for (auto& sym : nonterminals) {
+    sym.first.reset(numTerminals());
+    sym.follow.reset(numTerminals());
   }
 }
 
@@ -1261,18 +1274,18 @@ void GrammarAnalysis::computeProductionsByLHS()
   productionsByLHS.resize(numNonterms);
 
   // map: prodIndex -> production
-  numProds = productions.count();
+  numProds = productions.size();
   indexedProds = new Production* [numProds];
   memset(indexedProds, 0, sizeof(*indexedProds) * numProds);
 
   // fill in both maps
   {
-    MUTATE_EACH_PRODUCTION(productions, prod) {        // (constness)
-      int LHSindex = prod.data()->left->ntIndex;
+    for (auto& prod : productions) {  // (constness)
+      int LHSindex = prod.left->ntIndex;
       xassert(LHSindex < numNonterms);
 
-      productionsByLHS[LHSindex].push_back(prod.data());
-      indexedProds[prod.data()->prodIndex] = prod.data();
+      productionsByLHS[LHSindex].push_back(&prod);
+      indexedProds[prod.prodIndex] = &prod;
     }
   }
 
@@ -1290,11 +1303,10 @@ void GrammarAnalysis::createDottedProductions()
   dottedProds = new DottedProduction* [numProds];
   memset(dottedProds, 0, sizeof(*dottedProds) * numProds);
 
-  FOREACH_PRODUCTION(productions, iter) {
-    Production const *prod = iter.data();
-    int rhsLen = prod->rhsLength();
+  for (auto const& prod : productions) {
+    int rhsLen = prod.rhsLength();
     xassert(rhsLen >= 0);
-    int id = prod->prodIndex;
+    int id = prod.prodIndex;
 
     // one dottedproduction for every dot position, which is one
     // more than the # of RHS elements
@@ -1303,7 +1315,7 @@ void GrammarAnalysis::createDottedProductions()
 
     // fill in each one
     for (int posn=0; posn <= rhsLen; posn++) {
-      array[posn].setProdAndDot(prod, posn);
+      array[posn].setProdAndDot(&prod, posn);
     }
   }
 
@@ -1369,8 +1381,8 @@ void GrammarAnalysis::initializeAuxData()
 
   // finish the productions before we compute the
   // dotted productions
-  MUTATE_EACH_PRODUCTION(productions, prod) {
-    prod.data()->finished(numTerminals());
+  for (auto& prod : productions) {
+    prod.finished(numTerminals());
   }
 
   createDottedProductions();
@@ -1395,25 +1407,21 @@ void GrammarAnalysis::computeWhatCanDeriveWhat()
 
     // --------- first part: add new canDerive relations --------
     // loop over all productions
-    for (ObjListIter<Production> prodIter(productions);
-         !prodIter.isDone(); prodIter.adv()) {
-      // convenient alias
-      Production const *prod = prodIter.data();
+    for (auto prod = productions.cbegin(); prod != productions.cend(); ++prod) {
 
       // since I don't include 'empty' explicitly in my rules, I won't
       // conclude that anything can derive empty, which is a problem;
       // so I special-case it here
-      if (prod->right.isEmpty()) {
-	addDerivable(prod->left, &emptyString);
+      if (prod->right.empty()) {
+	    addDerivable(prod->left, &emptyString);
         continue;      	// no point in looping over RHS symbols since there are none
       }
 
       // iterate over RHS symbols, seeing if the LHS can derive that
       // RHS symbol (by itself)
-      for (RHSEltListIter rightSym(prod->right);
-           !rightSym.isDone(); rightSym.adv()) {
+      for (auto rightSym = prod->right.cbegin(); rightSym != prod->right.cend(); ++rightSym) {
 
-        if (rightSym.data()->sym->isTerminal()) {
+        if (rightSym->sym->isTerminal()) {
           // if prod->left derives a string containing a terminal,
           // then it can't derive any nontermial alone (using this
           // production, at least) -- empty is considered a nonterminal
@@ -1421,7 +1429,7 @@ void GrammarAnalysis::computeWhatCanDeriveWhat()
         }
 
         // otherwise, it's a nonterminal
-        Nonterminal const &rightNT = rightSym.data()->sym->asNonterminalC();
+        Nonterminal const &rightNT = rightSym->sym->asNonterminalC();
 
         // check if we already know that LHS derives rightNT
         if (canDerive(prod->left, &rightNT)) {
@@ -1434,14 +1442,14 @@ void GrammarAnalysis::computeWhatCanDeriveWhat()
           // this to be true, every symbol that comes after rightSym
           // must be able to derive emptySymbol (we've already verified
           // by now that every symbol to the *left* can derive empty)
-          RHSEltListIter afterRightSym(rightSym);
           bool restDeriveEmpty = true;
-          for (afterRightSym.adv();    // *after* right symbol
-               !afterRightSym.isDone(); afterRightSym.adv()) {
+          // *after* right symbol
+          for (auto afterRightSym = std::next(rightSym);
+               afterRightSym != prod->right.cend(); ++afterRightSym) {
 
-            if (afterRightSym.data()->sym->isTerminal()  ||
+            if (afterRightSym->sym->isTerminal()  ||
                   // if it's a terminal, it can't derive emptyString
-                !canDeriveEmpty(&( afterRightSym.data()->sym->asNonterminalC() ))) {
+                !canDeriveEmpty(&( afterRightSym->sym->asNonterminalC() ))) {
                   // this symbol can't derive empty string (or, we don't
                   // yet know that it can), so we conclude that prod->left
                   // can't derive rightSym
@@ -1531,16 +1539,15 @@ void GrammarAnalysis::computeWhatCanDeriveWhat()
 // set Nonterminal::superset to correspond to Nonterminal::subsets
 void GrammarAnalysis::computeSupersets()
 {
-  FOREACH_OBJLIST_NC(Nonterminal, nonterminals, iter1) {
-    Nonterminal *super = iter1.data();
+  for (auto &super : nonterminals) {
 
-    for (Nonterminal *sub : super->subsets) {
+    for (Nonterminal *sub : super.subsets) {
 
       // for now, only handle 'super' as a partial function
       if (sub->superset != NULL) {
         xfailure(stringc << sub->name << " has more than one superset" << c_str);
       }
-      sub->superset = super;
+      sub->superset = &super;
     }
   }
 }
@@ -1569,10 +1576,8 @@ void GrammarAnalysis::computeFirst()
     changes = 0;
 
     // for each production
-    for (ObjListMutator<Production> prodIter(productions);
-         !prodIter.isDone(); prodIter.adv()) {
+    for (auto prod = productions.begin(); prod != productions.end(); ++prod) {
       // convenient aliases
-      Production *prod = prodIter.data();
       Nonterminal *LHS = prod->left;
         // the list iter is mutating because I modify LHS's First set
 
@@ -1598,9 +1603,7 @@ void GrammarAnalysis::computeFirst()
   } // while (changes)
 
   if (tr) {
-    FOREACH_NONTERMINAL(nonterminals, iter) {
-      Nonterminal const &nt = *(iter.data());
-
+    for (auto const& nt : nonterminals) {
       std::ostream &trs = trace("first") << " " << nt.name << ": ";
       nt.first.print(trs, *this);
       trs << std::endl;
@@ -1616,28 +1619,27 @@ void GrammarAnalysis::computeFirst()
 void GrammarAnalysis::firstOfSequence(TerminalSet &destList,
                                       RHSEltList const &sequence)
 {
-  RHSEltListIter iter(sequence);
-  firstOfIterSeq(destList, iter);
+  firstOfIterSeq(destList, sequence.begin(), sequence.end());
 }
 
 // similar to above, 'sym' needs to be a mutator
 void GrammarAnalysis::firstOfIterSeq(TerminalSet &destList,
-                                     RHSEltListIter sym)
+                                     RHSEltListIter sym, RHSEltListIter end)
 {
   //int numTerms = numTerminals();
 
   // for each sequence member such that all
   // preceeding members can derive emptyString
-  for (; !sym.isDone(); sym.adv()) {
+  for (; sym != end; ++sym) {
     // LHS -> x alpha   means x is in First(LHS)
-    if (sym.data()->sym->isTerminal()) {
-      destList.add(sym.data()->sym->asTerminal().termIndex);
+    if (sym->sym->isTerminal()) {
+      destList.add(sym->sym->asTerminal().termIndex);
       break;    // stop considering RHS members since a terminal
                 // effectively "hides" all further symbols from First
     }
 
     // sym must be a nonterminal
-    Nonterminal const &nt = sym.data()->sym->asNonterminalC();
+    Nonterminal const &nt = sym->sym->asNonterminalC();
 
     // anything already in nt's First should be added to destList
     destList.merge(nt.first);
@@ -1654,19 +1656,20 @@ void GrammarAnalysis::firstOfIterSeq(TerminalSet &destList,
 void GrammarAnalysis::computeDProdFirsts()
 {
   // for each production..
-  FOREACH_PRODUCTION(productions, prodIter) {
+  for (auto const& prod : productions) {
     // for each dotted production where the dot is not at the end..
-    int rhsLen = prodIter.data()->rhsLength();
+    int rhsLen = prod.rhsLength();
     for (int posn=0; posn <= rhsLen; posn++) {
-      DottedProduction *dprod = getDProd_nc(prodIter.data(), posn);
+      DottedProduction *dprod = getDProd_nc(&prod, posn);
 
       // compute its first
-      RHSEltListIter symIter(dprod->getProd()->right, posn);
+      auto& right = dprod->getProd()->right;
+      auto symIter = std::next(right.begin(), posn);
       dprod->firstSet.reset(numTerms);
-      firstOfIterSeq(dprod->firstSet, symIter);
+      firstOfIterSeq(dprod->firstSet, symIter, right.end());
 
       // can it derive empty?
-      dprod->canDeriveEmpty = iterSeqCanDeriveEmpty(symIter);
+      dprod->canDeriveEmpty = iterSeqCanDeriveEmpty(symIter, right.end());
     }
   }
 }
@@ -1685,15 +1688,15 @@ void GrammarAnalysis::computeFollow()
     // needs a mutable 'term' and 'nt'
 
     // for each production
-    MUTATE_EACH_PRODUCTION(productions, prodIter) {
-      Production *prod = prodIter.data();
+    for (auto prod = productions.begin(); prod != productions.end(); ++prod) {
 
       // for each RHS nonterminal member
-      MUTATE_EACH_OBJLIST(Production::RHSElt, prod->right, rightSym) {
-        if (rightSym.data()->sym->isTerminal()) continue;
+      auto const rightEnd = prod->right.end();
+      for (auto rightSym = prod->right.begin(); rightSym != rightEnd; ++rightSym) {
+        if (rightSym->sym->isTerminal()) continue;
 
         // convenient alias
-        Nonterminal &rightNT = rightSym.data()->sym->asNonterminal();
+        Nonterminal &rightNT = rightSym->sym->asNonterminal();
 
         // I'm not sure what it means to compute Follow(emptyString),
         // so let's just not do so
@@ -1703,8 +1706,8 @@ void GrammarAnalysis::computeFollow()
 
         // an iterator pointing to the symbol just after
         // 'rightSym' will be useful below
-        RHSEltListMutator afterRightSym(rightSym);
-        afterRightSym.adv();    // NOTE: 'isDone()' may be true now
+        auto afterRightSym = std::next(rightSym);
+        // NOTE: it may be at the end now
 
         // rule 1:
         // if there is a production A -> alpha B beta, then
@@ -1712,7 +1715,7 @@ void GrammarAnalysis::computeFollow()
         {
           // compute First(beta)
           TerminalSet firstOfBeta(numTerms);
-          firstOfIterSeq(firstOfBeta, afterRightSym);
+          firstOfIterSeq(firstOfBeta, afterRightSym, rightEnd);
 
           // put those into Follow(rightNT)
           if (rightNT.follow.merge(firstOfBeta)) {
@@ -1731,7 +1734,7 @@ void GrammarAnalysis::computeFollow()
         // rule 2:
         // if there is a production A -> alpha B, or a
         // production A -> alpha B beta where beta ->* empty ...
-        if (iterSeqCanDeriveEmpty(afterRightSym)) {
+        if (iterSeqCanDeriveEmpty(afterRightSym, rightEnd)) {
           // ... then everything in Follow(A) is in Follow(B)
           if (rightNT.follow.merge(prod->left->follow)) {
             changes++;
@@ -1764,8 +1767,7 @@ void GrammarAnalysis::computePredictiveParsingTable()
 
   // for each production 'prod' (non-const iter because adding them
   // to ProductionList, which doesn't promise to not change them)
-  MUTATE_EACH_PRODUCTION(productions, prodIter) {
-    Production *prod = prodIter.data();
+  for (auto prod = productions.begin(); prod != productions.end(); ++prod) {
 
     // for each terminal 'term' in First(RHS)
     TerminalSet firsts(numTerms);
@@ -1888,14 +1890,15 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
   finished.setEnableShrink(false);
 
   // put all the nonkernels we have into 'finished'
-  while (itemSet.nonkernelItems.isNotEmpty()) {
-    LRItem *dp = itemSet.nonkernelItems.removeFirst();
+  for (LRItem *dp : itemSet.nonkernelItems) {
+    // ownership transfers to the finished list
     finished.add(dp->dprod, dp);
   }
+  itemSet.nonkernelItems.clear();
 
   // first, close the kernel items -> worklist
-  FOREACH_OBJLIST(LRItem, itemSet.kernelItems, itemIter) {
-    singleItemClosure(finished, worklist, itemIter.data(), scratchSet);
+  for (LRItem const *ik : itemSet.kernelItems) {
+    singleItemClosure(finished, worklist, ik, scratchSet);
   }
 
   while (worklist.isNotEmpty()) {
@@ -1919,7 +1922,8 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
          !iter.isDone(); iter.adv()) {
       // temporarily, the item is owned both by the hashtable
       // and the list
-      itemSet.nonkernelItems.prepend(iter.data());
+      itemSet.nonkernelItems.insert(itemSet.nonkernelItems.begin(), iter.data());
+      // FIXME probably doesn't need to be up front
     }
     finished.disownAndForgetAll();
   }
@@ -2139,7 +2143,7 @@ void GrammarAnalysis::disposeItemSet(ItemSet *is)
 //   since I don't want to allocate anything in here, we need scratch
 //   space for computing kernel CRCs
 void GrammarAnalysis::moveDotNoClosure(ItemSet const *source, Symbol const *symbol,
-                                       ItemSet *dest, ObjList<LRItem> &unusedTail,
+                                       ItemSet *dest, std::vector<LRItem *> &unusedTail,
                                        GrowArray<DottedProduction const*> &array)
 {
   //ItemSet *ret = makeItemSet();
@@ -2148,20 +2152,20 @@ void GrammarAnalysis::moveDotNoClosure(ItemSet const *source, Symbol const *symb
   int appendCt=0;
 
   // iterator for walking down dest's kernel list
-  ObjListMutator<LRItem> destIter(dest->kernelItems);
+  auto destIter = dest->kernelItems.begin();
 
-  // iterator for walking both lists of items; switching from an
-  // implementation which used 'getAllItems' for performance reasons
-  ObjListIter<LRItem> srcIter(source->kernelItems);
+  auto srcIter = source->kernelItems.cbegin();
+  auto srcEnd = source->kernelItems.cend();
   int passCt=0;    // 0=kernelItems, 1=nonkernelItems
   while (passCt < 2) {
     if (passCt++ == 1) {
-      srcIter.reset(source->nonkernelItems);
+      srcIter = source->nonkernelItems.cbegin();
+      srcEnd = source->nonkernelItems.cend();
     }
 
     // for each item
-    for (; !srcIter.isDone(); srcIter.adv()) {
-      LRItem const *item = srcIter.data();
+    for (; srcIter != srcEnd; srcIter++) {
+      LRItem const *item = *srcIter;
 
       if (item->isDotAtEnd() ||
           item->symbolAfterDotC() != symbol) {
@@ -2169,20 +2173,22 @@ void GrammarAnalysis::moveDotNoClosure(ItemSet const *source, Symbol const *symb
       }
 
       // need to access destIter; if there are no more items, make more
-      if (destIter.isDone()) {
+      if (destIter == dest->kernelItems.end()) {
         // the new item becomes the current 'data()'
-        destIter.insertBefore(new LRItem(numTerminals(), NULL /*dprod*/));
+        dest->kernelItems.push_back(new LRItem(numTerminals(), NULL /*dprod*/));
+        destIter = std::prev(dest->kernelItems.end());
+        //destIter = std::next(dest->kernelItems.begin(), dest->kernelItems.size() - 1);
       }
 
       // move the dot; write dot-moved item into 'destIter'
-      LRItem *dotMoved = destIter.data();
+      LRItem *dotMoved = *destIter;
       dotMoved->dprod = nextDProd(item->dprod);
       dotMoved->lookahead = item->lookahead;
 
       // add the new item to the itemset I'm building
       //ret->addKernelItem(dotMoved);   // UPDATE: it's already in the list
       appendCt++;
-      destIter.adv();
+      destIter++;
     }
   }
 
@@ -2190,7 +2196,9 @@ void GrammarAnalysis::moveDotNoClosure(ItemSet const *source, Symbol const *symb
   // this action not have to look at each unused item, because I want
   // to be able to make a really big scratch item list and not pay for
   // items I don't end up using
-  unusedTail.stealTailAt(appendCt, dest->kernelItems);
+  auto destEnd = dest->kernelItems.end();
+  std::copy(destIter, destEnd, std::back_inserter(unusedTail));
+  dest->kernelItems.erase(destIter, destEnd);
 
   // verify we actually got something
   xassert(appendCt > 0);
@@ -2207,14 +2215,14 @@ void GrammarAnalysis::moveDotNoClosure(ItemSet const *source, Symbol const *symb
 // if 'list' contains something equal to 'itemSet', return that
 // equal object; otherwise, return NULL
 // 'list' is non-const because might return an element of it
-ItemSet *GrammarAnalysis::findItemSetInList(ObjList<ItemSet> &list,
+ItemSet *GrammarAnalysis::findItemSetInList(std::vector<ItemSet *> &list,
                                             ItemSet const *itemSet)
 {
   // inefficiency: using iteration to check set membership
 
-  MUTATE_EACH_OBJLIST(ItemSet, list, iter) {
-    if (itemSetsEqual(iter.data(), itemSet)) {
-      return iter.data();
+  for (ItemSet *set : list) {
+    if (itemSetsEqual(set, itemSet)) {
+      return set;
     }
   }
   return NULL;
@@ -2284,8 +2292,7 @@ void GrammarAnalysis::constructLRItemSets()
     // this is a dummy item; it allocates the bitmap for 'lookahead',
     // but those bits and the 'dprod' pointer will be overwritten
     // many times during the algorithm
-    LRItem *item = new LRItem(numTerms, NULL /*dottedprod*/);
-    scratchState->addKernelItem(item);
+    scratchState->addKernelItem(numTerms, NULL /*dottedprod*/);
   }
 
   // similar to the scratch state, make a scratch array for the
@@ -2299,8 +2306,8 @@ void GrammarAnalysis::constructLRItemSets()
   {
     ItemSet *is = makeItemSet();              // (owner)
     startState = is;
-    LRItem *firstDP
-      = new LRItem(numTerms, getDProd(productions.first(), 0 /*dot at left*/));
+    LRItem *firstDP = is->addKernelItem(numTerms,
+      getDProd(&productions.front(), 0 /*dot at left*/));
 
     // don't add this to the lookahead; we assume EOF is actually
     // mentioned in the production already, and we won't contemplate
@@ -2308,7 +2315,6 @@ void GrammarAnalysis::constructLRItemSets()
     // (see GLR::cleanupAfterParse)
     //firstDP->laAdd(0 /*EOF token id*/);
 
-    is->addKernelItem(firstDP);
     is->sortKernelItems();                    // redundant, but can't hurt
     itemSetClosure(*is);                      // calls changedItems internally
 
@@ -2334,9 +2340,9 @@ void GrammarAnalysis::constructLRItemSets()
 
     if (tr) {
       trace("lrsets") << "state " << itemSet->id
-                      << ", " << itemSet->kernelItems.count()
+                      << ", " << itemSet->kernelItems.size()
                       << " kernel items and "
-                      << itemSet->nonkernelItems.count()
+                      << itemSet->nonkernelItems.size()
                       << " nonkernel items" << std::endl;
     }
 
@@ -2348,15 +2354,17 @@ void GrammarAnalysis::constructLRItemSets()
     //
     // explicitly iterate over both lists because 'getAllItems'
     // does allocation
-    ObjListIter<LRItem> itemIter(itemSet->kernelItems);
+    auto itemIter = itemSet->kernelItems.cbegin();
+    auto itemEnd = itemSet->kernelItems.cend();
     int passCt=0;    // 0=kernelItems, 1=nonkernelItems
     while (passCt < 2) {
       if (passCt++ == 1) {
-        itemIter.reset(itemSet->nonkernelItems);
+        itemIter = itemSet->nonkernelItems.cbegin();
+        itemEnd = itemSet->nonkernelItems.cend();
       }
 
-      for (; !itemIter.isDone(); itemIter.adv()) {
-        LRItem const *item = itemIter.data();
+      for (; itemIter != itemEnd; itemIter++) {
+        LRItem const *item = *itemIter;
         if (item->isDotAtEnd()) continue;
 
         CHECK_MALLOC_STATS("top of item list loop");
@@ -2388,9 +2396,8 @@ void GrammarAnalysis::constructLRItemSets()
         //
         // this call also yields the unused remainder of the kernel items,
         // so we can add them back in at the end
-        ObjList<LRItem> unusedTail;
-        moveDotNoClosure(itemSet, sym, scratchState,
-                         unusedTail, kernelCRCArray);
+        std::vector<LRItem *> unusedTail;
+        moveDotNoClosure(itemSet, sym, scratchState, unusedTail, kernelCRCArray);
         ItemSet *withDotMoved = scratchState;    // clarify role from here down
 
         CHECK_MALLOC_STATS("moveDotNoClosure");
@@ -2457,8 +2464,8 @@ void GrammarAnalysis::constructLRItemSets()
         else {
           // we don't already have it; need to actually allocate & copy
           withDotMoved = makeItemSet();
-          FOREACH_OBJLIST(LRItem, scratchState->kernelItems, iter) {
-            withDotMoved->addKernelItem(new LRItem( *(iter.data()) ));
+          for (LRItem const *item : scratchState->kernelItems) {
+            withDotMoved->addKernelItem( *item );
           }
 
           // finish it by computing its closure
@@ -2479,10 +2486,11 @@ void GrammarAnalysis::constructLRItemSets()
         itemSet->setTransition(sym, withDotMoved);
 
         // finally, restore 'scratchState's kernel item list
-        scratchState->kernelItems.concat(unusedTail);
+		std::copy(unusedTail.begin(), unusedTail.end(),
+		          std::back_inserter(scratchState->kernelItems));
 
         // make sure the link restoration process works as expected
-        xassertdb(scratchState->kernelItems.count() >= INIT_LIST_LEN);
+        xassertdb(scratchState->kernelItems.size() >= INIT_LIST_LEN);
 
         CHECK_MALLOC_STATS("end of item loop");
 
@@ -2505,7 +2513,7 @@ void GrammarAnalysis::constructLRItemSets()
   try {
     for (OwnerKHashTableIter<ItemSet, ItemSet> iter(itemSetsDone);
          !iter.isDone(); iter.adv()) {
-      itemSets.prepend(iter.data());
+      itemSets.insert(itemSets.begin(), iter.data());
     }
     itemSetsDone.disownAndForgetAll();
   }
@@ -2517,10 +2525,10 @@ void GrammarAnalysis::constructLRItemSets()
 
   // since we sometimes consider a state more than once, the
   // states end up out of order; put them back in order
-  itemSets.mergeSort(ItemSet::diffById);
+  sm::sortSList(itemSets, ItemSet::diffById);
 
 
-  traceProgress(1) << "done with LR sets: " << itemSets.count()
+  traceProgress(1) << "done with LR sets: " << itemSets.size()
                    << " states\n";
 
 
@@ -2537,8 +2545,8 @@ void GrammarAnalysis::constructLRItemSets()
     }
     out << "# lr sets in graph form\n";
 
-    FOREACH_OBJLIST(ItemSet, itemSets, itemSet) {
-      itemSet.data()->writeGraph(out, *this);
+    for (ItemSet const *itemSet : itemSets) {
+      itemSet->writeGraph(out, *this);
     }
   }
 }
@@ -2547,12 +2555,12 @@ void GrammarAnalysis::constructLRItemSets()
 // print each item set
 void GrammarAnalysis::printItemSets(std::ostream &os, bool nonkernel) const
 {
-  FOREACH_OBJLIST(ItemSet, itemSets, itemSet) {
-    os << "State " << itemSet.data()->id
-       << ", sample input: " << sampleInput(itemSet.data()) << "\n"
-       << "  and left context: " << leftContextString(itemSet.data()) << "\n"
+  for (ItemSet const* itemSet : itemSets) {
+    os << "State " << itemSet->id
+       << ", sample input: " << sampleInput(itemSet) << "\n"
+       << "  and left context: " << leftContextString(itemSet) << "\n"
        ;
-    itemSet.data()->print(os, *this, nonkernel);
+    itemSet->print(os, *this, nonkernel);
     os << "\n\n";
   }
 }
@@ -2565,16 +2573,16 @@ Symbol const *GrammarAnalysis::
   inverseTransitionC(ItemSet const *source, ItemSet const *target) const
 {
   // for each symbol..
-  FOREACH_TERMINAL(terminals, t) {
+  for (auto const& t : terminals) {
     // see if it is the one
-    if (source->transitionC(t.data()) == target) {
-      return t.data();
+    if (source->transitionC(&t) == target) {
+      return &t;
     }
   }
 
-  FOREACH_NONTERMINAL(nonterminals, nt) {
-    if (source->transitionC(nt.data()) == target) {
-      return nt.data();
+  for (auto const& nt : nonterminals) {
+    if (source->transitionC(&nt) == target) {
+      return &nt;
     }
   }
 
@@ -2586,8 +2594,8 @@ Symbol const *GrammarAnalysis::
 void GrammarAnalysis::computeReachable()
 {
   // start by clearing the reachability flags
-  MUTATE_EACH_NONTERMINAL(nonterminals, iter) {
-    iter.data()->reachable = false;
+  for (auto& nt : nonterminals) {
+    nt.reachable = false;
   }
 
   // do a DFS on the grammar, marking things reachable as
@@ -2607,16 +2615,15 @@ void GrammarAnalysis::computeReachableDFS(Nonterminal *nt)
   // iterate over this nonterminal's rules
   for (Production const *prod : productionsByLHS[nt->ntIndex]) {
     // iterate over symbols in the rule RHS
-    FOREACH_OBJLIST(Production::RHSElt, prod->right, jter) {
-      Production::RHSElt const *elt = jter.data();
+    for (auto const& elt : prod->right) {
 
-      if (elt->sym->isNonterminal()) {
+      if (elt.sym->isNonterminal()) {
         // recursively analyze nonterminal elements
-        computeReachableDFS(elt->sym->ifNonterminal());
+        computeReachableDFS(elt.sym->ifNonterminal());
       }
       else {
         // just mark terminals
-        elt->sym->reachable = true;
+        elt.sym->reachable = true;
       }
     }
   }
@@ -2734,13 +2741,13 @@ void GrammarAnalysis::computeBFSTree()
   // it will be convenient to have all the symbols in a single list
   // for iteration purposes
   std::vector <Symbol const *> allSymbols;
-  allSymbols.reserve(terminals.count() + nonterminals.count());
+  allSymbols.reserve(terminals.size() + nonterminals.size());
   {
-    FOREACH_TERMINAL(terminals, t) {
-      allSymbols.push_back(t.data());
+    for (auto &t : terminals) {
+      allSymbols.push_back(&t);
     }
-    FOREACH_NONTERMINAL(nonterminals, nt) {
-      allSymbols.push_back(nt.data());
+    for (auto &nt : nonterminals) {
+      allSymbols.push_back(&nt);
     }
   }
 
@@ -3041,12 +3048,11 @@ bool isAmbiguousNonterminal(Symbol const *sym)
 void GrammarAnalysis::renumberStates()
 {
   // sort them into the right order
-  itemSets.mergeSort(&GrammarAnalysis::renumberStatesDiff, this);
+  sm::sortSList(itemSets, &GrammarAnalysis::renumberStatesDiff, this);
 
   // number them in that order
   int n = 0;
-  FOREACH_OBJLIST_NC(ItemSet, itemSets, iter) {
-    ItemSet *s = iter.data();
+  for (ItemSet *s : itemSets) {
     if (n == 0) {
       // the first element should always be the start state
       xassert(s->id == 0);
@@ -3136,10 +3142,10 @@ STATICDEF int GrammarAnalysis::renumberStatesDiff
   //std::cout << "using reductions to distinguish states\n";
 
   // finally, order by possible reductions
-  FOREACH_OBJLIST(Terminal, gramanl->terminals, termIter) {
+  for (const auto &term : gramanl->terminals) {
     ProductionList
-      lpl = left->getPossibleReductions(termIter.data(), false /*parsing*/),
-      rpl = right->getPossibleReductions(termIter.data(), false /*parsing*/);
+      lpl = left->getPossibleReductions(&term, false /*parsing*/),
+      rpl = right->getPossibleReductions(&term, false /*parsing*/);
 
     // sort the productions before we can compare them...
     sm::sortSList(lpl, &GrammarAnalysis::arbitraryProductionOrder);
@@ -3165,6 +3171,30 @@ STATICDEF int GrammarAnalysis::renumberStatesDiff
   return 0;
 }
 
+template <typename T>
+int compare(const std::vector<T>& a, const std::vector<T>& b, int (*diff)(T const* left, T const* right, void* extra), void* extra = 0)
+{
+  auto mine = a.begin(), his = b.begin();
+  auto mineEnd = a.end(), hisEnd = b.end();
+
+  while (mine != mineEnd && his != hisEnd) {
+    int cmp = diff(&*mine, &*his, extra);
+    if (cmp != 0) {
+      // unequal, return which way comparison went
+      return cmp;
+    }
+    ++mine;
+    ++his;
+  }
+
+  if (mine != mineEnd || his != hisEnd) {
+    // unequal lengths: shorter compares as less
+    return mine == mineEnd ? -1 : +1;
+  }
+
+  return 0;        // everything matches
+}
+
 STATICDEF int GrammarAnalysis::arbitraryProductionOrder
   (Production const *left, Production const *right, void*)
 {
@@ -3173,7 +3203,7 @@ STATICDEF int GrammarAnalysis::arbitraryProductionOrder
   if (ret) return ret;
 
   // RHS elts one at a time
-  return left->right.compareAsLists(right->right,
+  return compare(left->right, right->right,
     &GrammarAnalysis::arbitraryRHSEltOrder);
 }
 
@@ -3189,7 +3219,7 @@ STATICDEF int GrammarAnalysis::arbitraryRHSEltOrder
 
 void GrammarAnalysis::computeParseTables(bool allowAmbig)
 {
-  tables = new ParseTables(numTerms, numNonterms, itemSets.count(), numProds,
+  tables = new ParseTables(numTerms, numNonterms, itemSets.size(), numProds,
                            startState->id,
                            0 /* slight hack: assume it's the first production */);
 
@@ -3197,8 +3227,7 @@ void GrammarAnalysis::computeParseTables(bool allowAmbig)
     // first-state info
     bool doingTerms = true;
     int prevSymCode = -1;
-    FOREACH_OBJLIST(ItemSet, itemSets, iter) {
-      ItemSet const *state = iter.data();
+    for (ItemSet const* state : itemSets) {
       Symbol const *sym = state->getStateSymbolC();
       if (!sym) continue;     // skip start state
       int symCode = sym->getTermOrNontermIndex();
@@ -3235,8 +3264,7 @@ void GrammarAnalysis::computeParseTables(bool allowAmbig)
   int sr=0, rr=0;
 
   // for each state...
-  FOREACH_OBJLIST(ItemSet, itemSets, stateIter) {
-    ItemSet const *state = stateIter.data();
+  for (ItemSet const *state : itemSets) {
     bool printedConflictHeader = false;
 
     // ---- fill in this row in the action table ----
@@ -3605,8 +3633,7 @@ bool GrammarAnalysis::
 {
   // get all of 'nonterminal's productions that are not recursive
   ProductionList candidates;
-  FOREACH_PRODUCTION(productions, prodIter) {
-    Production const *prod = prodIter.data();
+  for (auto prod = productions.cbegin(); prod != productions.cend(); ++prod) {
     if (prod->left != nonterminal) continue;
 
     // if 'prod' has 'nonterminal' on RHS, that would certainly
@@ -3811,7 +3838,7 @@ void GrammarAnalysis::addTreebuildingActions()
   {
     StringRef extra = grammarStringTable.add(
       "\n#include \"ptreenode.h\"     // PTreeNode\n");
-    verbatim.prepend(new LITERAL_LOCSTRING(extra));
+    verbatim.emplace_front(HERE_SOURCELOC, extra); // LITERAL_LOCSTRING
   }
 
   // get handles to the strings we want to emit
@@ -3826,25 +3853,23 @@ void GrammarAnalysis::addTreebuildingActions()
   LocString mergeCode = STR("L->addAlternative(R); return L;");
 
   // write dup/del/merge for nonterminals
-  MUTATE_EACH_OBJLIST(Nonterminal, nonterminals, ntIter) {
-    Nonterminal *nt = ntIter.data();
+  for (auto& nt : nonterminals) {
 
-    nt->dupParam = param;
-    nt->dupCode = dupCode;
+    nt.dupParam = param;
+    nt.dupCode = dupCode;
 
-    nt->delParam = param;
-    nt->delCode = delCode;
+    nt.delParam = param;
+    nt.delCode = delCode;
 
-    nt->type = svalType;
+    nt.type = svalType;
 
-    nt->mergeParam1 = mergeParam1;
-    nt->mergeParam2 = mergeParam2;
-    nt->mergeCode = mergeCode;
+    nt.mergeParam1 = mergeParam1;
+    nt.mergeParam2 = mergeParam2;
+    nt.mergeCode = mergeCode;
   }
 
   // write treebuilding actions for productions
-  MUTATE_EACH_OBJLIST(Production, productions, prodIter) {
-    Production *p = prodIter.data();
+  for (auto p = productions.begin(); p != productions.end(); ++p) {
 
     // build up the code
     stringBuilder code;
@@ -3854,14 +3879,13 @@ void GrammarAnalysis::addTreebuildingActions()
          << "\"";
 
     int ct=1;
-    MUTATE_EACH_OBJLIST(Production::RHSElt, p->right, rIter) {
-      Production::RHSElt *elt = rIter.data();
+    for (auto& elt : p->right) {
 
       // connect nonterminal subtrees; drop lexemes on the floor
-      if (elt->sym->isNonterminal()) {
+      if (elt.sym->isNonterminal()) {
         // use a generic tag
         string tag = stringc << "t" << ct++;
-        elt->tag = STR(tag.c_str());
+        elt.tag = STR(tag.c_str());
 
         code << ", " << tag;
       }
@@ -3954,12 +3978,16 @@ void GrammarAnalysis::runAnalyses(char const *setsFname)
   // print results
   {
     std::ostream &tracer = trace("terminals") << "Terminals:\n";
-    printSymbols(tracer, toObjList(terminals));
+    for (auto const& t : terminals) {
+      printSymbol(tracer, t);
+    }
   }
   {
     std::ostream &tracer = trace("nonterminals") << "Nonterminals:\n";
     tracer << "  " << emptyString << std::endl;
-    printSymbols(tracer, toObjList(nonterminals));
+    for (auto const& nt : nonterminals) {
+      printSymbol(tracer, nt);
+    }
   }
 
   if (tracingSys("derivable")) {
@@ -4035,12 +4063,12 @@ void GrammarAnalysis::runAnalyses(char const *setsFname)
       *setsOutput << "unreachable nonterminals:\n";
     }
     int ct=0;
-    FOREACH_NONTERMINAL(nonterminals, iter) {
-      if (!iter.data()->reachable) {
+    for (const auto& nt : nonterminals) {
+      if (!nt.reachable) {
         ct++;
 
         if (setsOutput) {
-          *setsOutput << "  " << iter.data()->name << "\n";
+          *setsOutput << "  " << nt.name << "\n";
         }
       }
     }
@@ -4055,12 +4083,12 @@ void GrammarAnalysis::runAnalyses(char const *setsFname)
       *setsOutput << "unreachable terminals:\n";
     }
     ct=0;
-    FOREACH_TERMINAL(terminals, jter) {
-      if (!jter.data()->reachable) {
+    for (auto const& jt : terminals) {
+      if (!jt.reachable) {
         ct++;
 
         if (setsOutput) {
-          *setsOutput << "  " << jter.data()->name << "\n";
+          *setsOutput << "  " << jt.name << "\n";
         }
       }
     }
@@ -4081,19 +4109,17 @@ void GrammarAnalysis::runAnalyses(char const *setsFname)
   // print information about all tokens
   if (setsOutput) {
     *setsOutput << "terminals:\n";
-    FOREACH_TERMINAL(terminals, iter) {
-      Terminal const *t = iter.data();
+    for (auto const& t : terminals) {
       *setsOutput << "  ";
-      t->print(*setsOutput);
+      t.print(*setsOutput);
       *setsOutput << "\n";
     }
 
     // and nonterminals
     *setsOutput << "nonterminals:\n";
-    FOREACH_NONTERMINAL(nonterminals, ntIter) {
-      Nonterminal const *nt = ntIter.data();
+    for (auto const& nt : nonterminals) {
       *setsOutput << "  ";
-      nt->print(*setsOutput);
+      nt.print(*setsOutput);
       *setsOutput << "\n";
     }
 
@@ -4117,8 +4143,8 @@ void GrammarAnalysis::runAnalyses(char const *setsFname)
 
   // I don't need (most of) the item sets during parsing, so
   // throw them away once I'm done analyzing the grammar
-  MUTATE_EACH_OBJLIST(ItemSet, itemSets, iter) {
-    iter.data()->throwAwayItems();
+  for (ItemSet *set : itemSets) {
+    set->throwAwayItems();
   }
 
 
@@ -4146,7 +4172,7 @@ void emitDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
                     Symbol const &sym);
 void emitSwitchCode(Grammar const &g, EmitCode &out,
                     char const *signature, char const *switchVar,
-                    ObjList<Symbol> const &syms, int whichFunc,
+                    std::list<Symbol> const &syms, int whichFunc,
                     char const *templateCode, char const *actUpon);
 
 
@@ -4184,16 +4210,16 @@ void emitActionCode(GrammarAnalysis const &g, rostring hFname,
       ;
 
   // insert the stand-alone verbatim sections
-  {FOREACH_OBJLIST(LocString, g.verbatim, iter) {
-    emitUserCode(dcl, *(iter.data()), false /*braces*/);
-  }}
+  for (auto const& locstr : g.verbatim) {
+    emitUserCode(dcl, locstr, false /*braces*/);
+  }
 
   // insert each of the context class definitions; the last one
   // is the one whose name is 'g.actionClassName' and into which
   // the action functions are inserted as methods
   {
     int ct=0;
-    FOREACH_OBJLIST(LocString, g.actionClasses, iter) {
+    for (auto const& locstr : g.actionClasses) {
       if (ct++ > 0) {
         // end the previous class; the following body will open
         // another one, and the brace following the action list
@@ -4204,7 +4230,7 @@ void emitActionCode(GrammarAnalysis const &g, rostring hFname,
       dcl << "\n"
           << "// parser context class\n"
           << "class ";
-      emitUserCode(dcl, *(iter.data()), false /*braces*/);
+      emitUserCode(dcl, locstr, false /*braces*/);
   }}
 
   // we end the context class with declarations of the action functions
@@ -4266,8 +4292,8 @@ void emitActionCode(GrammarAnalysis const &g, rostring hFname,
   //
   // 2005-06-23: Moved these to near the top of the file so that
   // the actions can easily refer to them.
-  FOREACH_OBJLIST(LocString, g.implVerbatim, iter) {
-    emitUserCode(out, *(iter.data()), false /*braces*/);
+  for (auto& locstr : g.implVerbatim) {
+    emitUserCode(out, locstr, false /*braces*/);
   }
 
   emitActions(g, out, dcl);
@@ -4443,8 +4469,7 @@ void emitActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
   out << "// ------------------- actions ------------------\n";
 
   // iterate over productions, emitting inline action functions
-  {FOREACH_OBJLIST(Production, g.productions, iter) {
-    Production const &prod = *(iter.data());
+  for (auto const& prod : g.productions) {
 
     // there's no syntax for a typeless nonterminal, so this shouldn't
     // be triggerable by the user
@@ -4467,8 +4492,7 @@ void emitActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
     SOURCELOC( ct++ );    // if we printed the 'loc' param, count it
 
     // iterate over RHS elements, emitting formals for each with a tag
-    FOREACH_OBJLIST(Production::RHSElt, prod.right, rhsIter) {
-      Production::RHSElt const &elt = *(rhsIter.data());
+    for (auto const& elt : prod.right) {
       if (elt.tag.length() == 0) continue;
 
       if (ct++ > 0) {
@@ -4490,7 +4514,7 @@ void emitActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
     // now insert the user's code, to execute in this environment of
     // properly-typed semantic values
     emitUserCode(out, prod.action);
-  }}
+  }
 
   out << "\n";
 
@@ -4504,8 +4528,7 @@ void emitActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
   out << "  switch (productionId) {\n";
 
   // iterate over productions
-  FOREACH_OBJLIST(Production, g.productions, iter) {
-    Production const &prod = *(iter.data());
+  for (auto const& prod : g.productions) {
 
     out << "    case " << prod.prodIndex << ":\n";
     out << "      return (SemanticValue)(ths->" << actionFuncName(prod) << "("
@@ -4516,8 +4539,7 @@ void emitActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
     int index = -1;      // index into 'semanticValues'
     int ct=0;
     SOURCELOC( ct++ );   // count 'loc' if it is passed
-    FOREACH_OBJLIST(Production::RHSElt, prod.right, rhsIter) {
-      Production::RHSElt const &elt = *(rhsIter.data());
+    for (auto const& elt : prod.right) {
 
       // we have semantic values in the array for all RHS elements,
       // even if they didn't get a tag
@@ -4575,15 +4597,15 @@ void emitDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
       << "\n";
 
   // emit inlines for dup/del/merge of nonterminals
-  FOREACH_OBJLIST(Nonterminal, g.nonterminals, ntIter) {
-    emitDDMInlines(g, out, dcl, *(ntIter.data()));
+  for (auto const& nt : g.nonterminals) {
+    emitDDMInlines(g, out, dcl, nt);
   }
 
   // emit dup-nonterm
   emitSwitchCode(g, out,
     "SemanticValue $acn::duplicateNontermValue(int nontermId, SemanticValue sval)",
     "nontermId",
-    (ObjList<Symbol> const&)g.nonterminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.nonterminals), /*FIXME this is a bad hack*/
     0 /*dupCode*/,
     "      return (SemanticValue)dup_$symName(($symType)sval);\n",
     NULL);
@@ -4592,7 +4614,7 @@ void emitDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
   emitSwitchCode(g, out,
     "void $acn::deallocateNontermValue(int nontermId, SemanticValue sval)",
     "nontermId",
-    (ObjList<Symbol> const&)g.nonterminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.nonterminals), /*FIXME this is a bad hack*/
     1 /*delCode*/,
     "      del_$symName(($symType)sval);\n"
     "      return;\n",
@@ -4605,7 +4627,7 @@ void emitDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
     SOURCELOC(",  SourceLoc loc")
     ")",
     "nontermId",
-    (ObjList<Symbol> const&)g.nonterminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.nonterminals), /*FIXME this is a bad hack*/
     2 /*mergeCode*/,
     "      return (SemanticValue)merge_$symName(($symType)left, ($symType)right);\n",
     "merge nonterm");
@@ -4614,7 +4636,7 @@ void emitDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
   emitSwitchCode(g, out,
     "bool $acn::keepNontermValue(int nontermId, SemanticValue sval)",
     "nontermId",
-    (ObjList<Symbol> const&)g.nonterminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.nonterminals), /*FIXME this is a bad hack*/
     3 /*keepCode*/,
     "      return keep_$symName(($symType)sval);\n",
     NULL);
@@ -4623,15 +4645,15 @@ void emitDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
   out << "\n";
   out << "// ---------------- dup/del/classify terminals ---------------\n";
   // emit inlines for dup/del of terminals
-  FOREACH_OBJLIST(Terminal, g.terminals, termIter) {
-    emitDDMInlines(g, out, dcl, *(termIter.data()));
+  for (auto const& t : g.terminals) {
+    emitDDMInlines(g, out, dcl, t);
   }
 
   // emit dup-term
   emitSwitchCode(g, out,
     "SemanticValue $acn::duplicateTerminalValue(int termId, SemanticValue sval)",
     "termId",
-    (ObjList<Symbol> const&)g.terminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.terminals), /*FIXME this is a bad hack*/
     0 /*dupCode*/,
     "      return (SemanticValue)dup_$symName(($symType)sval);\n",
     NULL);
@@ -4640,7 +4662,7 @@ void emitDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
   emitSwitchCode(g, out,
     "void $acn::deallocateTerminalValue(int termId, SemanticValue sval)",
     "termId",
-    (ObjList<Symbol> const&)g.terminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.terminals), /*FIXME this is a bad hack*/
     1 /*delCode*/,
     "      del_$symName(($symType)sval);\n"
     "      return;\n",
@@ -4650,7 +4672,7 @@ void emitDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
   emitSwitchCode(g, out,
     "/*static*/ int $acn::reclassifyToken($acn *ths, int oldTokenType, SemanticValue sval)",
     "oldTokenType",
-    (ObjList<Symbol> const&)g.terminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.terminals), /*FIXME this is a bad hack*/
     4 /*classifyCode*/,
     "      return ths->classify_$symName(($symType)sval);\n",
     NULL);
@@ -4730,15 +4752,14 @@ bool noDeclaredType(char const *type)
 
 void emitSwitchCode(Grammar const &g, EmitCode &out,
                     char const *signature, char const *switchVar,
-                    ObjList<Symbol> const &syms, int whichFunc,
+                    std::list<Symbol> const &syms, int whichFunc,
                     char const *templateCode, char const *actUpon)
 {
   out << replace(signature, "$acn", string(g.actionClassName)) << "\n"
          "{\n"
          "  switch (" << switchVar << ") {\n";
 
-  FOREACH_OBJLIST(Symbol, syms, symIter) {
-    Symbol const &sym = *(symIter.data());
+  for (auto const& sym : syms) {
 
     if ((whichFunc==0 && sym.dupCode) ||
         (whichFunc==1 && sym.delCode) ||
@@ -4781,7 +4802,7 @@ void emitSwitchCode(Grammar const &g, EmitCode &out,
     case 1:    // unspecified del
       if (!g.useGCDefaults) {
         // warn about unspec'd del, since it's probably a memory leak
-        if (syms.firstC()->isNonterminal()) {
+        if (syms.front().isNonterminal()) {
           // use the nonterminal map
           out << "      std::cout << \"WARNING: there is no action to deallocate nonterm \"\n"
                  "           << nontermNames[" << switchVar << "] << std::endl;\n";
@@ -4796,7 +4817,7 @@ void emitSwitchCode(Grammar const &g, EmitCode &out,
           // emitting that instead. /FL
           out <<
             "      int arrayMin = 0;\n"
-            "      int arrayMax = " << syms.count() << ";\n"
+            "      int arrayMax = " << syms.size() << ";\n"
             "      xassert(" << switchVar << " >= arrayMin &&"
             " " << switchVar << " < arrayMax);\n"
             "      std::cout << \"WARNING: there is no action to deallocate terminal \"\n"
@@ -4996,7 +5017,7 @@ int inner_entry(int argc, char **argv)
     string mliFname = stringc << prefix << ".mli";
     string mlFname = stringc << prefix << ".ml";
     traceProgress() << "emitting OCaml code to " << mlFname
-                    << " and " << mliFname << " ...\n";
+                    << " and " << mliFname << " ...\n" << std::flush;
 
     try {
       emitMLActionCode(g, mliFname, mlFname, grammarFname);

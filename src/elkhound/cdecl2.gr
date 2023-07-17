@@ -5,10 +5,11 @@
 verbatim ParseEnv [
 
 #include <iostream>        // std::cout
+#include <vector>          // std::vector
+
 #include "trace.h"         // trace
 #include "locstr.h"        // LocString
 #include "strhash.h"       // StringHash
-#include "objlist.h"       // ObjList
 #include "parssppt.h"      // ParseTreeAndTokens
 
 #define D(msg) \
@@ -20,7 +21,7 @@ verbatim ParseEnv [
 class ParseEnv : public UserActions {
 public:
   StringRef intType;              // "int"
-  ObjList<StringHash> types;      // stack of hashes which identify names of types
+  std::vector<StringHash*> types; // stack of hashes which identify names of types
 
 public:
   ParseEnv(StringTable &table);
@@ -47,7 +48,11 @@ ParseEnv::ParseEnv(StringTable &table)
 }
 
 ParseEnv::~ParseEnv()
-{}
+{
+  for (StringHash *type : types) {
+    delete type;
+  }
+}
 
 
 static char const *identity(void *data)
@@ -57,17 +62,18 @@ static char const *identity(void *data)
 
 void ParseEnv::enterScope()
 {
-  types.prepend(new StringHash(identity));
+  types.push_back(new StringHash(identity));
 }
 
 void ParseEnv::leaveScope()
 {
-  delete types.removeAt(0);
+  delete types.back();
+  types.pop_back();
 }
 
 void ParseEnv::addType(StringRef type)
 {
-  StringHash *h = types.first();
+  StringHash *h = types.back();
   if (h->get(type)) {
     std::cout << "duplicate entry for " << type << " -- will ignore\n";
   }
@@ -82,8 +88,8 @@ bool ParseEnv::isType(StringRef name)
     return true;
   }
 
-  FOREACH_OBJLIST(StringHash, types, iter) {
-    if (iter.data()->get(name)) {
+  for (StringHash const *type : types) {
+    if (type->get(name)) {
       return true;
     }
   }

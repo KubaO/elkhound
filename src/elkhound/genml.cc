@@ -32,7 +32,7 @@ void emitMLDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
                       Symbol const &sym);
 void emitMLSwitchCode(Grammar const &g, EmitCode &out,
                       rostring signature, char const *switchVar,
-                      ObjList<Symbol> const &syms, int whichFunc,
+                      std::list<Symbol> const &syms, int whichFunc,
                       char const *templateCode, char const *actUpon);
 
 
@@ -62,9 +62,9 @@ void emitMLActionCode(GrammarAnalysis const &g, rostring mliFname,
       ;
 
   // insert the stand-alone verbatim sections
-  {FOREACH_OBJLIST(LocString, g.verbatim, iter) {
-    emitMLUserCode(dcl, *(iter.data()), false /*braces*/);
-  }}
+  for (auto const& locstr : g.verbatim) {
+    emitMLUserCode(dcl, locstr, false /*braces*/);
+  }
 
   #if 0    // not implemented
   // insert each of the context class definitions; the last one
@@ -124,9 +124,9 @@ void emitMLActionCode(GrammarAnalysis const &g, rostring mliFname,
       ;
 
   // stand-alone verbatim sections go into .ml file *also*
-  {FOREACH_OBJLIST(LocString, g.verbatim, iter) {
-    emitMLUserCode(out, *(iter.data()), false /*braces*/);
-  }}
+  for (auto const& locstr : g.verbatim) {
+    emitMLUserCode(out, locstr, false /*braces*/);
+  }
 
   #if 0   // not implemented and/or not needed
     #ifdef NO_GLR_SOURCELOC
@@ -165,8 +165,8 @@ void emitMLActionCode(GrammarAnalysis const &g, rostring mliFname,
   // 2005-06-23: Moved these to near the top of the file so that
   // the actions can refer to them.  This is especially important
   // in OCaml since you can't forward-declare in OCaml (!).
-  FOREACH_OBJLIST(LocString, g.implVerbatim, iter) {
-    emitMLUserCode(out, *(iter.data()), false /*braces*/);
+  for (auto& locstr : g.implVerbatim) {
+    emitMLUserCode(out, locstr, false /*braces*/);
   }
 
   emitMLActions(g, out, dcl);
@@ -359,8 +359,7 @@ void emitMLActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
       ;
 
   // iterate over productions, emitting action function closures
-  {FOREACH_OBJLIST(Production, g.productions, iter) {
-    Production const &prod = *(iter.data());
+  for (auto const& prod : g.productions) {
 
     // there's no syntax for a typeless nonterminal, so this shouldn't
     // be triggerable by the user
@@ -373,8 +372,7 @@ void emitMLActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
 
     // iterate over RHS elements, emitting bindings for each with a tag
     int index=-1;
-    FOREACH_OBJLIST(Production::RHSElt, prod.right, rhsIter) {
-      Production::RHSElt const &elt = *(rhsIter.data());
+    for (Production::RHSElt const& elt : prod.right) {
       index++;
       if (elt.tag.length() == 0) continue;
 
@@ -396,7 +394,7 @@ void emitMLActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
         << ");\n"
         << "\n"
         ;
-  }}
+  }
 
   // finish the array; one dummy element for ';' separation
   out << "(fun _ -> (failwith \"bad production index\"))   (* no ; *)"
@@ -431,15 +429,15 @@ void emitMLDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
       << "\n";
 
   // emit inlines for dup/del/merge of nonterminals
-  FOREACH_OBJLIST(Nonterminal, g.nonterminals, ntIter) {
-    emitMLDDMInlines(g, out, dcl, *(ntIter.data()));
+  for (const auto& nt : g.nonterminals) {
+    emitMLDDMInlines(g, out, dcl, nt);
   }
 
   // emit dup-nonterm
   emitMLSwitchCode(g, out,
     "let duplicateNontermValueFunc (nontermId:int) (sval:tSemanticValue) : tSemanticValue",
     "nontermId",
-    (ObjList<Symbol> const&)g.nonterminals,
+    reinterpret_cast<std::list<Symbol> const &>(g.nonterminals), /*FIXME this is a bad hack*/
     0 /*dupCode*/,
     "      (Obj.repr (dup_$symName ((Obj.obj sval) : $symType)))\n",
     NULL);
@@ -448,7 +446,7 @@ void emitMLDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
   emitMLSwitchCode(g, out,
     "let deallocateNontermValueFunc (nontermId:int) (sval:tSemanticValue) : unit",
     "nontermId",
-    (ObjList<Symbol> const&)g.nonterminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.nonterminals), /*FIXME this is a bad hack*/
     1 /*delCode*/,
     "      (del_$symName ((Obj.obj sval) : $symType));\n",
     "deallocate nonterm");
@@ -459,7 +457,7 @@ void emitMLDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
     "                               (right:tSemanticValue) : tSemanticValue",
     // SOURCELOC?
     "nontermId",
-    (ObjList<Symbol> const&)g.nonterminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.nonterminals), /*FIXME this is a bad hack*/
     2 /*mergeCode*/,
     "      (Obj.repr (merge_$symName ((Obj.obj left) : $symType) ((Obj.obj right) : $symType)))\n",
     "merge nonterm");
@@ -468,7 +466,7 @@ void emitMLDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
   emitMLSwitchCode(g, out,
     "let keepNontermValueFunc (nontermId:int) (sval:tSemanticValue) : bool",
     "nontermId",
-    (ObjList<Symbol> const&)g.nonterminals,
+    reinterpret_cast<std::list<Symbol> const &>(g.nonterminals), /*FIXME this is a bad hack*/
     3 /*keepCode*/,
     "      (keep_$symName ((Obj.obj sval) : $symType))\n",
     NULL);
@@ -477,15 +475,15 @@ void emitMLDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
   out << "\n";
   out << "(* ---------------- dup/del/classify terminals --------------- *)";
   // emit inlines for dup/del of terminals
-  FOREACH_OBJLIST(Terminal, g.terminals, termIter) {
-    emitMLDDMInlines(g, out, dcl, *(termIter.data()));
+  for (auto const &term : g.terminals) {
+    emitMLDDMInlines(g, out, dcl, term);
   }
 
   // emit dup-term
   emitMLSwitchCode(g, out,
     "let duplicateTerminalValueFunc (termId:int) (sval:tSemanticValue) : tSemanticValue",
     "termId",
-    (ObjList<Symbol> const&)g.terminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.terminals), /*FIXME this is a bad hack*/
     0 /*dupCode*/,
     "      (Obj.repr (dup_$symName ((Obj.obj sval) : $symType)))\n",
     NULL);
@@ -494,7 +492,7 @@ void emitMLDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
   emitMLSwitchCode(g, out,
     "let deallocateTerminalValueFunc (termId:int) (sval:tSemanticValue) : unit",
     "termId",
-    (ObjList<Symbol> const&)g.terminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.terminals), /*FIXME this is a bad hack*/
     1 /*delCode*/,
     "      (del_$symName ((Obj.obj sval) : $symType));\n",
     "deallocate terminal");
@@ -503,7 +501,7 @@ void emitMLDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
   emitMLSwitchCode(g, out,
     "let reclassifyTokenFunc (oldTokenType:int) (sval:tSemanticValue) : int",
     "oldTokenType",
-    (ObjList<Symbol> const&)g.terminals,
+    reinterpret_cast<std::list<Symbol> const&>(g.terminals), /*FIXME this is a bad hack*/
     4 /*classifyCode*/,
     "      (classify_$symName ((Obj.obj sval) : $symType))\n",
     NULL);
@@ -570,7 +568,7 @@ void emitMLDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
 
 void emitMLSwitchCode(Grammar const &g, EmitCode &out,
                       rostring signature, char const *switchVar,
-                      ObjList<Symbol> const &syms, int whichFunc,
+                      std::list<Symbol> const &syms, int whichFunc,
                       char const *templateCode, char const *actUpon)
 {
   out << replace(signature, "$acn", string(g.actionClassName)) << " =\n"
@@ -578,8 +576,7 @@ void emitMLSwitchCode(Grammar const &g, EmitCode &out,
          "  match " << switchVar << " with\n"
          ;
 
-  FOREACH_OBJLIST(Symbol, syms, symIter) {
-    Symbol const &sym = *(symIter.data());
+  for (const auto& sym : syms) {
 
     if ((whichFunc==0 && sym.dupCode) ||
         (whichFunc==1 && sym.delCode) ||

@@ -10,6 +10,8 @@
 #include "useract.h"      // SemanticValue
 #include "lexerint.h"     // LexerInterface
 
+#include <deque>          // std::deque
+
 class CCLang;             // cc_lang.h
 
 // this enumeration defines the terminal symbols that the parser
@@ -247,13 +249,10 @@ public:
   StringTable &idTable;
 
   // output token stream
-  ObjList<Lexer2Token> tokens;
-
-  // for appending new tokens
-  ObjListMutator<Lexer2Token> tokensMut;
+  std::deque<Lexer2Token> tokens;
 
   // for reading the token stream
-  ObjListIter<Lexer2Token> currentToken;
+  std::deque<Lexer2Token>::const_iterator currentToken;
 
 private:
   // copy from currentToken to LexerInterface fields
@@ -269,10 +268,10 @@ public:
 
   SourceLoc startLoc() const;
 
-  void addToken(Lexer2Token *tok)
-    { tokensMut.append(tok); }
+  Lexer2Token* addToken(Lexer2TokenType type, SourceLoc loc)
+    { tokens.emplace_back(type, loc); return &tokens.back(); }
   void addEOFToken()
-    { addToken(new Lexer2Token(L2_EOF, SL_UNKNOWN)); }
+    { addToken(L2_EOF, SL_UNKNOWN); }
 
   // reset the 'currentToken' so the parser can begin reading tokens
   void beginReading();

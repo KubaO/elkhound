@@ -443,12 +443,11 @@ bool TerminalSet::removeSet(TerminalSet const &obj)
 void TerminalSet::print(std::ostream &os, Grammar const &g, char const *lead) const
 {
   int ct=0;
-  FOREACH_TERMINAL(g.terminals, iter) {
-    Terminal const *t = iter.data();
-    if (!contains(t->termIndex)) continue;
+  for (const auto& t : g.terminals) {
+    if (!contains(t.termIndex)) continue;
 
     if (suppressExcept &&                  // suppressing..
-        suppressExcept != t) continue;     // and this isn't the exception
+        suppressExcept != &t) continue;    // and this isn't the exception
 
     if (ct++ == 0) {
       // by waiting until now to print this, if the set has no symbols
@@ -460,7 +459,7 @@ void TerminalSet::print(std::ostream &os, Grammar const &g, char const *lead) co
       os << "/";
     }
 
-    os << t->toString();
+    os << t.toString();
   }
 }
 
@@ -509,7 +508,7 @@ Production::Production(Flatten &flat)
 
 void Production::xfer(Flatten &flat)
 {
-  xferObjList(flat, right);
+  /*FIXME*/ //xferObjList(flat, right);
   action.xfer(flat);
   flat.xferInt(precedence);
   forbid.xfer(flat);
@@ -523,12 +522,13 @@ void Production::xferSerfs(Flatten &flat, Grammar &g)
 {
   // must break constness in xfer
 
-  xferSerfPtrToList(flat, const_cast<Nonterminal*&>(left),
-                          g.nonterminals);
+  /*FIXME*/
+  //xferSerfPtrToList(flat, const_cast<Nonterminal*&>(left),
+  //                        g.nonterminals);
 
   // xfer right's 'sym' pointers
-  MUTATE_EACH_OBJLIST(RHSElt, right, iter) {
-    iter.data()->xferSerfs(flat, g);
+  for (auto& elt : right) {
+    elt.xferSerfs(flat, g);
   }
 
   // compute derived data
@@ -564,8 +564,8 @@ int Production::rhsLength() const
 int Production::numRHSNonterminals() const
 {
   int ct = 0;
-  FOREACH_OBJLIST(RHSElt, right, iter) {
-    if (iter.data()->sym->isNonterminal()) {
+  for (auto const& elt : right) {
+    if (elt.sym->isNonterminal()) {
       ct++;
     }
   }
@@ -575,8 +575,8 @@ int Production::numRHSNonterminals() const
 
 bool Production::rhsHasSymbol(Symbol const *sym) const
 {
-  FOREACH_OBJLIST(RHSElt, right, iter) {
-    if (iter.data()->sym == sym) {
+  for (auto const& elt : right) {
+    if (elt.sym == sym) {
       return true;
     }
   }
@@ -586,8 +586,8 @@ bool Production::rhsHasSymbol(Symbol const *sym) const
 
 void Production::getRHSSymbols(SymbolList &output) const
 {
-  FOREACH_OBJLIST(RHSElt, right, iter) {
-    output.push_back(iter.data()->sym);
+  for (auto const& elt : right) {
+    output.push_back(elt.sym);
   }
 }
 
@@ -599,7 +599,7 @@ void Production::append(Symbol *sym, LocString const &tag)
   // productions
   xassert(!sym->isEmptyString);
 
-  right.append(new RHSElt(sym, tag));
+  right.emplace_back(sym, tag);
 }
 
 
@@ -611,7 +611,7 @@ void Production::finished(int numTerms)
 
 void Production::computeDerived()
 {
-  rhsLen = right.count();
+  rhsLen = right.size();
 }
 
 
@@ -627,12 +627,12 @@ bool tagCompare(StringRef s1, StringRef s2)
 int Production::findTag(StringRef tag) const
 {
   // walk RHS list looking for a match
-  ObjListIter<RHSElt> tagIter(right);
   int index=1;
-  for(; !tagIter.isDone(); tagIter.adv(), index++) {
-    if (tagCompare(tagIter.data()->tag, tag)) {
+  for (auto const& elt : right) {
+    if (tagCompare(elt.tag, tag)) {
       return index;
     }
+    index++;
   }
 
   // not found
@@ -659,7 +659,7 @@ string Production::symbolTag(int index) const
 
   // find index in RHS list
   index--;
-  return string(right.nthC(index)->tag);
+  return string(right[index].tag);
 }
 
 
@@ -672,7 +672,7 @@ Symbol const *Production::symbolByIndexC(int index) const
 
   // find index in RHS list
   index--;
-  return right.nthC(index)->sym;
+  return right[index].sym;
 }
 
 
@@ -729,12 +729,10 @@ string Production::rhsString(bool printTags, bool quoteAliases) const
 {
   stringBuilder sb;
 
-  if (right.isNotEmpty()) {
+  if (!right.empty()) {
     // print the RHS symbols
     int ct=0;
-    FOREACH_OBJLIST(RHSElt, right, iter) {
-      RHSElt const &elt = *(iter.data());
-
+    for (auto const& elt : right) {
       if (ct++ > 0) {
         sb << " ";
       }
@@ -805,18 +803,18 @@ void Grammar::xfer(Flatten &flat)
 {
   // owners
   flat.checkpoint(0xC7AB4D86);
-  xferObjList(flat, nonterminals);
-  xferObjList(flat, terminals);
-  xferObjList(flat, productions);
+  /*FIXME*/ //xferObjList(flat, nonterminals);
+  /*FIXME*/ //xferObjList(flat, terminals);
+  /*FIXME*/ //xferObjList(flat, productions);
 
   // emptyString is const
 
-  xferObjList(flat, verbatim);
+  /*FIXME*/ //xferObjList(flat, verbatim);
 
   actionClassName.xfer(flat);
-  xferObjList(flat, actionClasses);
+  /*FIXME*/ //xferObjList(flat, actionClasses);
 
-  xferObjList(flat, implVerbatim);
+  /*FIXME*/ //xferObjList(flat, implVerbatim);
 
   flat.xferString(targetLang);
   flat.xferBool(useGCDefaults);
@@ -830,14 +828,14 @@ void Grammar::xfer(Flatten &flat)
   // serfs
   flat.checkpoint(0x8580AAD2);
 
-  MUTATE_EACH_OBJLIST(Nonterminal, nonterminals, nt) {
-    nt.data()->xferSerfs(flat, *this);
+  for (auto& nt : nonterminals) {
+    nt.xferSerfs(flat, *this);
   }
-  MUTATE_EACH_OBJLIST(Production, productions, p) {
-    p.data()->xferSerfs(flat, *this);
+  for (auto& p : productions) {
+    p.xferSerfs(flat, *this);
   }
 
-  xferSerfPtrToList(flat, startSymbol, nonterminals);
+  /*FIXME*/ //xferSerfPtrToList(flat, startSymbol, nonterminals);
 
   flat.checkpoint(0x2874DB95);
 }
@@ -845,21 +843,20 @@ void Grammar::xfer(Flatten &flat)
 
 int Grammar::numTerminals() const
 {
-  return terminals.count();
+  return terminals.size();
 }
 
 int Grammar::numNonterminals() const
 {
   // everywhere, we regard emptyString as a nonterminal
-  return nonterminals.count() + 1;
+  return nonterminals.size() + 1;
 }
 
 
 void Grammar::printSymbolTypes(std::ostream &os) const
 {
   os << "Grammar terminals with types or precedence:\n";
-  FOREACH_OBJLIST(Terminal, terminals, term) {
-    Terminal const &t = *(term.data());
+  for (const auto& t : terminals) {
     t.printDDM(os);
     if (t.precedence) {
       os << "  " << t.name << " " << ::toString(t.associativity)
@@ -868,8 +865,8 @@ void Grammar::printSymbolTypes(std::ostream &os) const
   }
 
   os << "Grammar nonterminals with types:\n";
-  FOREACH_OBJLIST(Nonterminal, nonterminals, nt) {
-    nt.data()->printDDM(os);
+  for (const auto& nt : nonterminals) {
+    nt.printDDM(os);
   }
 }
 
@@ -877,9 +874,8 @@ void Grammar::printSymbolTypes(std::ostream &os) const
 void Grammar::printProductions(std::ostream &os, bool code) const
 {
   os << "Grammar productions:\n";
-  for (ObjListIter<Production> iter(productions);
-       !iter.isDone(); iter.adv()) {
-    os << "  " << iter.data()->toStringMore(code);
+  for (auto const& prod : productions) {
+    os << "  " << prod.toStringMore(code);
   }
 }
 
@@ -907,19 +903,19 @@ void Grammar::addProduction(Nonterminal *lhs, Symbol *firstRhs, ...)
 #endif // 0
 
 
-void Grammar::addProduction(Production *prod)
+void Grammar::addProduction(Production &&prod)
 {
   // I used to add emptyString if there were 0 RHS symbols,
   // but I've now switched to not explicitly saying that
 
-  prod->prodIndex = productions.count();
-  productions.append(prod);
+  prod.prodIndex = productions.size();
+  productions.emplace_back(std::move(prod));
 
   // if the start symbol isn't defined yet, we can here
   // implement the convention that the LHS of the first
   // production is the start symbol
   if (startSymbol == NULL) {
-    startSymbol = prod->left;
+    startSymbol = prod.left;
   }
 }
 
@@ -968,11 +964,11 @@ void Grammar::printAsBison(std::ostream &os) const
   os << "/* automatically generated grammar */\n\n";
 
   os << "/* -------- tokens -------- */\n";
-  FOREACH_TERMINAL(terminals, term) {
+  for (const auto& t : terminals) {
     // I'll surround all my tokens with quotes and see how Bison likes it
     // TODO: the latest bison does *not* like it!
-    os << "%token " << bisonTokenName(term.data()) << " "
-       << term.data()->termIndex << "\n";
+    os << "%token " << bisonTokenName(&t) << " "
+       << t.termIndex << "\n";
   }
   os << "\n\n";
 
@@ -981,8 +977,8 @@ void Grammar::printAsBison(std::ostream &os) const
   {
     // first, compute the highest precedence used anywhere in the grammar
     int highMark=0;
-    FOREACH_TERMINAL(terminals, iter) {
-      highMark = max(iter.data()->precedence, highMark);
+    for (const auto& t : terminals) {
+      highMark = max(t.precedence, highMark);
     }
 
     // map AssocKind to bison declaration; map stuff bison doesn't
@@ -994,21 +990,19 @@ void Grammar::printAsBison(std::ostream &os) const
     // because it means 'unspecified')
     for (int level=1; level <= highMark; level++) {
       AssocKind kind = NUM_ASSOC_KINDS;   // means we haven't seen any kind yet
-      FOREACH_TERMINAL(terminals, iter) {
-        Terminal const *t = iter.data();
-
-        if (t->precedence == level) {
+      for (const auto& t : terminals) {
+        if (t.precedence == level) {
           if (kind == NUM_ASSOC_KINDS) {
             // first token at this level
-            kind = t->associativity;
+            kind = t.associativity;
             os << kindMap[kind];
           }
-          else if (kind != t->associativity) {
+          else if (kind != t.associativity) {
             xfailure("different associativities at same precedence?!");
           }
 
           // print the token itself
-          os << " " << bisonTokenName(t);
+          os << " " << bisonTokenName(&t);
         }
       }
 
@@ -1022,26 +1016,26 @@ void Grammar::printAsBison(std::ostream &os) const
   os << "/* -------- productions ------ */\n"
         "%%\n\n";
   // print every nonterminal's rules
-  FOREACH_NONTERMINAL(nonterminals, nt) {
+  for (const auto& nt : nonterminals) {
     // look at every rule where this nonterminal is on LHS
     bool first = true;
-    FOREACH_PRODUCTION(productions, prod) {
-      if (prod.data()->left == nt.data()) {
+    for (auto const& prod : productions) {
+      if (prod.left == &nt) {
 
         if (first) {
-          os << nt.data()->name << ":";
+          os << nt.name << ":";
         }
         else {
           os << "\n";
-          INTLOOP(i, 0, nt.data()->name.length()) {
+          INTLOOP(i, 0, nt.name.length()) {
             os << " ";
           }
           os << "|";
         }
 
         // print RHS symbols
-        FOREACH_OBJLIST(Production::RHSElt, prod.data()->right, symIter) {
-          Symbol const *sym = symIter.data()->sym;
+        for (auto const& elt : prod.right) {
+          Symbol const *sym = elt.sym;
           if (sym != &emptyString) {
             if (sym->isTerminal()) {
               os << " " << bisonTokenName(&( sym->asTerminalC() ));
@@ -1053,32 +1047,32 @@ void Grammar::printAsBison(std::ostream &os) const
         }
 
         // or, if empty..
-        if (prod.data()->rhsLength() == 0) {
+        if (prod.rhsLength() == 0) {
           os << " /* empty */";
         }
 
         // precedence?
-        if (prod.data()->precedence) {
+        if (prod.precedence) {
           // search for a terminal with the required precedence level
           bool found=false;
-          FOREACH_TERMINAL(terminals, iter) {
-            if (iter.data()->precedence == prod.data()->precedence) {
+          for (const auto& t : terminals) {
+            if (t.precedence == prod.precedence) {
               // found suitable token
-              os << " %prec " << bisonTokenName(iter.data());
+              os << " %prec " << bisonTokenName(&t);
               found = true;
               break;
             }
           }
           if (!found) {
             std::cout << "warning: cannot find token for precedence level "
-                      << prod.data()->precedence << std::endl;
+                      << prod.precedence << std::endl;
             os << " /* no token precedence level "/* */
-               << prod.data()->precedence << " */";
+               << prod.precedence << " */";
           }
         }
 
         // dummy action to help while debugging
-        os << " { $$=" << prod.data()->prodIndex << "; }";
+        os << " { $$=" << prod.prodIndex << "; }";
 
         first = false;
       }
@@ -1086,12 +1080,12 @@ void Grammar::printAsBison(std::ostream &os) const
 
     if (first) {
       // no rules..
-      os << "/* no rules for " << nt.data()->name << " */";
+      os << "/* no rules for " << nt.name << " */";
     }
     else {
       // finish the rules with a semicolon
       os << "\n";
-      INTLOOP(i, 0, nt.data()->name.length()) {
+      INTLOOP(i, 0, nt.name.length()) {
         os << " ";
       }
       os << ";";
@@ -1111,9 +1105,9 @@ Nonterminal const *Grammar::findNonterminalC(char const *name) const
     return &emptyString;
   }
 
-  FOREACH_NONTERMINAL(nonterminals, iter) {
-    if (iter.data()->name.equals(name)) {
-      return iter.data();
+  for (const auto& nt : nonterminals) {
+    if (nt.name.equals(name)) {
+      return &nt;
     }
   }
   return NULL;
@@ -1122,10 +1116,9 @@ Nonterminal const *Grammar::findNonterminalC(char const *name) const
 
 Terminal const *Grammar::findTerminalC(char const *name) const
 {
-  FOREACH_TERMINAL(terminals, iter) {
-    if (iter.data()->name.equals(name) ||
-        iter.data()->alias.equals(name)) {
-      return iter.data();
+  for (const auto& t : terminals) {
+    if (t.name.equals(name) || t.alias.equals(name)) {
+      return &t;
     }
   }
   return NULL;
@@ -1153,9 +1146,8 @@ Nonterminal *Grammar::getOrMakeNonterminal(LocString const &name)
     return nt;
   }
 
-  nt = new Nonterminal(name);
-  nonterminals.append(nt);
-  return nt;
+  nonterminals.emplace_back(name);
+  return &nonterminals.back();
 }
 
 Terminal *Grammar::getOrMakeTerminal(LocString const &name)
@@ -1165,9 +1157,8 @@ Terminal *Grammar::getOrMakeTerminal(LocString const &name)
     return term;
   }
 
-  term = new Terminal(name);
-  terminals.append(term);
-  return term;
+  terminals.emplace_back(name);
+  return &terminals.back();
 }
 
 Symbol *Grammar::getOrMakeSymbol(LocString const &name)
@@ -1192,7 +1183,9 @@ Symbol *Grammar::getOrMakeSymbol(LocString const &name)
 
 int Grammar::getProductionIndex(Production const *prod) const
 {
-  int ret = productions.indexOf(prod);
+  // A production that wasn't inserted into the productions
+  // list will have the default index of -1
+  int ret = prod->prodIndex;
   xassert(ret != -1);
   return ret;
 }
