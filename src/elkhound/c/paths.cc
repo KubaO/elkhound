@@ -5,7 +5,6 @@
 
 #include "c.ast.gen.h"   // C AST
 #include "algo.h"        // sm::contains
-#include "objlist.h"     // ObjList
 #include "c_env.h"       // Env
 #include "trace.h"       // tracingSys
 #include "treeout.h"     // treeOut

@@ -5,7 +5,6 @@
 #define FLATUTIL_H
 
 #include "flatten.h"     // Flatten
-#include "objlist.h"     // ObjList
 
 
 // ------------- xfer of owners -----------------
@@ -59,6 +58,7 @@ void xferOwnerPtr_readObj(Flatten &flat, T *&ptr)
 }
 
 
+#if 0
 template <class T>
 void xferObjList(Flatten &flat, ObjList <T> &list)
 {
@@ -118,6 +118,7 @@ void xferObjList_readObj(Flatten &flat, ObjList <T> &list)
     }
   }
 }
+#endif
 
 
 #if 0
@@ -184,6 +185,7 @@ void xferSObjList(Flatten &flat, SObjList<T> &list, ObjList<T> &masterList)
 #endif // 0
 
 
+#if 0
 // xfer a pointer which points to something in a master list
 template <class T>
 void xferSerfPtrToList(Flatten &flat, T *&ptr, ObjList<T> &masterList)
@@ -213,6 +215,7 @@ void xferNullableSerfPtrToList(Flatten &flat, T *&ptr, ObjList<T> &masterList)
     }
   }
 }
+#endif
 
 
 template <class T>
