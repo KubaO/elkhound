@@ -288,10 +288,10 @@ void parseFieldDecl(string &type, string &name, rostring decl)
   // it's not trivial to extract the name of the field from
   // its declaration.. so let's use a simple heuristic: it's
   // probably the last sequence of non-whitespace alphanum chars
-  StrtokParse tok(decl, " \t*()[]<>,");
+  StrtokParse tokens(decl, " \t*()[]<>,");
 
   // now, find the offset of the start of the last token
-  int ofs = tok.offset(tok.tokc()-1);
+  int ofs = tokens.offset(tokens.size()-1);
 
   // extract the parts
   type = trimWhitespace(string_view(decl).substr(0, ofs));

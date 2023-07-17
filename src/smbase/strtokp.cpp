@@ -7,100 +7,67 @@
 #include <string.h>     // strtok
 
 
-StrtokParse::StrtokParse(rostring origStr, rostring origDelim)
-  : buf(origStr.length()+1)
+StrtokParse::StrtokParse(string_view origStr, const char* delim) :
+  orig(origStr.data(), origStr.size()),
+  buf(orig)
 {
-  char const *str = origStr.c_str();
-  char const *delim = origDelim.c_str();
-
-  // make local copy
-  strcpy(buf, str);
-
-  // parse it first time to count # of tokens
-  int ct=0;
-  char *tok = strtok(buf.ptr(), delim);
+  char *tok = strtok(&buf[0], delim);
   while (tok) {
-    ct++;
+    tokens.push_back(string_view(tok));
     tok = strtok(NULL, delim);
   }
-
-  // restore buf
-  strcpy(buf, str);
-
-  // allocate storage
-  _tokc = ct;
-  if (ct) {
-    _tokv = new char*[ct+1];
-    _tokv[ct] = NULL;     // terminate argv[]-like list
-  }
-  else {
-    _tokv = NULL;
-  }
-
-  // parse it again, this time saving the values
-  ct=0;
-  tok = strtok(buf.ptr(), delim);
-  while (tok) {
-    _tokv[ct] = tok;
-    ct++;
-    tok = strtok(NULL, delim);
-  }
-
-  // simple check just because it's easy
-  xassert(ct == _tokc);
 }
 
 
-StrtokParse::~StrtokParse()
-{
-  // buf deletes itself
-
-  if (_tokv) {
-    delete _tokv;
-  }
-}
+StrtokParse::~StrtokParse() {}
 
 
 void StrtokParse::validate(int which) const
 {
-  xassert((unsigned)which < (unsigned)_tokc);
+  xassert(which >= 0 && which < tokens.size());
 }
 
 
-char const *StrtokParse::tokv(int which) const
+string_view StrtokParse::tokv(int which) const
 {
   validate(which);
-  return _tokv[which];
+  return tokens[which];
 }
 
 
-string StrtokParse::
-  reassemble(int firstTok, int lastTok, rostring original) const
+string_view StrtokParse::reassemble(int firstTok, int lastTok) const
 {
   int left = offset(firstTok);
-  int right = offset(lastTok) + strlen(tokv(lastTok));
-
-  return original.substr(left, right - left);
+  int right = offsetAfter(lastTok);
+  return string_view(orig).substr(left, right - left);
 }
 
 
-string StrtokParse::
-  join(int firstTok, int lastTok, rostring separator) const
+string StrtokParse::join(int firstTok, int lastTok, string_view separator) const
 {
-  stringBuilder sb;
+  string ret;
+  const int Nsep = std::min(lastTok - firstTok, 0);
+  ret.reserve((tokv(lastTok).end() - tokv(firstTok).begin()) + Nsep * separator.length());
 
   for (int i=firstTok; i<=lastTok; i++) {
     if (i > firstTok) {
-      sb << separator;
+      ret.append(separator.data(), separator.length());
     }
-    sb << tokv(i);
+    string_view tok = tokv(i);
+    ret.append(tok.data(), tok.length());
   }
 
-  return sb;
+  return ret;
 }
 
 
 int StrtokParse::offset(int which) const
 {
-  return tokv(which) - (char const*)buf;
+  return tokv(which).begin() - buf.data();
+}
+
+
+int StrtokParse::offsetAfter(int which) const
+{
+  return tokv(which).end() - buf.data();
 }

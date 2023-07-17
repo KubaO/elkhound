@@ -6,40 +6,40 @@
 #define __STRTOKP_H
 
 #include "str.h"       // string
-#include "array.h"     // Array
-#include <string.h>    // strlen
+#include <vector>
+
 
 class StrtokParse {
-  Array<char> buf;     // locally allocated storage; NUL terminated
-  int _tokc;           // # of tokens found
-  char **_tokv;        // array of tokens themselves; NULL terminated
+  const string orig;                // original string
+  string buf;                       // string with tokens NUL-terminated
+  std::vector<string_view> tokens;  // the tokens found
 
 private:
   void validate(int which) const;
     // throw an exception if which is invalid token
 
 public:
-  StrtokParse(rostring str, rostring delim);
+  StrtokParse(string_view str, const char* delim);
     // parse 'str' into tokens delimited by chars from 'delim'
 
   ~StrtokParse();
-    // clean up'
 
-  int tokc() const { return _tokc; }
-  operator int () const { return tokc(); }
-    // simple count of available tokens
+  auto begin() const { return tokens.begin(); }
+  auto end() const { return tokens.end(); }
 
-  char const *tokv(int which) const;     // may throw xArrayBounds
-  char const* operator[] (int which) const { return tokv(which); }
+  int size() const { return tokens.size(); }
+
+  string_view tokv(int which) const;     // may throw xArrayBounds
+  string_view operator[] (int which) const { return tokv(which); }
     // access to tokens; must make local copies to modify
 
-  string reassemble(int firstTok, int lastTok, rostring originalString) const;
+  string_view reassemble(int firstTok, int lastTok) const;
     // return the substring of the original string spanned by the
     // given range of tokens; if firstTok==lastTok, only that token is
     // returned (without any separators); must be that firstTok <=
     // lastTok
 
-  string join(int firstTok, int lastTok, rostring separator) const;
+  string join(int firstTok, int lastTok, string_view separator) const;
     // return a string created by concatenating the given range of tokens
     // together with 'separator' in between them
 
@@ -47,16 +47,9 @@ public:
     // return a value that, when added to the original 'str' parameter,
     // yields a pointer to where tokv(which) is, as a substring, in that string
 
-  int offsetAfter(int which) const
-    { return offset(which) + strlen(tokv(which)); }
+  int offsetAfter(int which) const;
     // offset for character just beyond last one in tokv (should be either
     // a delimiter character, or 0)
-
-  char **spawn_tokv_array() { return _tokv; }
-    // this is defined because it makes it convenient to generate
-    // spawn arguments, and should be limited to use for that purpose
-    // (because it exposes internal representation which is in
-    // principle subject to change)
 };
 
 #endif // __STRTOKP_H
