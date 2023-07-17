@@ -31,8 +31,6 @@ using string_view = nonstd::string_view;
 
 inline int strcmp(string_view s1, string_view s2) { return s1.compare(s2); }
 
-inline bool streq(string_view s1, string_view s2) { return s1 == s2; }
-
 
 // --------------------- stringBuilder remnants --------------------
 

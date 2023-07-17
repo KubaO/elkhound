@@ -1316,7 +1316,7 @@ void CGen::emitDestroyField(bool isOwner, rostring type, rostring name)
     out << "  " << name << ".deleteAll();\n";
   }
   else if (isListType(type)) {
-    if (streq(extractListType(type), "LocString")) {
+    if (extractListType(type) == "LocString") {
       // these are owned even though they aren't actually tree nodes
       out << "  " << name << ".deleteAll();\n";
 
@@ -1371,13 +1371,13 @@ void CGen::emitPrintFields(ASTList<Annotation> const &decls)
 void CGen::emitPrintField(rostring print,
                           bool isOwner, rostring type, rostring name)
 {
-  if (streq(type, "string")) {
+  if (type == "string") {
     out << "  " << print << "_STRING(" << name << ");\n";
   }
-  else if (streq(type, "StringRef")) {
+  else if (type == "StringRef") {
     out << "  " << print << "_CSTRING(" << name << ");\n";
   }
-  else if (streq(type, "bool")) {
+  else if (type == "bool") {
     out << "  " << print << "_BOOL(" << name << ");\n";
   }
   else if (isListType(type)) {
@@ -1436,7 +1436,7 @@ void CGen::emitCloneCtorArg(CtorArg const *arg, int &ct)
     out << "cloneASTList(" << argName << ")";
   }
   else if (isListType(arg->type)) {
-    if (streq(extractListType(arg->type), "LocString")) {
+    if (extractListType(arg->type) == "LocString") {
       // these are owned, so clone deeply
       out << "cloneASTList(" << argName << ")";
     }
@@ -1453,7 +1453,7 @@ void CGen::emitCloneCtorArg(CtorArg const *arg, int &ct)
     // clone a tree node
     out << argName << "? " << argName << "->clone() : NULL";
   }
-  else if (streq(arg->type, "LocString")) {
+  else if (arg->type == "LocString") {
     // clone a LocString; we store objects, but pass pointers
     out << argName << ".clone()";
   }
@@ -1943,7 +1943,7 @@ void CGen::emitXmlFields(ASTList<Annotation> const &decls, char const *baseName,
 
 void CGen::emitXmlField(rostring type, rostring name, char const *baseName,
                         string const &className, AccessMod *amod) {
-  if (streq(name, "arraySize")) {
+  if (name == "arraySize") {
     breaker();
   }
   // FIX: there is a problem with coming up with a way to serialize a
@@ -1951,7 +1951,7 @@ void CGen::emitXmlField(rostring type, rostring name, char const *baseName,
   // to represent NULL is also a valid string value, 3) quoting twice
   // is expensive; For now, I simply omit mention of it: it will
   // default to NULL.
-  if (streq(type, "string") || streq(type, "StringRef")) {
+  if (type == "string" || type == "StringRef") {
     out << "  if (" << baseName << "->" << name << ") {\n";
     out << "    out << \"\\n\";\n";
     out << "    if (indent) printIndentation();\n";
@@ -1962,43 +1962,43 @@ void CGen::emitXmlField(rostring type, rostring name, char const *baseName,
 //      out << "    out << \"\\\"0\\\"\";\n";
     out << "  }\n";
   }
-  else if (streq(type, "bool")) {
+  else if (type == "bool") {
     out << "  out << \"\\n\";\n";
     out << "  if (indent) printIndentation();\n";
     out << "  out << \"" << name << "\" << \"=\";\n";
     out << "  out << quoted(toXml_bool(" << baseName << "->" << name << "));\n";
   }
-  else if (streq(type, "int")) {
+  else if (type == "int") {
     out << "  out << \"\\n\";\n";
     out << "  if (indent) printIndentation();\n";
     out << "  out << \"" << name << "\" << \"=\";\n";
     out << "  out << quoted(toXml_int(" << baseName << "->" << name << "));\n";
   }
-  else if (streq(type, "unsigned int")) {
+  else if (type == "unsigned int") {
     out << "  out << \"\\n\";\n";
     out << "  if (indent) printIndentation();\n";
     out << "  out << \"" << name << "\" << \"=\";\n";
     out << "  out << quoted(toXml_unsigned_int(" << baseName << "->" << name << "));\n";
   }
-  else if (streq(type, "long")) {
+  else if (type == "long") {
     out << "  out << \"\\n\";\n";
     out << "  if (indent) printIndentation();\n";
     out << "  out << \"" << name << "\" << \"=\";\n";
     out << "  out << quoted(toXml_long(" << baseName << "->" << name << "));\n";
   }
-  else if (streq(type, "unsigned long")) {
+  else if (type == "unsigned long") {
     out << "  out << \"\\n\";\n";
     out << "  if (indent) printIndentation();\n";
     out << "  out << \"" << name << "\" << \"=\";\n";
     out << "  out << quoted(toXml_unsigned_long(" << baseName << "->" << name << "));\n";
   }
-  else if (streq(type, "double")) {
+  else if (type == "double") {
     out << "  out << \"\\n\";\n";
     out << "  if (indent) printIndentation();\n";
     out << "  out << \"" << name << "\" << \"=\";\n";
     out << "  out << quoted(toXml_double(" << baseName << "->" << name << "));\n";
   }
-  else if (streq(type, "SourceLoc")) {
+  else if (type == "SourceLoc") {
     out << "  out << \"\\n\";\n";
     out << "  if (indent) printIndentation();\n";
     out << "  out << \"" << name << "\" << \"=\";\n";
@@ -2512,13 +2512,13 @@ void XmlParserGen::collectXmlParserFields(ASTList<Annotation> const &decls, char
 void XmlParserGen::collectXmlParserField
   (rostring type, rostring name, char const *baseName, AccessMod*)
 {
-  if (streq(type, "string")) {
+  if (type == "string") {
     attributeNames.insert(name);
   }
-  else if (streq(type, "StringRef")) {
+  else if (type == "StringRef") {
     attributeNames.insert(name);
   }
-  else if (streq(type, "bool")) {
+  else if (type == "bool") {
     attributeNames.insert(name);
   }
 
@@ -2571,49 +2571,49 @@ void XmlParserGen::emitXmlField_AttributeParseRule
 {
   string type = trimWhitespace(type0);
   //  std::cout << "emitXmlField_AttributeParseRule() name:" << name << ", type:" << type << std::endl;
-  if (streq(type, "string")) {
+  if (type == "string") {
     parser1_defs << "  case XTOK_" << name << ":\n";
     parser1_defs << "    obj->" << name << " = strdup(parseQuotedString(strValue));\n";
     parser1_defs << "    break;\n";
   }
-  else if (streq(type, "StringRef")) {
+  else if (type == "StringRef") {
     parser1_defs << "  case XTOK_" << name << ":\n";
     parser1_defs << "    obj->" << name << " = manager->strTable(parseQuotedString(strValue));\n";
     parser1_defs << "    break;\n";
   }
-  else if (streq(type, "bool")) {
+  else if (type == "bool") {
     parser1_defs << "  case XTOK_" << name << ":\n";
     parser1_defs << "    fromXml_bool(obj->" << name << ", parseQuotedString(strValue));\n";
     parser1_defs << "    break;\n";
   }
-  else if (streq(type, "int")) {
+  else if (type == "int") {
     parser1_defs << "  case XTOK_" << name << ":\n";
     parser1_defs << "    fromXml_int(obj->" << name << ", parseQuotedString(strValue));\n";
     parser1_defs << "    break;\n";
   }
-  else if (streq(type, "unsigned int")) {
+  else if (type == "unsigned int") {
     parser1_defs << "  case XTOK_" << name << ":\n";
     parser1_defs << "    fromXml_unsigned_int(obj->" << name
                  << ", parseQuotedString(strValue));\n";
     parser1_defs << "    break;\n";
   }
-  else if (streq(type, "long")) {
+  else if (type == "long") {
     parser1_defs << "  case XTOK_" << name << ":\n";
     parser1_defs << "    fromXml_long(obj->" << name << ", parseQuotedString(strValue));\n";
     parser1_defs << "    break;\n";
   }
-  else if (streq(type, "unsigned long")) {
+  else if (type == "unsigned long") {
     parser1_defs << "  case XTOK_" << name << ":\n";
     parser1_defs << "    fromXml_unsigned_long(obj->" << name
                  << ", parseQuotedString(strValue));\n";
     parser1_defs << "    break;\n";
   }
-  else if (streq(type, "double")) {
+  else if (type == "double") {
     parser1_defs << "  case XTOK_" << name << ":\n";
     parser1_defs << "    fromXml_double(obj->" << name << ", parseQuotedString(strValue));\n";
     parser1_defs << "    break;\n";
   }
-  else if (streq(type, "SourceLoc")) {
+  else if (type == "SourceLoc") {
     parser1_defs << "  case XTOK_" << name << ":\n";
     // FIX: we don't parse SourceLoc-s yet
     parser1_defs << "    // fromXml_SourceLoc(obj->" << name << ", parseQuotedString(strValue));\n";
@@ -3288,7 +3288,7 @@ void entry(int argc, char **argv)
     else if (argv[0][1] == 'v') {
       traceAddSys("merge");
     }
-    else if (streq(argv[0], "-nocvr")) {
+    else if (string_view(argv[0]) == "-nocvr") {
       nocvr = true;
     }
     else {

@@ -54,10 +54,10 @@ LocString *LocString::clone() const
 bool LocString::equals(char const *other) const
 {
   if (!str) {
-    return !other;                            // equal if both null
+    return !other;                 // equal if both null
   }
   else {
-    return other && streq(str, other); // or same contents
+    return strcmp(str, other)==0;  // or same contents
   }
 }
 
