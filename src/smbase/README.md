@@ -29,12 +29,6 @@ Linked Lists
 
 Linked lists are sequences of objects with O(1) insertion at the front and iterators for traversal. Most also have _mutators_ for traversing and modifying.
 
-The main list class is ObjList. It is a list of pointers to objects. It _owns_ the objects, and will delete them when it goes away.
-
-* [objlist.h](objlist.h): ObjList, a general linked list of objects. ObjList considers itself to "own" (be responsible for deallocating) the things on its list. See also [sobjlist.h](sobjlist.h).
-
-* [xobjlist.h](xobjlist.h): This file is processed by [M4](http://www.gnu.org/software/m4/) to make [objlist.h](objlist.h).
-
 * [voidlist.h](voidlist.h), [voidlist.cc](voidlist.cc): The core of the linked list implementation used by [objlist.h](objlist.h).
 
 There are a couple of variants that support O(1) appending.

@@ -6,7 +6,6 @@
 project(nonport)
 project(voidlist)
 project(vdtllist)
-project(tobjlist)
 project(bit2d)
 project(str)
 project(strutil)
@@ -36,11 +35,6 @@ add_executable(voidlist
 # files for vdtllist
 add_executable(vdtllist
     ../vdtllist.cc
-)
-
-# files for tobjlist
-add_executable(tobjlist
-    ../tobjlist.cc
 )
 
 # files for bit2d
@@ -133,7 +127,6 @@ target_compile_options(autofile PRIVATE -DTEST_AUTOFILE)
 # link options
 target_link_libraries(voidlist smbase)
 target_link_libraries(vdtllist smbase)
-target_link_libraries(tobjlist smbase)
 target_link_libraries(bit2d smbase)
 target_link_libraries(str smbase)
 target_link_libraries(strutil smbase)
@@ -150,7 +143,6 @@ target_link_libraries(autofile smbase)
 add_test(NAME nonport COMMAND ./nonport)
 add_test(NAME voidlist COMMAND ./voidlist)
 add_test(NAME vdtllist COMMAND ./vdtllist)
-add_test(NAME tobjlist COMMAND ./tobjlist)
 add_test(NAME bit2d COMMAND ./bit2d)
 add_test(NAME str COMMAND ./str)
 add_test(NAME strutil COMMAND ./strutil)

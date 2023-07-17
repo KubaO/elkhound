@@ -18,7 +18,6 @@
 #define __GRAMANL_H
 
 #include "grammar.h"      // Grammar and friends
-#include "objlist.h"      // ObjList
 #include "ohashtbl.h"     // OwnerHashTable
 #include "okhashtbl.h"    // OwnerKHashTable
 #include "okhasharr.h"    // OwnerKHashArray
