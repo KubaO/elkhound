@@ -339,7 +339,7 @@ public:	    // data
   Nonterminal * const left;     // (serf) left hand side; must be nonterminal
   ObjList<RHSElt> right;        // right hand side; terminals & nonterminals
   int precedence;               // precedence level for disambiguation (0 for none specified)
-  TerminalSet *forbid;          // (nullable owner) forbidden next tokens
+  TerminalSet forbid;           // forbidden next tokens
 
   // user-supplied reduction action code
   LocString action;

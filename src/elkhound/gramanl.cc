@@ -2023,8 +2023,8 @@ void GrammarAnalysis
 
     // except we do not want to put terminals in the lookahead set
     // for which 'prod' is not allowed to reduce when they are next
-    if (prod.forbid) {
-      newItemLA.removeSet(*prod.forbid);
+    if (!prod.forbid.empty()) {
+      newItemLA.removeSet(prod.forbid);
     }
 
     if (tr) {
@@ -4102,9 +4102,9 @@ void GrammarAnalysis::runAnalyses(char const *setsFname)
       *setsOutput << "  ";
       Production const *prod = getProduction(p);
       prod->print(*setsOutput);
-      if (prod->forbid) {
+      if (!prod->forbid.empty()) {
         *setsOutput << " forbid_next(";
-        prod->forbid->print(*setsOutput, *this, "");
+        prod->forbid.print(*setsOutput, *this, "");
         *setsOutput << ")";
       }
       *setsOutput << "\n";

@@ -492,23 +492,17 @@ Production::Production(Nonterminal *L, char const *Ltag)
   : left(L),
     right(),
     precedence(0),
-    forbid(NULL),
     rhsLen(-1),
     prodIndex(-1),
     firstSet(0)       // don't allocate bitmap yet
 {}
 
 Production::~Production()
-{
-  if (forbid) {
-    delete forbid;
-  }
-}
+{}
 
 
 Production::Production(Flatten &flat)
   : left(NULL),
-    forbid(NULL),
     action(flat),
     firstSet(flat)
 {}
@@ -518,7 +512,7 @@ void Production::xfer(Flatten &flat)
   xferObjList(flat, right);
   action.xfer(flat);
   flat.xferInt(precedence);
-  xferNullableOwnerPtr(flat, forbid);
+  forbid.xfer(flat);
 
   flat.xferInt(rhsLen);
   flat.xferInt(prodIndex);
@@ -695,11 +689,11 @@ DottedProduction const *Production::getDProdC(int dotPlace) const
 // total number of terminals, but oh well
 void Production::addForbid(Terminal *t, int numTerminals)
 {
-  if (!forbid) {
-    forbid = new TerminalSet(numTerminals);
+  if (forbid.empty()) {
+    forbid.reset(numTerminals);
   }
 
-  forbid->add(t->termIndex);
+  forbid.add(t->termIndex);
 }
 
 
