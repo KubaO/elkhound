@@ -469,7 +469,7 @@ void ItemSet::xferSerfs(Flatten &flat, GrammarAnalysis &g)
 
   xferNullableSerfPtr(flat, stateSymbol);
 
-  xferNullableSerfPtrToList(flat, BFSparent, g.itemSets);
+  /*FIXME*/ //xferNullableSerfPtrToList(flat, BFSparent, g.itemSets);
 }
 
 
@@ -976,6 +976,10 @@ GrammarAnalysis::~GrammarAnalysis()
   if (tables) {
     delete tables;
   }
+
+  for (ItemSet* set : itemSets) {
+    delete set; // this is an owning set
+  }
 }
 
 
@@ -1000,9 +1004,9 @@ Production const *GrammarAnalysis::getProduction(int index) const
 ItemSet const *GrammarAnalysis::getItemSet(int index) const
 {
   // no pretense of efficiency; this is only used interactively
-  FOREACH_OBJLIST(ItemSet, itemSets, iter) {
-    if (iter.data()->id == index) {
-      return iter.data();
+  for (ItemSet const *set : itemSets) {
+    if (set->id == index) {
+      return set;
     }
   }
   return NULL;
@@ -1020,8 +1024,8 @@ void GrammarAnalysis::xfer(Flatten &flat)
 
   flat.xferInt(nextItemSetId);
 
-  xferObjList(flat, itemSets);
-  xferSerfPtrToList(flat, startState, itemSets);
+  /*FIXME*/ //xferObjList(flat, itemSets);
+  /*FIXME*/ //xferSerfPtrToList(flat, startState, itemSets);
 
   flat.xferBool(cyclic);
 
@@ -1042,8 +1046,8 @@ void GrammarAnalysis::xfer(Flatten &flat)
   // do serfs after because if I want to compute the
   // nonkernel items instead of storing them, I need
   // the indices
-  MUTATE_EACH_OBJLIST(ItemSet, itemSets, iter) {
-    iter.data()->xferSerfs(flat, *this);
+  for (ItemSet *set : itemSets) {
+    set->xferSerfs(flat, *this);
   }
 
   flat.xferBool(initialized);
@@ -1065,8 +1069,8 @@ void GrammarAnalysis::
 {
   printProductions(os, printCode);
 
-  FOREACH_OBJLIST(ItemSet, itemSets, iter) {
-    iter.data()->print(os, *this);
+  for (ItemSet const *set : itemSets) {
+    set->print(os, *this);
   }
 }
 
@@ -2211,14 +2215,14 @@ void GrammarAnalysis::moveDotNoClosure(ItemSet const *source, Symbol const *symb
 // if 'list' contains something equal to 'itemSet', return that
 // equal object; otherwise, return NULL
 // 'list' is non-const because might return an element of it
-ItemSet *GrammarAnalysis::findItemSetInList(ObjList<ItemSet> &list,
+ItemSet *GrammarAnalysis::findItemSetInList(std::vector<ItemSet *> &list,
                                             ItemSet const *itemSet)
 {
   // inefficiency: using iteration to check set membership
 
-  MUTATE_EACH_OBJLIST(ItemSet, list, iter) {
-    if (itemSetsEqual(iter.data(), itemSet)) {
-      return iter.data();
+  for (ItemSet *set : list) {
+    if (itemSetsEqual(set, itemSet)) {
+      return set;
     }
   }
   return NULL;
@@ -2509,7 +2513,7 @@ void GrammarAnalysis::constructLRItemSets()
   try {
     for (OwnerKHashTableIter<ItemSet, ItemSet> iter(itemSetsDone);
          !iter.isDone(); iter.adv()) {
-      itemSets.prepend(iter.data());
+      itemSets.insert(itemSets.begin(), iter.data());
     }
     itemSetsDone.disownAndForgetAll();
   }
@@ -2521,10 +2525,10 @@ void GrammarAnalysis::constructLRItemSets()
 
   // since we sometimes consider a state more than once, the
   // states end up out of order; put them back in order
-  itemSets.mergeSort(ItemSet::diffById);
+  sm::sortSList(itemSets, ItemSet::diffById);
 
 
-  traceProgress(1) << "done with LR sets: " << itemSets.count()
+  traceProgress(1) << "done with LR sets: " << itemSets.size()
                    << " states\n";
 
 
@@ -2541,8 +2545,8 @@ void GrammarAnalysis::constructLRItemSets()
     }
     out << "# lr sets in graph form\n";
 
-    FOREACH_OBJLIST(ItemSet, itemSets, itemSet) {
-      itemSet.data()->writeGraph(out, *this);
+    for (ItemSet const *itemSet : itemSets) {
+      itemSet->writeGraph(out, *this);
     }
   }
 }
@@ -2551,12 +2555,12 @@ void GrammarAnalysis::constructLRItemSets()
 // print each item set
 void GrammarAnalysis::printItemSets(std::ostream &os, bool nonkernel) const
 {
-  FOREACH_OBJLIST(ItemSet, itemSets, itemSet) {
-    os << "State " << itemSet.data()->id
-       << ", sample input: " << sampleInput(itemSet.data()) << "\n"
-       << "  and left context: " << leftContextString(itemSet.data()) << "\n"
+  for (ItemSet const* itemSet : itemSets) {
+    os << "State " << itemSet->id
+       << ", sample input: " << sampleInput(itemSet) << "\n"
+       << "  and left context: " << leftContextString(itemSet) << "\n"
        ;
-    itemSet.data()->print(os, *this, nonkernel);
+    itemSet->print(os, *this, nonkernel);
     os << "\n\n";
   }
 }
@@ -3044,12 +3048,11 @@ bool isAmbiguousNonterminal(Symbol const *sym)
 void GrammarAnalysis::renumberStates()
 {
   // sort them into the right order
-  itemSets.mergeSort(&GrammarAnalysis::renumberStatesDiff, this);
+  sm::sortSList(itemSets, &GrammarAnalysis::renumberStatesDiff, this);
 
   // number them in that order
   int n = 0;
-  FOREACH_OBJLIST_NC(ItemSet, itemSets, iter) {
-    ItemSet *s = iter.data();
+  for (ItemSet *s : itemSets) {
     if (n == 0) {
       // the first element should always be the start state
       xassert(s->id == 0);
@@ -3216,7 +3219,7 @@ STATICDEF int GrammarAnalysis::arbitraryRHSEltOrder
 
 void GrammarAnalysis::computeParseTables(bool allowAmbig)
 {
-  tables = new ParseTables(numTerms, numNonterms, itemSets.count(), numProds,
+  tables = new ParseTables(numTerms, numNonterms, itemSets.size(), numProds,
                            startState->id,
                            0 /* slight hack: assume it's the first production */);
 
@@ -3224,8 +3227,7 @@ void GrammarAnalysis::computeParseTables(bool allowAmbig)
     // first-state info
     bool doingTerms = true;
     int prevSymCode = -1;
-    FOREACH_OBJLIST(ItemSet, itemSets, iter) {
-      ItemSet const *state = iter.data();
+    for (ItemSet const* state : itemSets) {
       Symbol const *sym = state->getStateSymbolC();
       if (!sym) continue;     // skip start state
       int symCode = sym->getTermOrNontermIndex();
@@ -3262,8 +3264,7 @@ void GrammarAnalysis::computeParseTables(bool allowAmbig)
   int sr=0, rr=0;
 
   // for each state...
-  FOREACH_OBJLIST(ItemSet, itemSets, stateIter) {
-    ItemSet const *state = stateIter.data();
+  for (ItemSet const *state : itemSets) {
     bool printedConflictHeader = false;
 
     // ---- fill in this row in the action table ----
@@ -4142,8 +4143,8 @@ void GrammarAnalysis::runAnalyses(char const *setsFname)
 
   // I don't need (most of) the item sets during parsing, so
   // throw them away once I'm done analyzing the grammar
-  MUTATE_EACH_OBJLIST(ItemSet, itemSets, iter) {
-    iter.data()->throwAwayItems();
+  for (ItemSet *set : itemSets) {
+    set->throwAwayItems();
   }
 
 

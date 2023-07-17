@@ -404,7 +404,7 @@ protected:  // data
   int nextItemSetId;
 
   // the LR parsing tables
-  ObjList<ItemSet> itemSets;
+  std::vector<ItemSet *> itemSets;      // owning list
 
   // distinguished start state; NOTE: much of the grammar analysis
   // code currently assumes (and checks) that state 0 is the start
@@ -487,7 +487,7 @@ private:    // funcs
   void moveDotNoClosure(ItemSet const *source, Symbol const *symbol,
                         ItemSet *dest, std::vector<LRItem *> &unusedTail,
                         GrowArray<DottedProduction const*> &array);
-  ItemSet *findItemSetInList(ObjList<ItemSet> &list,
+  ItemSet *findItemSetInList(std::vector<ItemSet *> &list,
                              ItemSet const *itemSet);
   static bool itemSetsEqual(ItemSet const *is1, ItemSet const *is2);
 
