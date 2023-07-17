@@ -5,7 +5,8 @@
 #define BFLATTEN_H
 
 #include "flatten.h"      // Flatten
-#include "ohashtbl.h"     // OwnerHashTable
+
+#include <unordered_map>  // std::unordered_map
 #include <stdio.h>        // FILE
 
 class BFlatten : public Flatten {
@@ -17,12 +18,8 @@ private:     // data
     void *ownerPtr;       // a pointer
     intptr_t intName;     // a unique integer name
   };
-  OwnerHashTable<OwnerMapping> ownerTable;      // owner <-> int mapping
+  std::unordered_map<void const *, OwnerMapping*> ownerTable;      // owner <-> int mapping
   int nextUniqueName;     // counter for making int names
-
-private:     // funcs
-  static void const* getOwnerPtrKeyFn(OwnerMapping *data);
-  static void const* getIntNameKeyFn(OwnerMapping *data);
 
 public:      // funcs
   BFlatten(char const *fname, bool reading);
