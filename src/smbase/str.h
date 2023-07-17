@@ -25,12 +25,6 @@ using rostring = const std::string&;
 using stringBuilder = std::string;
 using string_view = nonstd::string_view;
 
-// ------------------ rostring remnants ------------------
-// These compatibility functions are still widely used.
-// They are deprecated.
-
-inline int strcmp(string_view s1, string_view s2) { return s1.compare(s2); }
-
 
 // --------------------- stringBuilder remnants --------------------
 

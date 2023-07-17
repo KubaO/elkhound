@@ -1064,10 +1064,10 @@ void emitTable(EmitCode &out, EltType const *table, int size, int rowLength,
     return;
   }
 
-  bool printHex = 0==strcmp(typeName, "ErrorBitsEntry") ||
-                  (ENABLE_CRS_COMPRESSION && 0==strcmp(typeName, "ActionEntry")) ||
-                  (ENABLE_CRS_COMPRESSION && 0==strcmp(typeName, "GotoEntry")) ;
-  bool needCast = 0==strcmp(typeName, "StateId");
+  bool printHex = typeName == "ErrorBitsEntry" ||
+                  (ENABLE_CRS_COMPRESSION && typeName == "ActionEntry") ||
+                  (ENABLE_CRS_COMPRESSION && typeName == "GotoEntry") ;
+  bool needCast = typeName == "StateId";
 
   if (size * sizeof(*table) > 50) {    // suppress small ones
     out << "  // storage size: " << size * sizeof(*table) << " bytes\n";

@@ -264,14 +264,14 @@ Lexer2TokenType lookupKeyword(CCLang &lang, rostring keyword)
   xassert(TABLESIZE(l2TokTypes) == L2_NUM_TYPES);
 
   {loopi(TABLESIZE(gnuKeywordMap)) {
-    if (0==strcmp(gnuKeywordMap[i].spelling, keyword)) {
+    if (gnuKeywordMap[i].spelling == keyword) {
       return gnuKeywordMap[i].tokType;
     }
   }}
 
   if (!lang.recognizeCppKeywords) {
     {loopi(TABLESIZE(c_KeywordMap)) {
-      if (0==strcmp(c_KeywordMap[i].spelling, keyword)) {
+      if (c_KeywordMap[i].spelling == keyword) {
         return c_KeywordMap[i].tokType;
       }
     }}
@@ -279,7 +279,7 @@ Lexer2TokenType lookupKeyword(CCLang &lang, rostring keyword)
 
   {loopi(L2_NUM_TYPES) {
     if (l2TokTypes[i].bisonSpelling &&
-        0==strcmp(l2TokTypes[i].spelling, keyword)) {
+        l2TokTypes[i].spelling == keyword) {
       return l2TokTypes[i].tokType;
     }
   }}
