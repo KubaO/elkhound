@@ -1,7 +1,5 @@
 // str.h            see license.txt for copyright and terms of use
-// a string class
-// the representation uses just one char*, so that a smart compiler
-//   can pass the entire object as a single word
+// former string and stringBuilder classes
 // Scott McPeak, 1995-2000  This file is public domain.
 
 // 2005-03-01: See string.txt.  The plan is to evolve the class
@@ -13,36 +11,19 @@
 #ifndef STR_H
 #define STR_H
 
-#include <iostream>                // istream, ostream
+#include <iosfwd>                  // istream forward declaration
 #include <stdarg.h>                // va_list
-#include <string.h>                // strcmp, etc.
 #include <type_traits>
 #include <string>                  // std::string
 #include "nonstd/string_view.hpp"  // nonstd::string_view
 
-class Flatten;           // flatten.h
 
-
-// ------------------------- string ---------------------
-
-// concatenation
-// uses '&' instead of '+' to avoid char* coercion problems
-std::string operator& (const std::string& head, const std::string& tail);
-
-// ------------------ porting compatibility ------------------
+// ------------------ local conventions ------------------
 
 using string = std::string;
 using rostring = const std::string&;
 using stringBuilder = std::string;
 using string_view = nonstd::string_view;
-
-// ------------------------ rostring ----------------------
-// My plan is to use this in places I currently use 'char const *'.
-
-// I need some compatibility functions
-inline int strcmp(string_view s1, string_view s2) { return s1.compare(s2); }
-
-inline bool streq(string_view s1, string_view s2) { return s1 == s2; }
 
 
 // --------------------- stringBuilder remnants --------------------

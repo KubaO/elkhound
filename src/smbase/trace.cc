@@ -116,24 +116,25 @@ std::ostream &traceProgress(int level)
 
 void traceAddMultiSys(char const *systemNames)
 {
-  StrtokParse tok(systemNames, ",");
-  loopi(tok) {
-    if (tok[i][0] == '-') {
+  StrtokParse tokens(systemNames, ",");
+  for (string_view tok : tokens) {
+    if (tok.starts_with('-')) {
       // treat a leading '-' as a signal to *remove*
       // a tracing flag, e.g. from some defaults specified
       // statically
-      char const *name = tok[i]+1;
-      if (tracingSys(name)) {      // be forgiving here
-        traceRemoveSys(name);
+      string_view name = tok.substr(1);
+      // tokens are guaranteed to be null-terminated
+      if (tracingSys(name.data())) {      // be forgiving here
+        traceRemoveSys(name.data());
       }
       else {
         std::cout << "Currently, `" << name << "' is not being traced.\n";
       }
     }
-
     else {
       // normal behavior: add things to the trace list
-      traceAddSys(tok[i]);
+      // tokens are guaranteed to be null-terminated
+      traceAddSys(tok.data());
     }
   }
 }

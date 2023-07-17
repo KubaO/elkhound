@@ -3676,7 +3676,7 @@ bool GrammarAnalysis::
 void GrammarAnalysis::lrParse(char const *input)
 {
   // tokenize the input
-  StrtokParse tok(input, " \t");
+  StrtokParse tokens(input, " \t");
 
   // parser state
   int currentToken = 0;               // index of current token
@@ -3686,9 +3686,10 @@ void GrammarAnalysis::lrParse(char const *input)
   ArrayStack<Symbol const*> symbolStack;    // stack of shifted symbols
 
   // for each token of input
-  while (currentToken < tok) {
+  for(string_view tok : tokens) {
     // map the token text to a symbol
-    Terminal *symbol = findTerminal(tok[currentToken]);     // (constness)
+    // tokens are guaranteed to be null-terminated
+    Terminal *symbol = findTerminal(tok.data());     // (constness)
 
     // consult action table
     ActionEntry action = tables->getActionEntry(state, symbol->termIndex);

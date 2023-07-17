@@ -828,12 +828,12 @@ void buildHashMap(SourceLocManager::File *pp, char const *fname, int &expanderLi
     // break into tokens at whitespace (this isn't exactly
     // right, because the file names can have quoted spaces,
     // but it will do for testing purposes)
-    StrtokParse tok(buf, " \r\n");
-    if (tok < 3) continue;
+    StrtokParse tokens(buf, " \r\n");
+    if (tokens.size() < 3) continue;
 
-    int origLine = atoi(tok[1]);
-    char const *tok2 = tok[2];
-    string origFname(tok2+1, strlen(tok2)-2);  // remove quotes
+    int origLine = atoi(tokens[1].data());
+    string_view tok2 = tokens[2];
+    string origFname(tok2.data() + 1, tok2.length() - 2);  // remove quotes
     pp->addHashLine(ppLine, origLine, origFname.c_str());
   }
   pp->doneAdding();

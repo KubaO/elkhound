@@ -7,7 +7,7 @@ string toXml_bool(bool b) {
 }
 
 void fromXml_bool(bool &b, rostring str) {
-  b = streq(str, "true");
+  b = str == "true";
 }
 
 
