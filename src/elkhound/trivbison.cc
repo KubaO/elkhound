@@ -22,20 +22,18 @@ int yyparse();
 // returns token types until EOF, at which point L2_EOF is returned
 int yylex()
 {
-  static ObjListIter<Lexer2Token> *iter = NULL;
+  // prepare to return tokens
+  static std::deque<Lexer2Token>::iterator
+    iter = lexer2.tokens.begin(), end = lexer2.tokens.end();
 
-  if (!iter) {
-    // prepare to return tokens
-    iter = new ObjListIter<Lexer2Token>(lexer2.tokens);
-  }
 
-  if (!iter->isDone()) {
+  if (iter != end) {
     // grab type to return
-    lastTokenYielded = iter->data();
-    Lexer2TokenType ret = iter->data()->type;
+    lastTokenYielded = &*iter;
+    Lexer2TokenType ret = iter->type;
 
     // advance to next token
-    iter->adv();
+    iter++;
 
     // return one we just advanced past
     return ret;
