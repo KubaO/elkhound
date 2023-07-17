@@ -196,13 +196,13 @@ public:     // intended to be read-only public
   // the special case of the initial item in the initial state,
   // the kernel items are distinguished by having the dot *not*
   // at the left edge
-  ObjList<LRItem> kernelItems;
+  std::vector<LRItem *> kernelItems;     // owning
 
   // nonkernel items: those derived as the closure of the kernel
   // items by expanding symbols to the right of dots; here I am
   // making the choice to materialize them, rather than derive
   // them on the spot as needed (and may change this decision)
-  ObjList<LRItem> nonkernelItems;
+  std::vector<LRItem *> nonkernelItems;  // owning
 
 private:    // data
   // transition function (where we go on shifts); NULL means no transition
@@ -251,7 +251,7 @@ private:    // funcs
   void allocateTransitionFunction();
   Symbol const *computeStateSymbolC() const;
 
-  void deleteNonReductions(ObjList<LRItem> &list);
+  void deleteNonReductions(std::vector<LRItem *> &list);
 
 public:     // funcs
   ItemSet(StateId id, int numTerms, int numNonterms);
@@ -306,14 +306,15 @@ public:     // funcs
 
   // ---- item mutations ----
   // add a kernel item; used while constructing the state
-  void addKernelItem(LRItem * /*owner*/ item);
+  LRItem *addKernelItem(int numTerms, DottedProduction const* dp);
+  LRItem *addKernelItem(LRItem const &item);
 
   // after adding all kernel items, call this
   void sortKernelItems();
 
   // add a nonkernel item; used while computing closure; this
   // item must not already be in the item set
-  void addNonkernelItem(LRItem * /*owner*/ item);
+  LRItem *addNonkernelItem(int numTerms, DottedProduction const* dp);
 
   // computes things derived from the item set lists:
   // dotsAtEnd, numDotsAtEnd, kernelItemsCRC, stateSymbol;
@@ -484,7 +485,7 @@ private:    // funcs
   ItemSet *makeItemSet();
   void disposeItemSet(ItemSet *is);
   void moveDotNoClosure(ItemSet const *source, Symbol const *symbol,
-                        ItemSet *dest, ObjList<LRItem> &unusedTail,
+                        ItemSet *dest, std::vector<LRItem *> &unusedTail,
                         GrowArray<DottedProduction const*> &array);
   ItemSet *findItemSetInList(ObjList<ItemSet> &list,
                              ItemSet const *itemSet);

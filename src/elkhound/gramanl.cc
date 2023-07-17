@@ -313,6 +313,14 @@ ItemSet::~ItemSet()
   if (dotsAtEnd) {
     delete[] dotsAtEnd;
   }
+
+  // We own those items
+  for (LRItem *k : kernelItems) {
+    delete k;
+  }
+  for (LRItem *n : nonkernelItems) {
+    delete n;
+  }
 }
 
 
@@ -359,8 +367,8 @@ DottedProduction *getNthDottedProduction(Production *p, int n)
 
 void ItemSet::xfer(Flatten &flat)
 {
-  xferObjList(flat, kernelItems);
-  xferObjList(flat, nonkernelItems);
+  /*FIXME*/ //xferObjList(flat, kernelItems);
+  /*FIXME*/ //xferObjList(flat, nonkernelItems);
 
   flat.xferInt(terms);
   flat.xferInt(nonterms);
@@ -382,11 +390,11 @@ void ItemSet::xferSerfs(Flatten &flat, GrammarAnalysis &g)
 {
   // xfer the 'prod' fields of the items
   {
-    MUTATE_EACH_OBJLIST(LRItem, kernelItems, k) {
-      k.data()->xferSerfs(flat, g);
+    for (LRItem *k : kernelItems) {
+      k->xferSerfs(flat, g);
     }
-    MUTATE_EACH_OBJLIST(LRItem, nonkernelItems, n) {
-      n.data()->xferSerfs(flat, g);
+    for (LRItem *n : nonkernelItems) {
+      n->xferSerfs(flat, g);
     }
   }
 
@@ -469,9 +477,9 @@ Symbol const *ItemSet::computeStateSymbolC() const
 {
   // need only check kernel items since all nonkernel items
   // have their dots at the left side
-  FOREACH_OBJLIST(LRItem, kernelItems, item) {
-    if (! item.data()->isDotAtStart() ) {
-      return item.data()->symbolBeforeDotC();
+  for (LRItem const *item : kernelItems) {
+    if (! item->isDotAtStart() ) {
+      return item->symbolBeforeDotC();
     }
   }
   return NULL;
@@ -521,17 +529,26 @@ void ItemSet::removeShift(Terminal const *sym)
 }
 
 
-void ItemSet::addKernelItem(LRItem *item)
+LRItem *ItemSet::addKernelItem(LRItem const &item)
 {
-  // add it
-  kernelItems.appendUnique(item);
+  LRItem *nitem = new LRItem(item);
+  kernelItems.push_back(nitem);
+  return nitem;
+}
+
+
+LRItem *ItemSet::addKernelItem(int numTerms, DottedProduction const* dp)
+{
+  LRItem* nitem = new LRItem(numTerms, dp);
+  kernelItems.push_back(nitem);
+  return nitem;
 }
 
 
 void ItemSet::sortKernelItems()
 {
   // sort the items to facilitate equality checks
-  kernelItems.mergeSort(LRItem::diff);
+  sm::sortSList(kernelItems, LRItem::diff);
 
   // note: the caller must call changedItems
 }
@@ -549,7 +566,7 @@ bool ItemSet::operator==(ItemSet const &obj) const
     // OLD: when pointer equality was sufficient
     //   return kernelItems.equalAsPointerLists(obj.kernelItems);
     // NEW: use deep equality check
-    return kernelItems.equalAsLists(obj.kernelItems, LRItem::diff);
+    return 0 == sm::compareSortedSLists(kernelItems, obj.kernelItems, LRItem::diff);
   }
   else {
     // can't possibly be equal if CRCs differ
@@ -558,27 +575,28 @@ bool ItemSet::operator==(ItemSet const &obj) const
 }
 
 
-void ItemSet::addNonkernelItem(LRItem *item)
+LRItem *ItemSet::addNonkernelItem(int numTerms, DottedProduction const *dp)
 {
-  nonkernelItems.appendUnique(item);
-
+  LRItem* nitem = new LRItem(numTerms, dp);
+  nonkernelItems.push_back(nitem);
+  return nitem;
   // note: the caller is supposed to call changedItems
 }
 
 
 void ItemSet::removeReduce(Production const *prod, Terminal const *sym)
 {
-  MUTATE_EACH_OBJLIST(LRItem, kernelItems, k) {
-    if (k.data()->isDotAtEnd() &&
-        k.data()->getProd() == prod) {
-      k.data()->laRemove(sym->termIndex);
+  for (LRItem *k : kernelItems) {
+    if (k->isDotAtEnd() &&
+        k->getProd() == prod) {
+      k->laRemove(sym->termIndex);
     }
   }
 
-  MUTATE_EACH_OBJLIST(LRItem, nonkernelItems, n) {
-    if (n.data()->isDotAtEnd() &&
-        n.data()->getProd() == prod) {
-      n.data()->laRemove(sym->termIndex);
+  for (LRItem *n : nonkernelItems) {
+    if (n->isDotAtEnd() &&
+        n->getProd() == prod) {
+      n->laRemove(sym->termIndex);
     }
   }
 
@@ -602,16 +620,12 @@ void ItemSet::removeReduce(Production const *prod, Terminal const *sym)
 std::vector<LRItem const *> ItemSet::getAllItems(bool nonkernel) const
 {
   std::vector<LRItem const *> ret;
-  ret.resize(kernelItems.count() + (nonkernel ? nonkernelItems.count() : 0));
+  ret.resize(kernelItems.size() + (nonkernel ? nonkernelItems.size() : 0));
 
   auto it = ret.begin();
-  FOREACH_OBJLIST(LRItem, kernelItems, k) {
-    *it++ = k.data();
-  }
+  it = std::copy(kernelItems.cbegin(), kernelItems.cend(), it);
   if (nonkernel) {
-    FOREACH_OBJLIST(LRItem, nonkernelItems, n) {
-      *it++ = n.data();
-    }
+    it = std::copy(nonkernelItems.cbegin(), nonkernelItems.cend(), it);
   }
   return ret;
 }
@@ -631,17 +645,18 @@ void ItemSet::throwAwayItems()
   deleteNonReductions(nonkernelItems);
 }
 
-void ItemSet::deleteNonReductions(ObjList<LRItem> &list)
+void ItemSet::deleteNonReductions(std::vector<LRItem *> &list)
 {
-  ObjListMutator<LRItem> mut(list);
-  while (!mut.isDone()) {
-    if (mut.data()->isDotAtEnd()) {
+  auto mut = list.begin();
+  while (mut != list.end()) {
+    if ((*mut)->isDotAtEnd()) {
       // keep it
-      mut.adv();
+      mut++;
     }
     else {
       // trash it
-      mut.deleteIt();     // also advances
+      delete *mut; // we're owning - must free the item
+      mut = list.erase(mut);  // FIXME this is probably not performing super well
     }
   }
 }
@@ -704,12 +719,17 @@ bool ItemSet::mergeLookaheadsInto(ItemSet &dest) const
   // will return true if any changes made
   bool changes = false;
 
+  // kernel list lengths are supposed to be the same
+  xassert(kernelItems.size() == dest.kernelItems.size());
+
   // iterate over both kernel lists simultaneously
-  ObjListIter<LRItem> srcIter(kernelItems);
-  ObjListMutator<LRItem> destIter(dest.kernelItems);
-  while (!srcIter.isDone() && !destIter.isDone()) {
-    LRItem const &srcItem = *(srcIter.data());
-    LRItem &destItem = *(destIter.data());
+  auto src = kernelItems.cbegin();
+  auto srcEnd = kernelItems.cend();
+  auto dst = dest.kernelItems.begin();
+
+  for (; src != srcEnd; src++, dst++) {
+    LRItem const &srcItem = **src;
+    LRItem &destItem = **dst;
 
     // the caller should already have established equality of the
     // non-lookahead components of the kernel items
@@ -719,13 +739,7 @@ bool ItemSet::mergeLookaheadsInto(ItemSet &dest) const
     if (destItem.laMerge(srcItem)) {
       changes = true;
     }
-
-    srcIter.adv();
-    destIter.adv();
   }
-
-  // kernel list lengths are supposed to be the same
-  xassert(srcIter.isDone() && destIter.isDone());
 
   return changes;
 }
@@ -733,11 +747,11 @@ bool ItemSet::mergeLookaheadsInto(ItemSet &dest) const
 
 bool ItemSet::hasExtendingShift(Nonterminal const *A, Terminal const *t) const
 {
-  FOREACH_OBJLIST(LRItem, kernelItems, iter1) {
-    if (iter1.data()->isExtendingShift(A, t)) { return true; }
+  for (LRItem const *k : kernelItems) {
+    if (k->isExtendingShift(A, t)) { return true; }
   }
-  FOREACH_OBJLIST(LRItem, nonkernelItems, iter2) {
-    if (iter2.data()->isExtendingShift(A, t)) { return true; }
+  for (LRItem const *n : nonkernelItems) {
+    if (n->isExtendingShift(A, t)) { return true; }
   }
   return false;
 }
@@ -805,7 +819,7 @@ void ItemSet::changedItems()
 
 void ItemSet::computeKernelCRC(GrowArray<DottedProduction const*> &array)
 {
-  int numKernelItems = kernelItems.count();
+  int numKernelItems = kernelItems.size();
 
   // expand as necessary, but don't get smaller
   array.ensureAtLeast(numKernelItems);
@@ -813,8 +827,8 @@ void ItemSet::computeKernelCRC(GrowArray<DottedProduction const*> &array)
   // we will crc the prod/dot fields, using the pointer representation
   // of 'dprod'; assumes the items have already been sorted!
   int index = 0;
-  FOREACH_OBJLIST(LRItem, kernelItems, kitem) {
-    array[index] = kitem.data()->dprod;
+  for (LRItem const *kitem : kernelItems) {
+    array[index] = kitem->dprod;
     index++;
   }
 
@@ -1872,14 +1886,15 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
   finished.setEnableShrink(false);
 
   // put all the nonkernels we have into 'finished'
-  while (itemSet.nonkernelItems.isNotEmpty()) {
-    LRItem *dp = itemSet.nonkernelItems.removeFirst();
+  for (LRItem *dp : itemSet.nonkernelItems) {
+    // ownership transfers to the finished list
     finished.add(dp->dprod, dp);
   }
+  itemSet.nonkernelItems.clear();
 
   // first, close the kernel items -> worklist
-  FOREACH_OBJLIST(LRItem, itemSet.kernelItems, itemIter) {
-    singleItemClosure(finished, worklist, itemIter.data(), scratchSet);
+  for (LRItem const *ik : itemSet.kernelItems) {
+    singleItemClosure(finished, worklist, ik, scratchSet);
   }
 
   while (worklist.isNotEmpty()) {
@@ -1903,7 +1918,8 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
          !iter.isDone(); iter.adv()) {
       // temporarily, the item is owned both by the hashtable
       // and the list
-      itemSet.nonkernelItems.prepend(iter.data());
+      itemSet.nonkernelItems.insert(itemSet.nonkernelItems.begin(), iter.data());
+      // FIXME probably doesn't need to be up front
     }
     finished.disownAndForgetAll();
   }
@@ -2123,7 +2139,7 @@ void GrammarAnalysis::disposeItemSet(ItemSet *is)
 //   since I don't want to allocate anything in here, we need scratch
 //   space for computing kernel CRCs
 void GrammarAnalysis::moveDotNoClosure(ItemSet const *source, Symbol const *symbol,
-                                       ItemSet *dest, ObjList<LRItem> &unusedTail,
+                                       ItemSet *dest, std::vector<LRItem *> &unusedTail,
                                        GrowArray<DottedProduction const*> &array)
 {
   //ItemSet *ret = makeItemSet();
@@ -2132,20 +2148,20 @@ void GrammarAnalysis::moveDotNoClosure(ItemSet const *source, Symbol const *symb
   int appendCt=0;
 
   // iterator for walking down dest's kernel list
-  ObjListMutator<LRItem> destIter(dest->kernelItems);
+  auto destIter = dest->kernelItems.begin();
 
-  // iterator for walking both lists of items; switching from an
-  // implementation which used 'getAllItems' for performance reasons
-  ObjListIter<LRItem> srcIter(source->kernelItems);
+  auto srcIter = source->kernelItems.cbegin();
+  auto srcEnd = source->kernelItems.cend();
   int passCt=0;    // 0=kernelItems, 1=nonkernelItems
   while (passCt < 2) {
     if (passCt++ == 1) {
-      srcIter.reset(source->nonkernelItems);
+      srcIter = source->nonkernelItems.cbegin();
+      srcEnd = source->nonkernelItems.cend();
     }
 
     // for each item
-    for (; !srcIter.isDone(); srcIter.adv()) {
-      LRItem const *item = srcIter.data();
+    for (; srcIter != srcEnd; srcIter++) {
+      LRItem const *item = *srcIter;
 
       if (item->isDotAtEnd() ||
           item->symbolAfterDotC() != symbol) {
@@ -2153,20 +2169,22 @@ void GrammarAnalysis::moveDotNoClosure(ItemSet const *source, Symbol const *symb
       }
 
       // need to access destIter; if there are no more items, make more
-      if (destIter.isDone()) {
+      if (destIter == dest->kernelItems.end()) {
         // the new item becomes the current 'data()'
-        destIter.insertBefore(new LRItem(numTerminals(), NULL /*dprod*/));
+        dest->kernelItems.push_back(new LRItem(numTerminals(), NULL /*dprod*/));
+        destIter = std::prev(dest->kernelItems.end());
+        //destIter = std::next(dest->kernelItems.begin(), dest->kernelItems.size() - 1);
       }
 
       // move the dot; write dot-moved item into 'destIter'
-      LRItem *dotMoved = destIter.data();
+      LRItem *dotMoved = *destIter;
       dotMoved->dprod = nextDProd(item->dprod);
       dotMoved->lookahead = item->lookahead;
 
       // add the new item to the itemset I'm building
       //ret->addKernelItem(dotMoved);   // UPDATE: it's already in the list
       appendCt++;
-      destIter.adv();
+      destIter++;
     }
   }
 
@@ -2174,7 +2192,9 @@ void GrammarAnalysis::moveDotNoClosure(ItemSet const *source, Symbol const *symb
   // this action not have to look at each unused item, because I want
   // to be able to make a really big scratch item list and not pay for
   // items I don't end up using
-  unusedTail.stealTailAt(appendCt, dest->kernelItems);
+  auto destEnd = dest->kernelItems.end();
+  std::copy(destIter, destEnd, std::back_inserter(unusedTail));
+  dest->kernelItems.erase(destIter, destEnd);
 
   // verify we actually got something
   xassert(appendCt > 0);
@@ -2268,8 +2288,7 @@ void GrammarAnalysis::constructLRItemSets()
     // this is a dummy item; it allocates the bitmap for 'lookahead',
     // but those bits and the 'dprod' pointer will be overwritten
     // many times during the algorithm
-    LRItem *item = new LRItem(numTerms, NULL /*dottedprod*/);
-    scratchState->addKernelItem(item);
+    scratchState->addKernelItem(numTerms, NULL /*dottedprod*/);
   }
 
   // similar to the scratch state, make a scratch array for the
@@ -2283,8 +2302,8 @@ void GrammarAnalysis::constructLRItemSets()
   {
     ItemSet *is = makeItemSet();              // (owner)
     startState = is;
-    LRItem *firstDP
-      = new LRItem(numTerms, getDProd(&productions.front(), 0 /*dot at left*/));
+    LRItem *firstDP = is->addKernelItem(numTerms,
+      getDProd(&productions.front(), 0 /*dot at left*/));
 
     // don't add this to the lookahead; we assume EOF is actually
     // mentioned in the production already, and we won't contemplate
@@ -2292,7 +2311,6 @@ void GrammarAnalysis::constructLRItemSets()
     // (see GLR::cleanupAfterParse)
     //firstDP->laAdd(0 /*EOF token id*/);
 
-    is->addKernelItem(firstDP);
     is->sortKernelItems();                    // redundant, but can't hurt
     itemSetClosure(*is);                      // calls changedItems internally
 
@@ -2318,9 +2336,9 @@ void GrammarAnalysis::constructLRItemSets()
 
     if (tr) {
       trace("lrsets") << "state " << itemSet->id
-                      << ", " << itemSet->kernelItems.count()
+                      << ", " << itemSet->kernelItems.size()
                       << " kernel items and "
-                      << itemSet->nonkernelItems.count()
+                      << itemSet->nonkernelItems.size()
                       << " nonkernel items" << std::endl;
     }
 
@@ -2332,15 +2350,17 @@ void GrammarAnalysis::constructLRItemSets()
     //
     // explicitly iterate over both lists because 'getAllItems'
     // does allocation
-    ObjListIter<LRItem> itemIter(itemSet->kernelItems);
+    auto itemIter = itemSet->kernelItems.cbegin();
+    auto itemEnd = itemSet->kernelItems.cend();
     int passCt=0;    // 0=kernelItems, 1=nonkernelItems
     while (passCt < 2) {
       if (passCt++ == 1) {
-        itemIter.reset(itemSet->nonkernelItems);
+        itemIter = itemSet->nonkernelItems.cbegin();
+        itemEnd = itemSet->nonkernelItems.cend();
       }
 
-      for (; !itemIter.isDone(); itemIter.adv()) {
-        LRItem const *item = itemIter.data();
+      for (; itemIter != itemEnd; itemIter++) {
+        LRItem const *item = *itemIter;
         if (item->isDotAtEnd()) continue;
 
         CHECK_MALLOC_STATS("top of item list loop");
@@ -2372,9 +2392,8 @@ void GrammarAnalysis::constructLRItemSets()
         //
         // this call also yields the unused remainder of the kernel items,
         // so we can add them back in at the end
-        ObjList<LRItem> unusedTail;
-        moveDotNoClosure(itemSet, sym, scratchState,
-                         unusedTail, kernelCRCArray);
+        std::vector<LRItem *> unusedTail;
+        moveDotNoClosure(itemSet, sym, scratchState, unusedTail, kernelCRCArray);
         ItemSet *withDotMoved = scratchState;    // clarify role from here down
 
         CHECK_MALLOC_STATS("moveDotNoClosure");
@@ -2441,8 +2460,8 @@ void GrammarAnalysis::constructLRItemSets()
         else {
           // we don't already have it; need to actually allocate & copy
           withDotMoved = makeItemSet();
-          FOREACH_OBJLIST(LRItem, scratchState->kernelItems, iter) {
-            withDotMoved->addKernelItem(new LRItem( *(iter.data()) ));
+          for (LRItem const *item : scratchState->kernelItems) {
+            withDotMoved->addKernelItem( *item );
           }
 
           // finish it by computing its closure
@@ -2463,10 +2482,11 @@ void GrammarAnalysis::constructLRItemSets()
         itemSet->setTransition(sym, withDotMoved);
 
         // finally, restore 'scratchState's kernel item list
-        scratchState->kernelItems.concat(unusedTail);
+		std::copy(unusedTail.begin(), unusedTail.end(),
+		          std::back_inserter(scratchState->kernelItems));
 
         // make sure the link restoration process works as expected
-        xassertdb(scratchState->kernelItems.count() >= INIT_LIST_LEN);
+        xassertdb(scratchState->kernelItems.size() >= INIT_LIST_LEN);
 
         CHECK_MALLOC_STATS("end of item loop");
 
