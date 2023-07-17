@@ -20,7 +20,6 @@ add_library(smbase STATIC
     point.cc
     srcloc.cc
     str.cpp
-    strhash.cc
     strtokp.cpp
     strutil.cc
     syserr.cpp
