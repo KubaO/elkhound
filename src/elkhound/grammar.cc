@@ -324,75 +324,47 @@ STATICDEF Terminal const *TerminalSet::suppressExcept = NULL;
 
 TerminalSet::TerminalSet(int numTerms)
 {
-  init(numTerms);
+  reset(numTerms);
 }
 
-TerminalSet::TerminalSet(TerminalSet const &obj)
+void TerminalSet::reset(int numTerms)
 {
-  init(obj.bitmapLen * 8);    // close enough; same # of bytes at least
-  copy(obj);
-}
-
-void TerminalSet::init(int numTerms)
-{
-  if (numTerms != 0) {
-    // allocate enough space for one bit per terminal; I assume
-    // 8 bits per byte
-    bitmapLen = (numTerms + 7) / 8;
-    bitmap = new unsigned char[bitmapLen];
-
-    // initially the set will be empty
-    memset(bitmap, 0, bitmapLen);
-  }
-  else {
-    // intended for situations where reset() will be called later
-    // to allocate some space
-    bitmapLen = 0;
-    bitmap = NULL;
-  }
-}
-
-
-TerminalSet::~TerminalSet()
-{
-  if (bitmap) {
-    delete[] bitmap;
-  }
+  // numTerms can be zero
+  // allocate enough space for one bit per terminal; I assume
+  // 8 bits per byte
+  int bitmapLen = (numTerms + 7) / 8;
+  bitmap.resize(0);
+  bitmap.resize(bitmapLen);
 }
 
 
 TerminalSet::TerminalSet(Flatten&)
-  : bitmap(NULL)
 {}
 
 void TerminalSet::xfer(Flatten &flat)
 {
+  int bitmapLen = bitmap.size();
   flat.xferInt(bitmapLen);
 
-  if (bitmapLen > 0) {
+  if (!bitmap.empty()) {
     if (flat.reading()) {
-      bitmap = new unsigned char[bitmapLen];
+      bitmap.resize(bitmapLen);
     }
-    flat.xferSimple(bitmap, bitmapLen);
+    flat.xferSimple(bitmap.data(), bitmapLen);
   }
 }
 
-
-void TerminalSet::reset(int numTerms)
+static inline constexpr int getBit(int terminalId)
 {
-  if (bitmap) {
-    delete[] bitmap;
-  }
-  init(numTerms);
+  return ((unsigned)terminalId % 8);
 }
-
 
 unsigned char *TerminalSet::getByte(int id) const
 {
   int offset = (unsigned)id / 8;
-  xassert(offset < bitmapLen);
+  xassert(offset < bitmap.size());
 
-  return bitmap + offset;
+  return const_cast<unsigned char*>(&bitmap[offset]);
 }
 
 
@@ -405,8 +377,8 @@ bool TerminalSet::contains(int id) const
 
 bool TerminalSet::isEqual(TerminalSet const &obj) const
 {
-  xassert(obj.bitmapLen == bitmapLen);
-  return 0==memcmp(bitmap, obj.bitmap, bitmapLen);
+  xassert(obj.bitmap.size() == bitmap.size());
+  return 0==memcmp(bitmap.data(), obj.bitmap.data(), bitmap.size());
 }
 
 
@@ -426,21 +398,21 @@ void TerminalSet::remove(int id)
 
 void TerminalSet::clear()
 {
-  memset(bitmap, 0, bitmapLen);
+  memset(bitmap.data(), 0, bitmap.size());
 }
 
 
 void TerminalSet::copy(TerminalSet const &obj)
 {
-  xassert(obj.bitmapLen == bitmapLen);
-  memcpy(bitmap, obj.bitmap, bitmapLen);
+  xassert(obj.bitmap.size() == bitmap.size());
+  memcpy(bitmap.data(), obj.bitmap.data(), bitmap.size());
 }
 
 
 bool TerminalSet::merge(TerminalSet const &obj)
 {
   bool changed = false;
-  for (int i=0; i<bitmapLen; i++) {
+  for (int i=0; i<bitmap.size(); i++) {
     unsigned before = bitmap[i];
     unsigned after = before | obj.bitmap[i];
     if (after != before) {
@@ -454,9 +426,9 @@ bool TerminalSet::merge(TerminalSet const &obj)
 
 bool TerminalSet::removeSet(TerminalSet const &obj)
 {
-  xassertdb(obj.bitmapLen == bitmapLen);
+  xassertdb(obj.bitmap.size() == bitmap.size());
   bool changed = false;
-  for (int i=0; i<bitmapLen; i++) {
+  for (int i=0; i<bitmap.size(); i++) {
     unsigned before = bitmap[i];
     unsigned after = before & ~(obj.bitmap[i]);
     if (after != before) {

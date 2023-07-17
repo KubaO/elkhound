@@ -214,9 +214,9 @@ string terminalSequenceToString(TerminalList const &list);
 // sets of production RHSs
 class TerminalSet {
 private:    // data
-  unsigned char *bitmap;      // (owner) bitmap of terminals, indexed by
-                              // terminal id; lsb of byte 0 is index 0
-  int bitmapLen;              // # of bytes in 'bitmap'
+  // This is not std::vector<bool> because it's super slow in debug builds.
+  // bitmap of terminals, indexed by terminal id; lsb of byte 0 is index 0
+  std::vector<unsigned char> bitmap;
 
 public:     // data
   // printing customization: when non-NULL only print tokens if
@@ -224,18 +224,12 @@ public:     // data
   static Terminal const *suppressExcept;
 
 private:    // funcs
-  void init(int numTerms);
   unsigned char *getByte(int terminalId) const;
-  int getBit(int terminalId) const
-    { return ((unsigned)terminalId % 8); }
 
 public:     // funcs
-  TerminalSet(int numTerms=0);                   // allocate new set, initially empty
-  TerminalSet(TerminalSet const &obj);
-  ~TerminalSet();
-
-  TerminalSet& operator= (TerminalSet const &obj)
-    { copy(obj); return *this; }
+  TerminalSet() = default;
+  explicit TerminalSet(int numTerms);
+  // C++-provided copy & move operations are OK
 
   TerminalSet(Flatten&);
   void xfer(Flatten &flat);
@@ -244,7 +238,7 @@ public:     // funcs
   void reset(int numTerms);
 
   // true when the # of symbols is 0; an unfinished state
-  bool nullMap() const { return bitmap==NULL; }
+  bool empty() const { return bitmap.empty(); }
 
   bool contains(int terminalId) const;
 
