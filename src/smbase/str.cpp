@@ -4,6 +4,7 @@
 
 #include "str.h"            // this module
 
+#include <istream>          // std::istream
 #include <stdio.h>          // sprintf
 #include <ctype.h>          // isspace
 #include <inttypes.h>       // string printf formats
