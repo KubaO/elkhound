@@ -3,10 +3,11 @@
 
 #include "exprequal.h"         // this module
 
+#include "algo.h"              // sm::getPointerFromMap
 #include "c.ast.gen.h"         // C AST stuff
-#include "ohashtbl.h"          // OwnerHashTable
 #include "c_type.h"            // Type::equals
 
+#include <unordered_map>       // std::unordered_map
 #include <vector>              // std::vector
 
 
@@ -28,22 +29,21 @@ void const *variablePairKey(VariablePair *vp)
 
 
 // ---------------- expression comparison --------------
-bool equalExpr(OwnerHashTable<VariablePair> &equiv,
+bool equalExpr(std::unordered_map<Variable const *, VariablePair *> &equiv,
                Expression const *left, Expression const *right);
 
 bool equalExpressions(Expression const *left, Expression const *right)
 {
   // map of variable equivalences, for determining equality of expressions
   // that locally declare variables (forall); initially empty
-  OwnerHashTable<VariablePair> equiv(variablePairKey,
-    HashTable::lcprngHashFn, HashTable::pointerEqualKeyFn);
+  std::unordered_map<Variable const *, VariablePair *> equiv;
 
   return equalExpr(equiv, left, right);
 }
 
 
 // simultaneous deconstruction..
-bool equalExpr(OwnerHashTable<VariablePair> &equiv,
+bool equalExpr(std::unordered_map<Variable const*, VariablePair *> &equiv,
                Expression const *left, Expression const *right)
 {
   // unlike in ML, I can do toplevel tag comparisons easily here
@@ -80,7 +80,7 @@ bool equalExpr(OwnerHashTable<VariablePair> &equiv,
       }
 
       // check the equivalence map
-      VariablePair *vp = equiv.get(L.var);
+      VariablePair* vp = sm::getPointerFromMap(equiv, L.var);
       if (vp && vp->varR == R.var) {
         // this is the equivalent variable in the right expression,
         // so we say these variable references *are* equal
@@ -190,7 +190,7 @@ bool equalExpr(OwnerHashTable<VariablePair> &equiv,
 
           // in expectation of all variables being of same type,
           // add these variables to the equivalence map
-          equiv.add(varL, new VariablePair(varL, varR));
+          equiv.insert(std::make_pair(varL, new VariablePair(varL, varR)));
 
           // keep track of what gets added
           addedEquiv.push_back(varL);
@@ -205,7 +205,8 @@ bool equalExpr(OwnerHashTable<VariablePair> &equiv,
     cleanup:
       // remove the equivalences we added
       for (auto ae = addedEquiv.rbegin(); ae != addedEquiv.rend(); ae++) {
-        delete equiv.remove(*ae);
+        delete* ae;
+        equiv.erase(*ae);
       }
       addedEquiv.clear();
 
