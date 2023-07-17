@@ -2,6 +2,7 @@
 // test ObjectPool
 
 #include "objpool.h"     // ObjectPool
+#include "xassert.h"     // xassert
 
 #include <stdlib.h>      // rand
 #include <iostream>      // std::cout
