@@ -3,6 +3,7 @@
 
 #include "eval.h"        // this module
 #include "ast.h"         // AST declarations
+#include "algo.h"        // sm::getPointerFromMap
 
 #include <stdlib.h>      // exit
 #include <assert.h>      // assert
@@ -20,17 +21,16 @@ static char const *bindToName(Binding *b)
   return b->name.c_str();
 }
 
-Env::Env()
-  : map(bindToName)
-{}
-
 Env::~Env()
-{}
-
+{
+  for (std::pair<string_view, Binding*> const & b : map) {
+    delete b.second;
+  }
+}
 
 int Env::get(char const *x)
 {
-  Binding *b = map.get(x);
+  Binding *b = sm::getPointerFromMap(map, x);
   if (!b) {
     return 0;     // unset variables default to 0 value
   }
@@ -41,10 +41,10 @@ int Env::get(char const *x)
 
 void Env::set(char const *x, int val)
 {
-  Binding *b = map.get(x);
+  Binding *b = sm::getPointerFromMap(map, x);
   if (!b) {
     // add new binding
-    map.add(x, new Binding(x, val));
+    map.insert(std::make_pair(x, new Binding(x, val)));
   }
   else {
     b->value = val;

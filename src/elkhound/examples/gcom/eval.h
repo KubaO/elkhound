@@ -4,8 +4,9 @@
 #ifndef EVAL_H
 #define EVAL_H
 
-#include "strhash.h"      // TStringHash
 #include "str.h"          // string
+
+#include <unordered_map>  // std::unordered_map
 
 class Binding {
 public:
@@ -23,12 +24,10 @@ public:
 class Env {
 private:
   // map: name -> value
-  TStringHash<Binding> map;
+  std::unordered_map<string_view, Binding *> map;  // owner map
 
 public:
-  Env();
   ~Env();
-
   int get(char const *x);
   void set(char const *x, int val);
 };
