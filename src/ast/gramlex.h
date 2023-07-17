@@ -18,6 +18,7 @@
 #include "sm_flexlexer.h"     // yyFlexLexer
 
 #include <iostream>           // std::istream
+#include <vector>             // std::vector
 
 // token code definitions
 #define TOK_EOF 0             // better name
@@ -26,7 +27,6 @@
 
 // other includes
 #include "str.h"              // string
-#include "objlist.h"          // ObjList
 #include "srcloc.h"           // SourceLoc
 #include "embedded.h"         // EmbeddedLang
 #include "strtable.h"         // StringTable, StringRef
@@ -76,7 +76,7 @@ private:     // data
   };
 
   FileState fileState;             // state for file we're lexing now
-  ObjList<FileState> fileStack;    // stack of files we will return to
+  std::vector<FileState> fileStack;// stack of files we will return to
 
   SourceLoc tokenStartLoc;         // location of start of current token
 
