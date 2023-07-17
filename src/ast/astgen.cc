@@ -3374,13 +3374,13 @@ void entry(int argc, char **argv)
   // file and generating something from it should perhaps be separated
   // into two parts
   if (!tracingSys("no_ast.gen")) {
-    string hdrFname = base & ".h";
+    string hdrFname = base + ".h";
     HGen hg(srcFname, modules, hdrFname, *ast);
     std::cout << "writing " << hdrFname << "...\n";
     hg.emitFile();
 
     // generated the c++ code
-    string codeFname = base & ".cc";
+    string codeFname = base + ".cc";
     CGen cg(srcFname, modules, codeFname, *ast, hdrFname);
     std::cout << "writing " << codeFname << "...\n";
     cg.emitFile();

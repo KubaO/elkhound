@@ -23,12 +23,6 @@
 class Flatten;           // flatten.h
 
 
-// ------------------------- string ---------------------
-
-// concatenation
-// uses '&' instead of '+' to avoid char* coercion problems
-std::string operator& (const std::string& head, const std::string& tail);
-
 // ------------------ porting compatibility ------------------
 
 using string = std::string;
