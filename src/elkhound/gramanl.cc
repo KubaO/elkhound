@@ -16,13 +16,19 @@
 #include "strutil.h"     // replace
 #include "ckheap.h"      // numMallocCalls
 #include "genml.h"       // emitMLActionCode
+#include "okhasharr.h"   // OwnerKHashArray
 
 #include <memory>        // std::make_unique
+#include <unordered_map> // std::unordered_map
 #include <vector>        // std::vector
 #include <fstream>       // std::ofstream
 #include <stdlib.h>      // getenv
 #include <stdio.h>       // printf
 
+
+class GrammarAnalysis::Finished :
+  public std::unordered_map<DottedProduction const*, LRItem*>
+{};
 
 class BitArray : public std::vector<bool>
 {
@@ -1824,37 +1830,6 @@ void GrammarAnalysis::computePredictiveParsingTable()
 }
 
 
-// these hashtables are keyed using the DottedProduction,
-// but yield LRItems as values
-
-// for storing dotted productions in a hash table, this is
-// the hash function itself
-STATICDEF unsigned LRItem::hash(DottedProduction const *key)
-{
-  //DottedProduction const *dp = (DottedProduction const*)key;
-
-  // on the assumption few productions have 20 RHS elts..
-  //int val = dp->dot + (20 * dp->prod->prodIndex);
-
-  // just use the address.. they're all shared..
-  return HashTable::lcprngHashFn((void*)key);
-}
-
-// given the data, yield the key
-STATICDEF DottedProduction const *LRItem::dataToKey(LRItem *it)
-{
-  return it->dprod;
-}
-
-// compare two dotted production keys for equality; since dotted
-// productions are shared, pointer equality suffices
-STATICDEF bool LRItem::dpEqual(DottedProduction const *key1,
-                               DottedProduction const *key2)
-{
-  return key1 == key2;
-}
-
-
 // based on [ASU] figure 4.33, p.223
 // NOTE: sometimes this is called with nonempty nonkernel items...
 void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
@@ -1866,15 +1841,6 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
     itemSet.print(trs, *this);
   }
 
-  // hashtable, list of items still yet to close; items are
-  // simultaneously in both the hash and the list, or not in either
-  #if 0
-  OwnerKHashArray<LRItem, DottedProduction> workhash(
-    &LRItem::dataToKey,
-    &LRItem::hash,
-    &LRItem::dpEqual, 13);
-  #endif // 0
-
   // every 'item' on the worklist has item->dprod->backPointer == item;
   // every 'dprod' not associated has dprod->backPointer == NULL
   ArrayStack<LRItem*> worklist;
@@ -1883,16 +1849,13 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
   TerminalSet scratchSet(numTerminals());
 
   // and another for the items we've finished
-  OwnerKHashTable<LRItem, DottedProduction> finished(
-    &LRItem::dataToKey,
-    &LRItem::hash,
-    &LRItem::dpEqual, 13);
-  finished.setEnableShrink(false);
+  Finished finished;
 
   // put all the nonkernels we have into 'finished'
   for (LRItem *dp : itemSet.nonkernelItems) {
     // ownership transfers to the finished list
-    finished.add(dp->dprod, dp);
+    xassert(finished.find(dp->dprod) == finished.end());
+    finished.insert(std::make_pair(dp->dprod, dp));
   }
   itemSet.nonkernelItems.clear();
 
@@ -1910,7 +1873,8 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
     // put it into list of 'done' items; this way, if this
     // exact item is generated during closure, it will be
     // seen and re-inserted (instead of duplicated)
-    finished.add(item->dprod, item);
+    xassert(finished.find(item->dprod) == finished.end());
+    finished.insert(std::make_pair(item->dprod, item));
 
     // close it -> worklist
     singleItemClosure(finished, worklist, item, scratchSet);
@@ -1918,20 +1882,19 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
 
   // move everything from 'finished' to the nonkernel items list
   try {
-    for (OwnerKHashTableIter<LRItem, DottedProduction> iter(finished);
-         !iter.isDone(); iter.adv()) {
+    for (std::pair<const DottedProduction *, LRItem*> const &f : finished) {
       // temporarily, the item is owned both by the hashtable
       // and the list
-      itemSet.nonkernelItems.insert(itemSet.nonkernelItems.begin(), iter.data());
+      itemSet.nonkernelItems.insert(itemSet.nonkernelItems.begin(), f.second);
       // FIXME probably doesn't need to be up front
     }
-    finished.disownAndForgetAll();
+    finished.clear();
   }
   catch (...) {
     breaker();    // debug breakpoint
 
     // resolve the multiple ownership by leaking some
-    finished.disownAndForgetAll();
+    finished.clear();
     throw;
   }
 
@@ -1946,9 +1909,8 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
 
 
 void GrammarAnalysis
-  ::singleItemClosure(OwnerKHashTable<LRItem, DottedProduction> &finished,
+  ::singleItemClosure(Finished &finished,
                       ArrayStack<LRItem*> &worklist,
-                      //OwnerKHashArray<LRItem, DottedProduction> &workhash,
                       LRItem const *item, TerminalSet &newItemLA)
 {
   INITIAL_MALLOC_STATS();
@@ -2048,7 +2010,9 @@ void GrammarAnalysis
       inDoneList = false;
     }
     else {
-      already = finished.get(newDP);
+      if (finished.find(newDP) != finished.end()) {
+        already = finished.at(newDP);
+      }
     }
 
     if (already) {
@@ -2072,7 +2036,7 @@ void GrammarAnalysis
         if (inDoneList) {
           // pull from the 'done' list and put in worklist, since the
           // lookahead changed
-          finished.remove(already->dprod);
+          finished.erase(already->dprod);
           CHECK_MALLOC_STATS("before worklist push");
           worklist.push(already);
           xassert(already->dprod->backPointer == NULL);   // was not on

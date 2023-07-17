@@ -18,9 +18,6 @@
 #define __GRAMANL_H
 
 #include "grammar.h"      // Grammar and friends
-#include "ohashtbl.h"     // OwnerHashTable
-#include "okhashtbl.h"    // OwnerKHashTable
-#include "okhasharr.h"    // OwnerKHashArray
 #include "glrconfig.h"    // SOURCELOC
 #include "parsetables.h"  // ParseTables, GrowArray
 
@@ -173,11 +170,6 @@ public:    // funcs
 
   int prodIndex() const
     { return getProd()->prodIndex; }
-
-  // stuff for insertion into a hash table
-  static unsigned hash(DottedProduction const *key);
-  static DottedProduction const *dataToKey(LRItem *dp);
-  static bool dpEqual(DottedProduction const *key1, DottedProduction const *key2);
 
   // true if this item is "A -> alpha * t beta"
   bool isExtendingShift(Nonterminal const *A, Terminal const *t) const;
@@ -429,6 +421,7 @@ public:	    // data
   ParseTables *tables;                  // (owner)
 
 private:    // funcs
+  class Finished;
   // ---- analyis init ----
   // call this after grammar is completely built
   void initializeAuxData();
@@ -545,9 +538,8 @@ private:    // funcs
   // let's try this .. it needs to access 'itemSets'
   friend void ItemSet::xferSerfs(Flatten &flat, GrammarAnalysis &g);
 
-  void singleItemClosure(OwnerKHashTable<LRItem, DottedProduction> &finished,
+  void singleItemClosure(Finished &finished,
                          ArrayStack<LRItem*> &worklist,
-                         //OwnerKHashArray<LRItem, DottedProduction> &workhash,
                          LRItem const *item, TerminalSet &scratchSet);
 
 public:	    // funcs
