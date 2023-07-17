@@ -5,7 +5,7 @@
 #ifndef OBJPOOL_H
 #define OBJPOOL_H
 
-#include "array.h"     // GrowArray
+#include <vector>     // std::vector
 
 // the class T should have:
 //   // a link in the free list; it is ok for T to re-use this
@@ -26,19 +26,19 @@ private:     // data
   // exponential) expansion strategy because these are supposed
   // to be used for small sets of rapidly-reused objects, not
   // things allocated for long-term storage
-  int rackSize;
+  int const rackSize;
 
   // growable array of pointers to arrays of 'rackSize' T objects
-  ArrayStack<T*> racks;
+  std::vector<T*> racks;
 
   // head of the free list; NULL when empty
-  T *head;
+  T *head = nullptr;
 
 private:     // funcs
   void expandPool();
 
 public:      // funcs
-  ObjectPool(int rackSize);
+  explicit ObjectPool(int rackSize);
   ~ObjectPool();
 
   // yields a pointer to an object ready to be used; typically,
@@ -58,17 +58,17 @@ public:      // funcs
 
 template <class T>
 ObjectPool<T>::ObjectPool(int rs)
-  : rackSize(rs),
-    racks(5),
-    head(NULL)
-{}
+  : rackSize(rs)
+{
+  racks.reserve(5);
+}
 
 template <class T>
 ObjectPool<T>::~ObjectPool()
 {
   // deallocate all the objects in the racks
-  for (int i=0; i < racks.length(); i++) {
-    delete[] racks[i];
+  for (T* rack : racks) {
+    delete[] rack;
   }
 }
 
@@ -98,7 +98,7 @@ template <class T>
 void ObjectPool<T>::expandPool()
 {
   T *rack = new T[rackSize];
-  racks.push(rack);
+  racks.push_back(rack);
 
   // thread new nodes into a free list
   for (int i=rackSize-1; i>=0; i--) {
