@@ -47,10 +47,6 @@
 #endif
 
 
-// member copy in constructor initializer list
-#define DMEMB(var) var(obj.var)
-
-
 // assert something at compile time (must use this inside a function);
 // works because compilers won't let us declare negative-length arrays
 // (the expression below works with egcs-1.1.2, gcc-2.x, gcc-3.x)

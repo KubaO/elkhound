@@ -69,8 +69,8 @@ XASTParse::XASTParse(LocString const &tok, rostring m)
 
 XASTParse::XASTParse(XASTParse const &obj)
   : xBase(obj),
-    DMEMB(failToken),
-    DMEMB(message)
+    failToken(obj.failToken),
+    message(obj.message)
 {}
 
 XASTParse::~XASTParse()
