@@ -11,7 +11,6 @@
 #include "syserr.h"          // xsyserror
 #include "strutil.h"         // quoted
 #include "grampar.tab.h"     // token constant codes, union YYSTYPE
-#include "array.h"           // GrowArray
 #include "mlsstr.h"          // MLSubstrate
 
 #include <fstream>           // std::ifstream
@@ -379,22 +378,12 @@ Terminal *astParseToken(Environment &env, LocString const &name)
 }
 
 
-// needed to ensure the GrowArray below has its values initialized
-// to false when the array expands
-class InitFalseBool {
-public:
-  bool b;
-public:
-  InitFalseBool() : b(false) {}
-};
-
-
 void astParseTerminals(Environment &env, TF_terminals const &terms)
 {
   // basic declarations
   {
     int maxCode = 0;
-    GrowArray<InitFalseBool> codeHasTerm(200);
+    std::vector<bool> codeHasTerm(200, false);
     FOREACH_ASTLIST(TermDecl, terms.decls, iter) {
       TermDecl const &term = *(iter.data());
 
@@ -410,15 +399,17 @@ void astParseTerminals(Environment &env, TF_terminals const &terms)
 
       // track what terminals have codes
       maxCode = (std::max)(code, maxCode);
-      codeHasTerm.ensureIndexDoubler(code);
-      codeHasTerm[code].b = true;
+      if (code > codeHasTerm.size()) {
+      	codeHasTerm.resize(maxCode * 2);
+      }
+      codeHasTerm[code] = true;
     }
 
     // fill in any gaps in the code space; this is required because
     // later analyses assume the terminal code space is dense
     SourceLoc dummyLoc(HERE_SOURCELOC);
     for (int i=0; i<maxCode; i++) {
-      if (!codeHasTerm[i].b) {
+      if (!codeHasTerm[i]) {
         LocString dummy(dummyLoc, grammarStringTable.add(
           stringc << "__dummy_filler_token" << i));
         env.g.declareToken(dummy, i, dummy);
