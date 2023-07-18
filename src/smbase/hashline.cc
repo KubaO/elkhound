@@ -2,6 +2,7 @@
 // code for hashline.h
 
 #include "hashline.h"      // this module
+#include "xassert.h"       // xassert
 
 #include <string.h>        // memcpy
 
@@ -27,13 +28,13 @@ void HashLineMap::addHashLine(int ppLine, int origLine, char const *origFname)
   origFname = canon.first->c_str();
 
   // add the entry to the array
-  directives.push(HashLine(ppLine, origLine, origFname));
+  directives.push_back(HashLine(ppLine, origLine, origFname));
 }
 
 
 void HashLineMap::doneAdding()
 {
-  directives.consolidate();
+  directives.shrink_to_fit();
 }
 
 
@@ -43,7 +44,7 @@ void HashLineMap::doneAdding()
 void HashLineMap::map(int ppLine, int &origLine, char const *&origFname) const
 {
   // check for a ppLine that precedes any in the array
-  if (directives.isEmpty() ||
+  if (directives.empty() ||
       ppLine < directives[0].ppLine) {
     // it simply refers to the pp file
     origLine = ppLine;
@@ -53,7 +54,7 @@ void HashLineMap::map(int ppLine, int &origLine, char const *&origFname) const
 
   // perform binary search on the 'directives' array
   int low = 0;                        // index of lowest candidate
-  int high = directives.length()-1;   // index of highest candidate
+  int high = directives.size()-1;   // index of highest candidate
 
   while (low < high) {
     // check the midpoint (round up to ensure progress when low+1 == high)
@@ -165,7 +166,6 @@ int main()
 
   int numFiles = hl.numUniqueFilenames();
   int numDirectives = hl.numDirectives();
-  int directivesSize = hl.directivesSize();
   if (numFiles != expectedFiles) {
     printf("the number of unique files was %d, but I expected %d\n",
            numFiles, expectedFiles);
@@ -174,11 +174,6 @@ int main()
   if (numDirectives != expectedDirectives) {
     printf("the number of directives was %d, but I expected %d\n",
            numDirectives, expectedDirectives);
-    return 2;
-  }
-  if (directivesSize != expectedDirectives) {
-    printf("the size of directives was %d, but I expected %d\n",
-           directivesSize, expectedDirectives);
     return 2;
   }
 

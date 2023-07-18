@@ -11,7 +11,7 @@
 #define HASHLINE_H
 
 #include <set>              // std::set<string>
-#include "array.h"          // ArrayStack
+#include <vector>           // std::vector
 #include "str.h"            // string, rostring
 
 // map from lines in some given pp source file to lines in
@@ -42,7 +42,7 @@ private:    // data
   std::set<string> filenames;
 
   // growable array of HashLine objects
-  ArrayStack<HashLine> directives;
+  std::vector<HashLine> directives;
 
   // previously-added ppLine; used to verify the entries are
   // being added in sorted order
@@ -72,9 +72,7 @@ public:     // funcs
   int numUniqueFilenames() { return filenames.size(); }
 
   // similarly, the number of directives
-  int numDirectives() { return directives.length(); }
-  // and size of array
-  int directivesSize() {return directives.size(); }
+  int numDirectives() const { return directives.size(); }
 };
 
 #endif // HASHLINE_H
