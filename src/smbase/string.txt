@@ -228,8 +228,7 @@ Transition guide for new string interface:
       char operator[] (int i) const;
     If the latter function (operator[]) is all that is needed,
     use stringBuilder instead.  If the former is needed, use
-    Array<char> instead, but remember to explicitly allocate
-    one extra byte for the NUL terminator.
+    std::string.
 
   - To convert code that iteratively scans a 'char const *', such as
       void foo(char const *src)

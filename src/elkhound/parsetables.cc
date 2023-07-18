@@ -8,8 +8,8 @@
 #include "emitcode.h"       // EmitCode
 #include "bit2d.h"          // Bit2d
 
+#include <vector>           // std::vector
 #include <string.h>         // memset
-#include <stdlib.h>         // qsort, system
 
 
 // array index code
@@ -552,8 +552,8 @@ void ParseTables::mergeActionColumns()
   }
 
   // color the graph
-  Array<int> color(numTerms);      // terminal -> color
-  int numColors = colorTheGraph(color, graph);
+  std::vector<int> color(numTerms, 0);      // terminal -> color
+  int numColors = colorTheGraph(&color[0], graph);
 
   // build a new, compressed action table; the entries are initialized
   // to 'error', meaning every cell starts as don't-care
@@ -643,8 +643,8 @@ void ParseTables::mergeActionRows()
   }
 
   // color the graph
-  Array<int> color(numStates);      // state -> color (equivalence class)
-  int numColors = colorTheGraph(color, graph);
+  std::vector<int> color(numStates, 0);      // state -> color (equivalence class)
+  int numColors = colorTheGraph(&color[0], graph);
 
   // build a new, compressed action table
   ActionEntry *newTable;
@@ -773,8 +773,8 @@ void ParseTables::mergeGotoColumns()
   }
 
   // color the graph
-  Array<int> color(numNonterms);      // nonterminal -> color
-  int numColors = colorTheGraph(color, graph);
+  std::vector<int> color(numNonterms, 0);      // nonterminal -> color
+  int numColors = colorTheGraph(&color[0], graph);
 
   // build a new, compressed goto table; the entries are initialized
   // to 'error', meaning every cell starts as don't-care
@@ -861,8 +861,8 @@ void ParseTables::mergeGotoRows()
   }
 
   // color the graph
-  Array<int> color(numStates);      // state -> color (equivalence class)
-  int numColors = colorTheGraph(color, graph);
+  std::vector<int> color(numStates, 0);      // state -> color (equivalence class)
+  int numColors = colorTheGraph(&color[0], graph);
 
   // build a new, compressed goto table
   GotoEntry *newTable;
@@ -925,11 +925,6 @@ void ParseTables::mergeGotoRows()
 }
 
 
-static int intCompare(void const *left, void const *right)
-{
-  return *((int const*)left) - *((int const*)right);
-}
-
 int ParseTables::colorTheGraph(int *color, Bit2d &graph)
 {
   int n = graph.Size().x;  // same as y
@@ -939,11 +934,10 @@ int ParseTables::colorTheGraph(int *color, Bit2d &graph)
   }
 
   // node -> # of adjacent nodes
-  Array<int> degree(n);
-  memset((int*)degree, 0, n * sizeof(int));
+  std::vector<int> degree(n, 0);
 
   // node -> # of adjacent nodes that have colors already
-  Array<int> blocked(n);
+  std::vector<int> blocked(n, 0);
 
   // initialize some arrays
   enum { UNASSIGNED = -1 };
@@ -991,7 +985,7 @@ int ParseTables::colorTheGraph(int *color, Bit2d &graph)
     }
 
     // get the assigned colors of the adjacent vertices
-    Array<int> adjColor(bestBlocked);
+    std::vector<int> adjColor(bestBlocked, 0);
     int adjIndex = 0;
     for (int i=0; i<n; i++) {
       if (graph.get(point(best,i)) &&
@@ -1002,7 +996,7 @@ int ParseTables::colorTheGraph(int *color, Bit2d &graph)
     xassert(adjIndex == bestBlocked);
 
     // sort them
-    qsort((int*)adjColor, bestBlocked, sizeof(int), intCompare);
+    std::sort(adjColor.begin(), adjColor.end());
 
     // select the lowest-numbered color that won't conflict
     int selColor = 0;
@@ -1115,6 +1109,13 @@ void emitTable(EmitCode &out, EltType const *table, int size, int rowLength,
       << "  };\n";
 }
 
+template <class EltType>
+void emitTable(EmitCode& out, const std::vector<EltType>& table, int rowLength,
+  rostring typeName, rostring tableName)
+{
+  emitTable(out, &table[0], table.size(), rowLength, typeName, tableName);
+}
+
 // used to emit the elements of the prodInfo table
 stringBuilder& operator<< (stringBuilder &sb, ParseTables::ProdInfo const &info)
 {
@@ -1145,15 +1146,12 @@ void emitOffsetTable(EmitCode &out, EltType **table, EltType *base, int size,
   }
 
   // make the pointers persist by storing a table of offsets
-  Array<int> offsets(size);
+  std::vector<int> offsets(size, UNASSIGNED);
   bool allUnassigned = true;
   for (int i=0; i < size; i++) {
     if (table[i]) {
       offsets[i] = table[i] - base;
       allUnassigned = false;
-    }
-    else {
-      offsets[i] = UNASSIGNED;    // codes for a NULL entry
     }
   }
 
@@ -1165,7 +1163,7 @@ void emitOffsetTable(EmitCode &out, EltType **table, EltType *base, int size,
   if (size > 0) {
     out << "  " << tableName << " = new " << typeName << " [" << size << "];\n";
 
-    emitTable(out, (int*)offsets, size, 16, "int", stringc << tableName << "_offsets");
+    emitTable(out, offsets, 16, "int", stringc << tableName << "_offsets");
 
     // at run time, interpret the offsets table
     out << "  for (int i=0; i < " << size << "; i++) {\n"
