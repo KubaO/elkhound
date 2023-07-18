@@ -17,7 +17,6 @@ project(crc)
 project(srcloc)
 project(hashline)
 project(gprintf)
-project(testarray)
 project(autofile)
 
 # files for nonport
@@ -91,11 +90,6 @@ add_executable(gprintf
     ../gprintf.c
 )
 
-# files for testarray
-add_executable(testarray
-    ../testarray.cc
-)
-
 # files for autofile
 add_executable(autofile
     ../autofile.cc
@@ -128,7 +122,6 @@ target_link_libraries(bflatten smbase)
 target_link_libraries(tobjpool smbase)
 target_link_libraries(srcloc smbase)
 target_link_libraries(hashline smbase)
-target_link_libraries(testarray smbase)
 target_link_libraries(autofile smbase)
 
 # add the tests
@@ -146,7 +139,6 @@ add_test(NAME crc COMMAND ./crc)
 add_test(NAME srcloc COMMAND ./srcloc)
 add_test(NAME hashline COMMAND ./hashline)
 add_test(NAME gprintf COMMAND ./gprintf)
-add_test(NAME testarray COMMAND ./testarray)
 add_test(NAME autofile COMMAND ./autofile)
 
 # dependencies for srcloc test
