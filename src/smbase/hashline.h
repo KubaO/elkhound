@@ -31,8 +31,6 @@ private:    // types
       : ppLine(0), origLine(0), origFname(NULL) {}
     HashLine(int pl, int ol, char const *of)
       : ppLine(pl), origLine(ol), origFname(of) {}
-    HashLine(HashLine const &obj)
-      : DMEMB(ppLine), DMEMB(origLine), DMEMB(origFname) {}
   };
 
 private:    // data

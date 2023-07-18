@@ -376,11 +376,6 @@ void SourceLocManager::File::doneAdding()
 }
 
 
-// ----------------------- StaticLoc -------------------
-SourceLocManager::StaticLoc::~StaticLoc()
-{}
-
-
 // ----------------------- SourceLocManager -------------------
 int SourceLocManager::shortLineCount = 0;
 

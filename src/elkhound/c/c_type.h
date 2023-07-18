@@ -311,8 +311,6 @@ private:    // funcs
 public:     // funcs
   CVAtomicType(AtomicType const *a, CVFlags c)
     : atomic(a), cv(c) {}
-  CVAtomicType(CVAtomicType const &obj)
-    : DMEMB(atomic), DMEMB(cv) {}
 
   bool innerEquals(CVAtomicType const *obj) const;
 
@@ -340,8 +338,6 @@ public:
 
 public:
   PointerType(PtrOper o, CVFlags c, Type const *a);
-  PointerType(PointerType const &obj)
-    : DMEMB(op), DMEMB(cv), DMEMB(atType) {}
 
   bool innerEquals(PointerType const *obj) const;
 

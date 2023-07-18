@@ -78,11 +78,9 @@ private:     // types
     int arrayOffset;
 
   public:
-    Marker() {}      // for creation in arrays
+    Marker() = default;      // for creation in arrays
     Marker(int c, int L, int a)
       : charOffset(c), lineOffset(L), arrayOffset(a) {}
-    Marker(Marker const &obj)
-      : DMEMB(charOffset), DMEMB(lineOffset), DMEMB(arrayOffset) {}
   };
 
 public:      // types
@@ -177,9 +175,6 @@ public:      // types
   public:
     StaticLoc(char const *n, int o, int L, int c)
       : name(n), offset(o), line(L), col(c) {}
-    StaticLoc(StaticLoc const &obj)
-      : DMEMB(name), DMEMB(offset), DMEMB(line), DMEMB(col) {}
-    ~StaticLoc();
   };
 
 private:     // data
