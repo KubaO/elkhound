@@ -149,12 +149,4 @@ public:
 };
 
 
-// put at the top of a class for which the default copy ctor
-// and operator= are not desired; then don't define these functions
-#define NO_OBJECT_COPIES(name)   \
-  private:                       \
-    name(name&);                 \
-    void operator=(name&) /*user ;*/
-
-
 #endif // __MACROS_H
