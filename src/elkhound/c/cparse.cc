@@ -4,6 +4,7 @@
 #include <iostream>      // std::cout
 
 #include "cparse.h"      // this module
+#include "algo.h"        // sm::contains
 #include "cc_lang.h"     // CCLang
 #include "trace.h"       // trace
 
@@ -19,14 +20,9 @@ ParseEnv::~ParseEnv()
 {}
 
 
-static char const *identity(void *data)
-{
-  return (char const*)data;
-}
-
 void ParseEnv::enterScope()
 {
-  types.emplace(identity);
+  types.emplace();
 }
 
 void ParseEnv::leaveScope()
@@ -37,14 +33,14 @@ void ParseEnv::leaveScope()
 void ParseEnv::addType(StringRef type)
 {
   StringHash &h = types.top();
-  if (h.get(type)) {
+  if (sm::contains(h, type)) {
     // this happens for C++ code which has both the implicit
     // and explicit typedefs (and/or, explicit 'class Foo' mentions
     // in places)
     //std::cout << "duplicate entry for " << type << " -- will ignore\n";
   }
   else {
-    h.add(type, (void*)type);
+    h.insert(type);
   }
 }
 
@@ -54,8 +50,8 @@ bool ParseEnv::isType(StringRef name)
     return true;
   }
 
-  for (auto const& iter : types) {
-    if (iter.get(name)) {
+  for (ParseEnv::StringHash const& type : types) {
+    if (sm::contains(type, name)) {
       return true;
     }
   }

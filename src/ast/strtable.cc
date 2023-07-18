@@ -2,6 +2,7 @@
 // code for strtable.h
 
 #include "strtable.h"    // this module
+#include "algo.h"        // sm::...
 #include "xassert.h"     // xassert
 #include "flatten.h"     // Flatten
 
@@ -11,15 +12,8 @@
 StringTable *flattenStrTable = NULL;
 
 
-STATICDEF char const *StringTable::identity(void *data)
-{
-  return (char const*)data;
-}
-
-
 StringTable::StringTable()
-  : hash(identity),
-    racks(NULL),
+  : racks(NULL),
     longStrings(NULL)
 {}
 
@@ -31,7 +25,7 @@ StringTable::~StringTable()
 
 void StringTable::clear()
 {
-  hash.empty();
+  hash.clear();
 
   while (racks != NULL) {
     Rack *temp = racks;
@@ -42,30 +36,31 @@ void StringTable::clear()
   while (longStrings != NULL) {
     LongString *temp = longStrings;
     longStrings = longStrings->next;
-    delete temp->data;
-    delete temp;
+    free(temp);
   }
 }
 
 
-StringRef StringTable::add(char const *src)
+StringRef StringTable::add(string_view src)
 {
   // see if it's already here
-  StringRef ret = get(src);
-  if (ret) {
-    return ret;
+  auto it = hash.find(src);
+  if (it != hash.end()) {
+    return it->data();
   }
 
-  int len = strlen(src)+1;     // include null terminator
+  string_view ret;
+  int len = src.size()+1;     // include null terminator
 
   // is it a long string?
   if (len >= longThreshold) {
-    char *d = new char[len];
-    ret = d;
-    memcpy(d, src, len);
+    // allocate a long string with a variable-sized tail
+    LongString *ls = static_cast<LongString*>(malloc(sizeof(LongString) + src.size()));
 
-    // prepend a new long-string entry
-    longStrings = new LongString(longStrings, d);
+    ls->next = longStrings;
+    longStrings = ls;
+
+    ret = string_view(ls->data, src.size());
   }
 
   else {
@@ -77,21 +72,29 @@ StringRef StringTable::add(char const *src)
     }
 
     // add the string to the last rack
-    ret = racks->nextByte();
-    memcpy(racks->nextByte(), src, len);
+    ret = string_view(racks->nextByte(), src.size());
     racks->usedBytes += len;
   }
 
-  // enter the intended location into the indexing structures
-  hash.add(ret, (void*)ret);
+  // copy the string to the destination
+  char* dst = const_cast<char*>(ret.data());
+  src.copy(dst, ret.size());
+  dst[ret.size()] = '\0';
 
-  return ret;
+  // enter the intended location into the indexing structures
+  hash.insert(ret);
+
+  return ret.data();
 }
 
 
-StringRef StringTable::get(char const *src) const
+StringRef StringTable::get(string_view src) const
 {
-  return (StringRef)hash.get(src);
+  auto it = hash.find(src);
+  if (it != hash.end()) {
+    return it->data();
+  }
+  return nullptr;
 }
 
 

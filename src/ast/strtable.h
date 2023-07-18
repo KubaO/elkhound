@@ -4,8 +4,9 @@
 #ifndef STRTABLE_H
 #define STRTABLE_H
 
-#include "strhash.h"     // StringHash
-#include "str.h"         // rostring
+#include "str.h"         // rostring, string_view
+
+#include <unordered_set>
 
 // fwd
 class Flatten;
@@ -39,7 +40,7 @@ private:     // types
     char data[rackSize];   // data where strings are stored
 
   public:
-    Rack(Rack *n) : next(n), usedBytes(0) {}
+    explicit Rack(Rack *n) : next(n), usedBytes(0) {}
     int availBytes() const { return rackSize - usedBytes; }
     char *nextByte() { return data + usedBytes; }
   };
@@ -47,16 +48,13 @@ private:     // types
   // stores long strings
   struct LongString {
     LongString *next;      // (owner) next long string
-    char *data;            // (owner) string data, any length (null terminated)
-
-  public:
-    LongString(LongString *n, char *d) : next(n), data(d) {}
+    char data[1];          // variable-size string array, in-place
   };
 
 private:    // data
   // hash table mapping strings to pointers into one
   // of the string racks
-  StringHash hash;
+  std::unordered_set<string_view> hash;
 
   // linked list of racks; only walked at dealloc time; we add new
   // strings to the first rack, and prepend a new one if necessary;
@@ -88,16 +86,14 @@ public:     // funcs
   //
   // note that this module does not retain a pointer or reference
   // to the original 'src' (it makes a copy if needed)
-  StringRef add(char const *src);
-  StringRef add(rostring src) { return add(src.c_str()); }
+  StringRef add(string_view src);
 
   // some syntactic sugar
-  StringRef operator() (char const *src) { return add(src); }
-  StringRef operator() (rostring src) { return add(src); }
+  StringRef operator() (string_view src) { return add(src); }
 
   // if 'src' is in the table, return its representative; if not,
   // return NULL
-  StringRef get(char const *src) const;
+  StringRef get(string_view src) const;
 
   // similar functions for strings with specified lengths
   // this doesn't work because the underlying hash table interface needs null terminators..
