@@ -9,7 +9,6 @@
 #include "bit2d.h"          // Bit2d
 
 #include <string.h>         // memset
-#include <stdlib.h>         // qsort, system
 
 
 // array index code
@@ -182,12 +181,9 @@ ParseTables::~ParseTables()
 ParseTables::TempData::TempData(int numStates)
   : ambigTable(),
     bigProductionList(),
-    productionsForState(numStates),
-    ambigStateTable(numStates)
-{
-  productionsForState.setAll(UNASSIGNED);
-  ambigStateTable.setAll(UNASSIGNED);
-}
+    productionsForState(numStates, UNASSIGNED),
+    ambigStateTable(numStates, UNASSIGNED)
+{}
 
 ParseTables::TempData::~TempData()
 {}
@@ -293,7 +289,7 @@ ActionEntry ParseTables::encodeReduce(int prodId, StateId inWhatState)
 
 
 ActionEntry ParseTables::encodeAmbig
-  (ArrayStack<ActionEntry> const &set, StateId inWhatState)
+  (sm::stack<ActionEntry> const &set, StateId inWhatState)
 {
   #if ENABLE_CRS_COMPRESSION
     int begin = temp->ambigStateTable[inWhatState];
@@ -314,7 +310,7 @@ ActionEntry ParseTables::encodeAmbig
       // would not be enough.
 
       // # of big-table entries that will be used
-      int encodeLen = set.length()+1;
+      int encodeLen = set.size()+1;
 
       for (int i=begin; i+encodeLen <= end; i++) {
         // does this offset contain the same set of actions?
@@ -329,29 +325,31 @@ ActionEntry ParseTables::encodeAmbig
     }
 
   #else
-    int end = temp->ambigTable.length();
+    int end = temp->ambigTable.size();
     appendAmbig(set);
     return validateAction(numStates+end+1);
   #endif
 }
 
 
-void ParseTables::appendAmbig(ArrayStack<ActionEntry> const &set)
+void ParseTables::appendAmbig(sm::stack<ActionEntry> const &set)
 {
-  temp->ambigTable.push(set.length());
-  for (int j=0; j < set.length(); j++) {
-    temp->ambigTable.push(set[j]);
+  temp->ambigTable.push_back(set.size());
+  for (auto e = set.rbegin(); e != set.rend(); e++) {
+    temp->ambigTable.push_back(*e);
   }
 }
 
-bool ParseTables::compareAmbig(ArrayStack<ActionEntry> const &set,
+
+bool ParseTables::compareAmbig(sm::stack<ActionEntry> const &set,
                                int startIndex)
 {
-  if (temp->ambigTable[startIndex] != set.length()) {
+  if (temp->ambigTable[startIndex] != set.size()) {
     return false;           // mismatch in 1st entry
   }
-  for (int j=0; j < set.length(); j++) {
-    if (temp->ambigTable[startIndex+1+j] != set[j]) {
+  int j = 0;
+  for (auto e = set.rbegin(); e != set.rend(); e++) {
+    if (temp->ambigTable[startIndex+1+j] != *e) {
       return false;         // mismatch in j+2nd entry
     }
   }
@@ -383,17 +381,17 @@ GotoEntry ParseTables::encodeGoto(StateId destState, int shiftedNontermId) const
 
 // simple alloc + copy
 template <class T>
-void copyArray(int &len, T *&dest, ArrayStack<T> const &src)
+void copyArray(int &len, T *&dest, std::vector<T> const &src)
 {
-  len = src.length();
+  len = src.size();
   dest = new T[len];
-  memcpy(dest, src.getArray(), sizeof(T) * len);
+  memcpy(dest, src.data(), sizeof(T) * len);
 }
 
 // given an array 'src' of indices relative to 'base', allocate the
 // array 'dest' and fill it in with actual pointers into 'base'
 template <class T>
-void copyIndexPtrArray(int len, T **&dest, T *base, ArrayStack<int> const &src)
+void copyIndexPtrArray(int len, T **&dest, T *base, std::vector<int> const &src)
 {
   dest = new T* [len];
   for (int i=0; i<len; i++) {
@@ -552,8 +550,8 @@ void ParseTables::mergeActionColumns()
   }
 
   // color the graph
-  Array<int> color(numTerms);      // terminal -> color
-  int numColors = colorTheGraph(color, graph);
+  std::vector<int> color(numTerms, 0);      // terminal -> color
+  int numColors = colorTheGraph(&color[0], graph);
 
   // build a new, compressed action table; the entries are initialized
   // to 'error', meaning every cell starts as don't-care
@@ -643,8 +641,8 @@ void ParseTables::mergeActionRows()
   }
 
   // color the graph
-  Array<int> color(numStates);      // state -> color (equivalence class)
-  int numColors = colorTheGraph(color, graph);
+  std::vector<int> color(numStates, 0);      // state -> color (equivalence class)
+  int numColors = colorTheGraph(&color[0], graph);
 
   // build a new, compressed action table
   ActionEntry *newTable;
@@ -773,8 +771,8 @@ void ParseTables::mergeGotoColumns()
   }
 
   // color the graph
-  Array<int> color(numNonterms);      // nonterminal -> color
-  int numColors = colorTheGraph(color, graph);
+  std::vector<int> color(numNonterms, 0);      // nonterminal -> color
+  int numColors = colorTheGraph(&color[0], graph);
 
   // build a new, compressed goto table; the entries are initialized
   // to 'error', meaning every cell starts as don't-care
@@ -861,8 +859,8 @@ void ParseTables::mergeGotoRows()
   }
 
   // color the graph
-  Array<int> color(numStates);      // state -> color (equivalence class)
-  int numColors = colorTheGraph(color, graph);
+  std::vector<int> color(numStates, 0);      // state -> color (equivalence class)
+  int numColors = colorTheGraph(&color[0], graph);
 
   // build a new, compressed goto table
   GotoEntry *newTable;
@@ -925,11 +923,6 @@ void ParseTables::mergeGotoRows()
 }
 
 
-static int intCompare(void const *left, void const *right)
-{
-  return *((int const*)left) - *((int const*)right);
-}
-
 int ParseTables::colorTheGraph(int *color, Bit2d &graph)
 {
   int n = graph.Size().x;  // same as y
@@ -939,11 +932,10 @@ int ParseTables::colorTheGraph(int *color, Bit2d &graph)
   }
 
   // node -> # of adjacent nodes
-  Array<int> degree(n);
-  memset((int*)degree, 0, n * sizeof(int));
+  std::vector<int> degree(n, 0);
 
   // node -> # of adjacent nodes that have colors already
-  Array<int> blocked(n);
+  std::vector<int> blocked(n, 0);
 
   // initialize some arrays
   enum { UNASSIGNED = -1 };
@@ -991,7 +983,7 @@ int ParseTables::colorTheGraph(int *color, Bit2d &graph)
     }
 
     // get the assigned colors of the adjacent vertices
-    Array<int> adjColor(bestBlocked);
+    std::vector<int> adjColor(bestBlocked, 0);
     int adjIndex = 0;
     for (int i=0; i<n; i++) {
       if (graph.get(point(best,i)) &&
@@ -1002,7 +994,7 @@ int ParseTables::colorTheGraph(int *color, Bit2d &graph)
     xassert(adjIndex == bestBlocked);
 
     // sort them
-    qsort((int*)adjColor, bestBlocked, sizeof(int), intCompare);
+    std::sort(adjColor.begin(), adjColor.end());
 
     // select the lowest-numbered color that won't conflict
     int selColor = 0;
@@ -1115,6 +1107,13 @@ void emitTable(EmitCode &out, EltType const *table, int size, int rowLength,
       << "  };\n";
 }
 
+template <class EltType>
+void emitTable(EmitCode& out, const std::vector<EltType>& table, int rowLength,
+  rostring typeName, rostring tableName)
+{
+  emitTable(out, &table[0], table.size(), rowLength, typeName, tableName);
+}
+
 // used to emit the elements of the prodInfo table
 stringBuilder& operator<< (stringBuilder &sb, ParseTables::ProdInfo const &info)
 {
@@ -1145,15 +1144,12 @@ void emitOffsetTable(EmitCode &out, EltType **table, EltType *base, int size,
   }
 
   // make the pointers persist by storing a table of offsets
-  Array<int> offsets(size);
+  std::vector<int> offsets(size, UNASSIGNED);
   bool allUnassigned = true;
   for (int i=0; i < size; i++) {
     if (table[i]) {
       offsets[i] = table[i] - base;
       allUnassigned = false;
-    }
-    else {
-      offsets[i] = UNASSIGNED;    // codes for a NULL entry
     }
   }
 
@@ -1165,7 +1161,7 @@ void emitOffsetTable(EmitCode &out, EltType **table, EltType *base, int size,
   if (size > 0) {
     out << "  " << tableName << " = new " << typeName << " [" << size << "];\n";
 
-    emitTable(out, (int*)offsets, size, 16, "int", stringc << tableName << "_offsets");
+    emitTable(out, offsets, 16, "int", stringc << tableName << "_offsets");
 
     // at run time, interpret the offsets table
     out << "  for (int i=0; i < " << size << "; i++) {\n"

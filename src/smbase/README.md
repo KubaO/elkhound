@@ -61,15 +61,6 @@ Container Adapters
   - There's less verbosity in the template arguments: the container type is a free template; scalar value types get `std::vector` by default as the backing storage, whereas non-scalar types get `std::deque`. For safety it's presumed that the non-scalar values may be referenced outside of the stack through pointers, so a non-pointer-preserving container like vector can't be used.
 
 
-Arrays
-------
-
-Arrays are sequences of objects with O(1) random access and replacement.
-
-The main array header, [array.h](array.h), contains several array classes. GrowArray supports bounds checking and a method to grow the array. ArrayStack supports a distinction between the _length_ of the sequence and the _size_ of the array allocated to store it, and grows the latter automatically.
-
-* [array.h](array.h): Several array-like template classes, including growable arrays.
-
 Arrays of Bits
 --------------
 

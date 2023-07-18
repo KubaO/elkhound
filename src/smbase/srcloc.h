@@ -31,6 +31,7 @@
 #include "xassert.h"  // xassert
 
 #include <deque>      // std::deque
+#include <vector>     // std::vector
 
 class HashLineMap;    // hashline.h
 
@@ -114,10 +115,7 @@ public:      // types
     // chars, we use runs of '\xFF' chars to (in unary) encode
     // multiples of 254 (one less than 255) chars, plus the final
     // short count to give the total length
-    unsigned char *lineLengths;      // (owner)
-
-    // # of elements in 'lineLengths'
-    int lineLengthsSize;
+    std::vector<unsigned char> lineLengths;
 
     // this marker and offset can name an arbitrary point
     // in the array, including those that are not at the
@@ -127,13 +125,11 @@ public:      // types
     int markerCol;      // 1-based column; it's usually 1
 
     // an index built on top of 'lineLengths' for faster random access
-    Marker *index;                   // (owner)
-
-    // # of elements in 'index'
-    int indexSize;
+    std::vector<Marker> index;
 
   private:   // funcs
-    File(File&);                     // disallowed
+    File(File &) = delete;
+    File &operator=(File &) = delete;
     void resetMarker();
     void advanceMarker();
 

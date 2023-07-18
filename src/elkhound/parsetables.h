@@ -5,10 +5,13 @@
 #ifndef PARSETABLES_H
 #define PARSETABLES_H
 
-#include "array.h"        // ArrayStack
 #include "glrconfig.h"    // compression options
 #include "str.h"          // string
+#include "stack.h"        // sm::stack
+#include "xassert.h"      // xassert
+
 #include <iostream>       // std::ostream
+#include <vector>         // std::vector
 
 class Flatten;            // flatten.h
 class EmitCode;           // emitcode.h
@@ -117,17 +120,17 @@ private:    // types
   class TempData {
   public:   // data
     // nascent ambigTable
-    ArrayStack<ActionEntry> ambigTable;
+    std::vector<ActionEntry> ambigTable;
 
     // nascent bigProductionList
-    ArrayStack<ProdIndex> bigProductionList;
+    std::vector<ProdIndex> bigProductionList;
 
     // nascent productionsForState, except using integer offsets from
     // start of 'bigProductionList' instead of direct pointers into it
-    ArrayStack<int> productionsForState;
+    std::vector<int> productionsForState;
 
     // nascent versions of ambig tables, again with integer offsets
-    ArrayStack<int> ambigStateTable;
+    std::vector<int> ambigStateTable;
 
   public:   // funcs
     TempData(int numStates);
@@ -292,8 +295,8 @@ private:    // funcs
   int gotoTableSize() const
     { return gotoRows * gotoCols; }
 
-  void appendAmbig(ArrayStack<ActionEntry> const &set);
-  bool compareAmbig(ArrayStack<ActionEntry> const &set, int startIndex);
+  void appendAmbig(sm::stack<ActionEntry> const &set);
+  bool compareAmbig(sm::stack<ActionEntry> const &set, int startIndex);
 
   void fillInErrorBits(bool setPointers);
   int colorTheGraph(int *color, Bit2d &graph);
@@ -347,7 +350,7 @@ public:     // funcs
   // encode actions
   ActionEntry encodeShift(StateId destState, int shiftedTermId);
   ActionEntry encodeReduce(int prodId, StateId inWhatState);
-  ActionEntry encodeAmbig(ArrayStack<ActionEntry> const &set,
+  ActionEntry encodeAmbig(sm::stack<ActionEntry> const &set,
                           StateId inWhatState);
   ActionEntry encodeError() const;
   ActionEntry validateAction(int code) const;

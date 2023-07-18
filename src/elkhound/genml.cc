@@ -10,6 +10,8 @@
 #include "exc.h"         // XOpen
 #include "strutil.h"     // replace
 
+#include <vector>        // std::vector
+
 
 // NOTE: The as following code is largely copied from elsewhere,
 // including comments, the comments may be in some places not
@@ -700,6 +702,13 @@ void emitMLTable(EmitCode &out, EltType const *table, int size, int rowLength,
       ;
 }
 
+template <class EltType>
+void emitMLTable(EmitCode& out, const std::vector<EltType> &table, int rowLength,
+  char const* tableName)
+{
+  emitMLTable(out, &table[0], table.size(), rowLength, tableName);
+}
+
 #if 0   // not used
 // used to emit the elements of the prodInfo table
 stringBuilder& operator<< (stringBuilder &sb, ParseTables::ProdInfo const &info)
@@ -731,15 +740,12 @@ void emitMLOffsetTable(EmitCode &out, EltType **table, EltType *base, int size,
   }
 
   // make the pointers persist by storing a table of offsets
-  Array<int> offsets(size);
+  std::vector<int> offsets(size, UNASSIGNED);
   bool allUnassigned = true;
   for (int i=0; i < size; i++) {
     if (table[i]) {
       offsets[i] = table[i] - base;
       allUnassigned = false;
-    }
-    else {
-      offsets[i] = UNASSIGNED;    // codes for a NULL entry
     }
   }
 
@@ -826,17 +832,17 @@ void ParseTables::emitMLConstructionCode
 
   // break the prodInfo into two arrays
   {
-    Array<int> rhsLen(numProds);
-    Array<int> lhsIndex(numProds);
+    std::vector<int> rhsLen(numProds, 0);
+    std::vector<int> lhsIndex(numProds, 0);
 
     for (int i=0; i < numProds; i++) {
       rhsLen[i] = prodInfo[i].rhsLen;
       lhsIndex[i] = prodInfo[i].lhsIndex;
     }
 
-    emitMLTable(out, rhsLen.operator int const *(), numProds,
+    emitMLTable(out, rhsLen,
                 16 /*columns; arbitrary*/, "prodInfo_rhsLen");
-    emitMLTable(out, lhsIndex.operator int const *(), numProds,
+    emitMLTable(out, lhsIndex,
                 16 /*columns; arbitrary*/, "prodInfo_lhsIndex");
   }
 

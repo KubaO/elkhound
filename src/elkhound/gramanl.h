@@ -20,6 +20,7 @@
 #include "grammar.h"      // Grammar and friends
 #include "glrconfig.h"    // SOURCELOC
 #include "parsetables.h"  // ParseTables, GrowArray
+#include "stack.h"        // sm::stack
 
 #include <vector>         // std::vector
 
@@ -316,7 +317,7 @@ public:     // funcs
   // during LR item set construction; it leaves 'this' in a somewhat
   // half-baked state (if changedItems is not also called), so some
   // care needs to be taken when using this directly
-  void computeKernelCRC(GrowArray<DottedProduction const*> &array);
+  void computeKernelCRC(std::vector<DottedProduction const*> &array);
 
   // remove the reduce using 'prod' on lookahead 'sym;
   // calls 'changedItems' internally
@@ -476,7 +477,7 @@ private:    // funcs
   void disposeItemSet(ItemSet *is);
   void moveDotNoClosure(ItemSet const *source, Symbol const *symbol,
                         ItemSet *dest, std::vector<LRItem *> &unusedTail,
-                        GrowArray<DottedProduction const*> &array);
+                        std::vector<DottedProduction const*> &array);
   ItemSet *findItemSetInList(std::vector<ItemSet *> &list,
                              ItemSet const *itemSet);
   static bool itemSetsEqual(ItemSet const *is1, ItemSet const *is2);
@@ -537,7 +538,7 @@ private:    // funcs
   friend void ItemSet::xferSerfs(Flatten &flat, GrammarAnalysis &g);
 
   void singleItemClosure(Finished &finished,
-                         ArrayStack<LRItem*> &worklist,
+                         sm::stack<LRItem*> &worklist,
                          LRItem const *item, TerminalSet &scratchSet);
 
 public:	    // funcs

@@ -14,7 +14,6 @@
 #include "ckheap.h"         // checkHeapNode
 #include "flatten.h"        // Flatten
 #include "nonport.h"        // vnprintf
-#include "array.h"          // Array
 
 
 // ----------------------- string ---------------------
@@ -119,10 +118,10 @@ string vstringf(char const *format, va_list args)
   va_end(args2);
 
   // allocate space
-  Array<char> buf(est+1);
+  string ret(est + 1, '\0');
 
   // render the string
-  int len = vsprintf(buf, format, args);
+  int len = vsprintf(&ret[0], format, args);
 
   // check the estimate, and fail *hard* if it was low, to avoid any
   // possibility that this might become exploitable in some context
@@ -139,7 +138,8 @@ string vstringf(char const *format, va_list args)
   }
 
   // happy
-  return string(buf);
+  ret.resize(len);
+  return ret;
 }
 
 
