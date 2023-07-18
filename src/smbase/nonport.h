@@ -6,7 +6,6 @@
 #ifndef __NONPORT_H
 #define __NONPORT_H
 
-#include "typ.h"     // bool
 #include <stdarg.h>  // va_list
 
 

@@ -5,7 +5,6 @@
 #ifndef __POINT_H
 #define __POINT_H
 
-#include "typ.h"          // bool, min, max
 #include "str.h"
 
 // point defined over arbitrary underlying types
