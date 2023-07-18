@@ -73,16 +73,6 @@ inline T div_up(T const &x, T const &y)
 { return (x + y - 1) / y; }
 
 
-// mutable
-#ifdef __BORLANDC__
-#  define MUTABLE
-#  define EXPLICIT
-#else
-#  define MUTABLE mutable
-#  define EXPLICIT explicit
-#endif
-
-
 #define SWAP(a,b) \
   temp = a;       \
   a = b;          \
