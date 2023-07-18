@@ -6,6 +6,7 @@
 #include "str.h"        // stringc
 #include "ckheap.h"     // checkHeap
 
+#include <functional>   // std::less
 #include <stdlib.h>     // rand()
 #include <stdio.h>      // printf()
 
@@ -653,7 +654,13 @@ void VoidList::removeDuplicatesAsMultiset(VoidDiff diff, void *extra)
 
 STATICDEF int VoidList::pointerAddressDiff(void *left, void *right, void*)
 {
-  return comparePointerAddresses(left, right);
+  if (std::less<void*>{}(left, right)) {
+    return -1;
+  }
+  if (std::less<void*>{}(right, left)) {
+    return +1;
+  }
+  return 0;
 }
 
 
