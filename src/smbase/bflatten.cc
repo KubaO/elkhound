@@ -2,15 +2,13 @@
 // code for bflatten.h
 
 #include "bflatten.h"     // this module
+#include "algo.h"         // sm::getPointerFromMap
 #include "exc.h"          // throw_XOpen
 #include "syserr.h"       // xsyserror
 
 
 BFlatten::BFlatten(char const *fname, bool r)
   : readMode(r),
-    ownerTable(!r? &BFlatten::getOwnerPtrKeyFn : &BFlatten::getIntNameKeyFn,
-               HashTable::lcprngHashFn,
-               HashTable::pointerEqualKeyFn),
     nextUniqueName(1)
 {
   fp = fopen(fname, readMode? "rb" : "wb");
@@ -22,17 +20,6 @@ BFlatten::BFlatten(char const *fname, bool r)
 BFlatten::~BFlatten()
 {
   fclose(fp);
-}
-
-
-STATICDEF void const* BFlatten::getOwnerPtrKeyFn(OwnerMapping *data)
-{
-  return data->ownerPtr;
-}
-
-STATICDEF void const* BFlatten::getIntNameKeyFn(OwnerMapping *data)
-{
-  return (void const*)(data->intName);
 }
 
 
@@ -61,11 +48,11 @@ void BFlatten::noteOwner(void *ownerPtr)
   // add it to the table
   if (writing()) {
     // index by pointer
-    ownerTable.add(ownerPtr, map);
+    ownerTable.insert(std::make_pair(ownerPtr, map));
   }
   else {
     // index by int name
-    ownerTable.add((void const*)(map->intName), map);
+    ownerTable.insert(std::make_pair((void const*)(map->intName), map));
   }
 }
 
@@ -81,7 +68,7 @@ void BFlatten::xferSerf(void *&serfPtr, bool nullable)
     }
     else {
       // lookup the mapping
-      OwnerMapping *map = ownerTable.get(serfPtr);
+      OwnerMapping* map = sm::getPointerFromMap(ownerTable, serfPtr);
 
       // we must have already written the owner pointer
       xassert(map != NULL);
@@ -100,7 +87,7 @@ void BFlatten::xferSerf(void *&serfPtr, bool nullable)
     }
     else {
       // lookup the mapping
-      OwnerMapping *map = ownerTable.get((void const*)name);
+      OwnerMapping* map = sm::getPointerFromMap(ownerTable, (void const*)name);
       formatAssert(map != NULL);
 
       // return the pointer

@@ -4,7 +4,6 @@
 #ifndef CPARSE_H
 #define CPARSE_H
 
-#include "strhash.h"       // StringHash
 #include "strtable.h"      // StringTable
 #include "c.ast.gen.h"     // C AST, for action function signatures
 
@@ -15,6 +14,7 @@ class CCLang;
 // parsing action state
 class ParseEnv {
 public:
+  using StringHash = std::unordered_set<string_view>;
   StringTable &str;               // string table
   StringRef intType;              // "int"
   StringRef strRefAttr;           // "attr"

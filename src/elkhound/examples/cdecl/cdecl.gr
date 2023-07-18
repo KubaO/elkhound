@@ -5,11 +5,12 @@
 verbatim [
 
 #include <iostream>        // std::cout
+#include <unordered_set>   // std::unordered_set
 #include <vector>          // std::vector
 
+#include "algo.h"          // sm::contains
 #include "trace.h"         // trace
 #include "locstr.h"        // LocString
-#include "strhash.h"       // StringHash
 #include "parssppt.h"      // ParseTreeAndTokens
 
 #define D(msg) \
@@ -20,9 +21,13 @@ verbatim [
 
 // parsing action state
 context_class ParseEnv : public UserActions {
+private:
+  StringTable &table;
+
 public:
   StringRef intType;               // "int"
-  std::vector<StringHash *> types; // stack of hashes which identify names of types
+  std::vector<std::unordered_set<string_view> *> types;
+                                   // stack of hashes which identify names of types
 
 public:
   ParseEnv(StringTable &table);
@@ -30,12 +35,19 @@ public:
 
   void enterScope();
   void leaveScope();
-  void addType(StringRef type);
-  bool isType(StringRef name);
+  void addType(string_view type);
+  bool isType(string_view name);
 };
 
 
 impl_verbatim [
+
+#include "xassert.h"
+
+// StringHash here is collecting references to
+// strings interned in a StringTable
+
+using StringHash = std::unordered_set<string_view>;
 
 // bit of a hack..
 ParseTables *tables;
@@ -48,14 +60,13 @@ UserActions *makeUserActions(StringTable &table, CCLang &lang)
   return ret;
 }
 
-ParseTables *make_ParseEnv_tables();
 ParseTables *makeParseTables()
 {
   return tables;
 }
 
 
-ParseEnv::ParseEnv(StringTable &table)
+ParseEnv::ParseEnv(StringTable &table) : table(table)
 {
   intType = table.add("int");
 }
@@ -68,14 +79,9 @@ ParseEnv::~ParseEnv()
 }
 
 
-static char const *identity(void *data)
-{
-  return (char const*)data;
-}
-
 void ParseEnv::enterScope()
 {
-  types.push_back(new StringHash(identity));
+  types.push_back(new StringHash());
 }
 
 void ParseEnv::leaveScope()
@@ -84,25 +90,28 @@ void ParseEnv::leaveScope()
   types.pop_back();
 }
 
-void ParseEnv::addType(StringRef type)
+void ParseEnv::addType(string_view type)
 {
+  // ensure that the type is an interned string
+  xassert(table.get(type) != nullptr);
+
   StringHash *h = types.back();
-  if (h->get(type)) {
+  if (sm::contains(*h, type)) {
     std::cout << "duplicate entry for " << type << " -- will ignore\n";
   }
   else {
-    h->add(type, (void*)type);
+    h->insert(type);
   }
 }
 
-bool ParseEnv::isType(StringRef name)
+bool ParseEnv::isType(string_view name)
 {
   if (name == intType) {
     return true;
   }
 
   for (StringHash const *type : types) {
-    if (type->get(name)) {
+    if (sm::contains(*type, name)) {
       return true;
     }
   }

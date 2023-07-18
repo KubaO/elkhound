@@ -45,6 +45,8 @@ Algorithms
   - `bool contains(container, value)` - a less verbose alternative to `std::find` when only a yes/no answer is needed
   - `int compareSortedSLists(a, b, diff, [extra])` - compares two sorted lists using a provided int-returning comparison function, the returned value has the same meaning as in `strcmp` and `memcmp`.
   - `void sortSList(container, diff, [extra])` - sorts the given container using a provided int-returning comparison function
+  - `V* getPointerFromMap(map, key)` - returns the pointer-typed value for a given key, or nullptr
+  - `V* getPointerFromSet(set, val)` - returns val if the set contains it, or nullptr
 
   The `S` in `SList` means "serf" - a non-owning pointers. `SList` is a general term that refers to a vector of pointers, a deque of pointers, etc.
 
@@ -76,43 +78,6 @@ Arrays of bits are handled specially, because they are implemented by storing mu
 * [bit2d.h](bit2d.h), [bit2d.cc](bit2d.cc): Two-dimensional array of bits.
 
 
-Hash Tables and Maps
---------------------
-
-Maps support mapping from arbitrary domains to arbitrary ranges. Mappings can be added and queried in amortized O(1) time, but the constant factor is considerably higher than for arrays and lists.
-
-If the key can always be derived from the data (for example, the key is stored in the data object), then it is inefficient to store both in the table. The following variants require a function pointer to map from data to keys.
-
-* [hashtbl.h](hashtbl.h), [hashtbl.cc](hashtbl.cc): HashTable, a hash table. Maps void* to void*.
-
-* [thashtbl.h](thashtbl.h): Template class built on top of HashTable. Maps KEY* to VALUE*.
-
-* [ohashtbl.h](ohashtbl.h): OwnerHashTable, a hash table that owns the values, built on top of HashTable. Maps void* to T*.
-
-The above can be used to efficiently implement a set of T*.
-
-* [sobjset.h](sobjset.h): SObjSet, a non-owning set of objects implemented on top of HashTable.
-
-There are two specialized versions that combine O(1) insertion and query of a hash table with O(1) enqueue and dequeue of an array.
-
-* [okhasharr.h](okhasharr.h): OwnerKHashArray, a combination of an owner hash table and an array/stack.
-
-* [okhashtbl.h](okhashtbl.h): OwnerKHashTable, a version of [okhasharr.h](okhasharr.h) with type-safe keys ("k" for keys).
-
-Maps with Strings as Keys
--------------------------
-
-Mapping from strings is a nontrivial extension of the above maps because comparison is more than a pointer equality test. So there are some specialized maps from strings.
-
-If you have a function that can map from data to (string) key, then StringHash and TStringHash (the template version) are the most efficient:
-
-* [strhash.h](strhash.h), [strhash.cc](strhash.cc): StringHash, a case-sensitive map from strings to void* pointers. Built on top of HashTable.
-
-
-Finally, there is a module to map from strings to strings.
-
-* [strdict.h](strdict.h), [strdict.cc](strdict.cc): StringDict, a case-sensitive map from strings to strings. Currently, this is implemented with a linked list and consequently not efficient. But it will work when efficiency does not matter, and could be reimplemented (preserving the interface) with something better.
-
 Strings
 -------
 
@@ -123,6 +88,8 @@ Strings are sequences of characters.
 * [strtokp.h](strtokp.h), [strtokp.cpp](strtokp.cpp): StrtokParse, a class that parses a string similar to how strtok() works, but provides a more convenient (and thread-safe) interface. Similar to Java's StringTokenizer.
 
 * [strutil.h](strutil.h), [strutil.cc](strutil.cc): A set of generic string utilities, including replace(), translate(), trimWhitespace(), encodeWithEscapes(), etc.
+
+* [strtable.h](strtable.h): A table that interns the strings.
 
 
 System Utilities

@@ -15,12 +15,10 @@ add_library(smbase STATIC
     flatten.cc
     gprintf.c
     hashline.cc
-    hashtbl.cc
     nonport.cpp
     point.cc
     srcloc.cc
     str.cpp
-    strhash.cc
     strtokp.cpp
     strutil.cc
     syserr.cpp

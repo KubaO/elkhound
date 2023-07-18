@@ -3,7 +3,11 @@
 // enumeration of all the statements
 
 #include "c.ast.gen.h"     // C AST stuff, including decl for this module
-#include "sobjset.h"       // SObjSet
+#include "algo.h"          // sm::contains
+
+#include <unordered_set>   // std::unordered_set
+
+using StatementSet = std::unordered_set<Statement const *>;
 
 // DFS from 'node', having arrived at node with 'isContinue'
 // disposition; 'seen' is those nodes either currently being
@@ -11,10 +15,10 @@
 // entirely ("black"), and 'seenCont' is the same thing but for the
 // continue==true halves of the nodes
 void rp_dfs(NextPtrList &order, Statement const *node, bool isContinue,
-            SObjSet<Statement const *> &seen, SObjSet<Statement const*> &seenCont)
+            StatementSet &seen, StatementSet &seenCont)
 {
   // we're now considering 'node'
-  (isContinue? seenCont : seen).add(node);     // C++ generalized lvalue!
+  (isContinue? seenCont : seen).insert(node);
 
   // consider each of this node's successors
   NextPtrList successors;
@@ -24,7 +28,7 @@ void rp_dfs(NextPtrList &order, Statement const *node, bool isContinue,
     Statement const *succ = nextPtrStmt(iter.data());
     bool succCont = nextPtrContinue(iter.data());
 
-    if ((succCont? seenCont : seen).contains(succ)) {
+    if (sm::contains((succCont? seenCont : seen), succ)) {
       // we're already considering, or have already considered, this node;
       // do nothing with it
     }
@@ -46,6 +50,6 @@ void reversePostorder(NextPtrList &order, TF_func const &func)
 
   // DFS from the function start, computing the spanning tree implicitly,
   // and the reverse postorder explicitly
-  SObjSet<Statement const*> seen, seenCont;
+  StatementSet seen, seenCont;
   rp_dfs(order, func.body, false /*isContinue*/, seen, seenCont);
 }

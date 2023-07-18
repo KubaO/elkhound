@@ -17,12 +17,19 @@
 #include "ckheap.h"      // numMallocCalls
 #include "genml.h"       // emitMLActionCode
 
+#include <functional>    // std::hash
 #include <memory>        // std::make_unique
+#include <unordered_map> // std::unordered_map
+#include <unordered_set> // std::unordered_set
 #include <vector>        // std::vector
 #include <fstream>       // std::ofstream
 #include <stdlib.h>      // getenv
 #include <stdio.h>       // printf
 
+
+class GrammarAnalysis::Finished :
+  public std::unordered_map<DottedProduction const*, LRItem*>
+{};
 
 class BitArray : public std::vector<bool>
 {
@@ -1824,37 +1831,6 @@ void GrammarAnalysis::computePredictiveParsingTable()
 }
 
 
-// these hashtables are keyed using the DottedProduction,
-// but yield LRItems as values
-
-// for storing dotted productions in a hash table, this is
-// the hash function itself
-STATICDEF unsigned LRItem::hash(DottedProduction const *key)
-{
-  //DottedProduction const *dp = (DottedProduction const*)key;
-
-  // on the assumption few productions have 20 RHS elts..
-  //int val = dp->dot + (20 * dp->prod->prodIndex);
-
-  // just use the address.. they're all shared..
-  return HashTable::lcprngHashFn((void*)key);
-}
-
-// given the data, yield the key
-STATICDEF DottedProduction const *LRItem::dataToKey(LRItem *it)
-{
-  return it->dprod;
-}
-
-// compare two dotted production keys for equality; since dotted
-// productions are shared, pointer equality suffices
-STATICDEF bool LRItem::dpEqual(DottedProduction const *key1,
-                               DottedProduction const *key2)
-{
-  return key1 == key2;
-}
-
-
 // based on [ASU] figure 4.33, p.223
 // NOTE: sometimes this is called with nonempty nonkernel items...
 void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
@@ -1866,15 +1842,6 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
     itemSet.print(trs, *this);
   }
 
-  // hashtable, list of items still yet to close; items are
-  // simultaneously in both the hash and the list, or not in either
-  #if 0
-  OwnerKHashArray<LRItem, DottedProduction> workhash(
-    &LRItem::dataToKey,
-    &LRItem::hash,
-    &LRItem::dpEqual, 13);
-  #endif // 0
-
   // every 'item' on the worklist has item->dprod->backPointer == item;
   // every 'dprod' not associated has dprod->backPointer == NULL
   ArrayStack<LRItem*> worklist;
@@ -1883,16 +1850,13 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
   TerminalSet scratchSet(numTerminals());
 
   // and another for the items we've finished
-  OwnerKHashTable<LRItem, DottedProduction> finished(
-    &LRItem::dataToKey,
-    &LRItem::hash,
-    &LRItem::dpEqual, 13);
-  finished.setEnableShrink(false);
+  Finished finished;
 
   // put all the nonkernels we have into 'finished'
   for (LRItem *dp : itemSet.nonkernelItems) {
     // ownership transfers to the finished list
-    finished.add(dp->dprod, dp);
+    xassert(finished.find(dp->dprod) == finished.end());
+    finished.insert(std::make_pair(dp->dprod, dp));
   }
   itemSet.nonkernelItems.clear();
 
@@ -1910,7 +1874,8 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
     // put it into list of 'done' items; this way, if this
     // exact item is generated during closure, it will be
     // seen and re-inserted (instead of duplicated)
-    finished.add(item->dprod, item);
+    xassert(finished.find(item->dprod) == finished.end());
+    finished.insert(std::make_pair(item->dprod, item));
 
     // close it -> worklist
     singleItemClosure(finished, worklist, item, scratchSet);
@@ -1918,20 +1883,19 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
 
   // move everything from 'finished' to the nonkernel items list
   try {
-    for (OwnerKHashTableIter<LRItem, DottedProduction> iter(finished);
-         !iter.isDone(); iter.adv()) {
+    for (std::pair<const DottedProduction *, LRItem*> const &f : finished) {
       // temporarily, the item is owned both by the hashtable
       // and the list
-      itemSet.nonkernelItems.insert(itemSet.nonkernelItems.begin(), iter.data());
+      itemSet.nonkernelItems.insert(itemSet.nonkernelItems.begin(), f.second);
       // FIXME probably doesn't need to be up front
     }
-    finished.disownAndForgetAll();
+    finished.clear();
   }
   catch (...) {
     breaker();    // debug breakpoint
 
     // resolve the multiple ownership by leaking some
-    finished.disownAndForgetAll();
+    finished.clear();
     throw;
   }
 
@@ -1946,9 +1910,8 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
 
 
 void GrammarAnalysis
-  ::singleItemClosure(OwnerKHashTable<LRItem, DottedProduction> &finished,
+  ::singleItemClosure(Finished &finished,
                       ArrayStack<LRItem*> &worklist,
-                      //OwnerKHashArray<LRItem, DottedProduction> &workhash,
                       LRItem const *item, TerminalSet &newItemLA)
 {
   INITIAL_MALLOC_STATS();
@@ -2048,7 +2011,9 @@ void GrammarAnalysis
       inDoneList = false;
     }
     else {
-      already = finished.get(newDP);
+      if (finished.find(newDP) != finished.end()) {
+        already = finished.at(newDP);
+      }
     }
 
     if (already) {
@@ -2072,7 +2037,7 @@ void GrammarAnalysis
         if (inDoneList) {
           // pull from the 'done' list and put in worklist, since the
           // lookahead changed
-          finished.remove(already->dprod);
+          finished.erase(already->dprod);
           CHECK_MALLOC_STATS("before worklist push");
           worklist.push(already);
           xassert(already->dprod->backPointer == NULL);   // was not on
@@ -2236,22 +2201,20 @@ STATICDEF bool GrammarAnalysis::itemSetsEqual(ItemSet const *is1, ItemSet const 
 }
 
 
-// keys and data are the same
-STATICDEF ItemSet const *ItemSet::dataToKey(ItemSet *data)
-{
-  return data;
-}
+struct ItemSetHash : private std::hash<uintptr_t> {
+  unsigned int operator()(ItemSet const *key) const
+  {
+    uintptr_t crc = key->kernelItemsCRC;
+    return std::hash<uintptr_t>::operator()(crc);
+  }
+};
 
-STATICDEF unsigned ItemSet::hash(ItemSet const *key)
-{
-  uintptr_t crc = key->kernelItemsCRC;
-  return HashTable::lcprngHashFn((void*)crc);
-}
-
-STATICDEF bool ItemSet::equalKey(ItemSet const *key1, ItemSet const *key2)
-{
-  return *key1 == *key2;
-}
+struct ItemSetEquals {
+  bool operator()(ItemSet const *key1, ItemSet const *key2) const
+  {
+    return *key1 == *key2;
+  }
+};
 
 
 // [ASU] fig 4.34, p.224
@@ -2264,17 +2227,11 @@ void GrammarAnalysis::constructLRItemSets()
 
   // item sets yet to be processed; item sets are simultaneously in
   // both the hash and the list, or not in either
-  OwnerKHashArray<ItemSet, ItemSet> itemSetsPending(
-    &ItemSet::dataToKey,
-    &ItemSet::hash,
-    &ItemSet::equalKey);
+  std::unordered_set<ItemSet*, ItemSetHash, ItemSetEquals> itemSetsPending; // owner
+  std::vector<ItemSet*> itemSetsPendingStack;
 
   // item sets with all outgoing links processed
-  OwnerKHashTable<ItemSet, ItemSet> itemSetsDone(
-    &ItemSet::dataToKey,
-    &ItemSet::hash,
-    &ItemSet::equalKey);
-  itemSetsDone.setEnableShrink(false);
+  std::unordered_set<ItemSet*, ItemSetHash, ItemSetEquals> itemSetsDone;    // owner
 
   // to avoid allocating in the inner loop, we make a single item set
   // which we'll fill with kernel items every time we think we *might*
@@ -2319,21 +2276,24 @@ void GrammarAnalysis::constructLRItemSets()
     itemSetClosure(*is);                      // calls changedItems internally
 
     // this makes the initial pending itemSet
-    itemSetsPending.push(is, is);             // (ownership transfer)
+    itemSetsPending.insert(is);
+    itemSetsPendingStack.push_back(is);       // (ownership transfer)
   }
 
   // track how much allocation we're doing
   INITIAL_MALLOC_STATS();
 
   // for each pending item set
-  while (itemSetsPending.isNotEmpty()) {
-    ItemSet *itemSet = itemSetsPending.pop();          // dequeue (owner)
+  while (!itemSetsPendingStack.empty()) {
+    ItemSet *itemSet = itemSetsPendingStack.back(); // dequeue (owner)
+    itemSetsPendingStack.pop_back();
+    itemSetsPending.erase(itemSet);
 
     CHECK_MALLOC_STATS("top of pending list loop");
 
     // put it in the done set; note that we must do this *before*
     // the processing below, to properly handle self-loops
-    itemSetsDone.add(itemSet, itemSet);                // (ownership transfer; 'itemSet' becomes serf)
+    itemSetsDone.insert(itemSet);                   // (ownership transfer; 'itemSet' becomes serf)
 
     // allows for expansion of 'itemSetsDone' hash
     UPDATE_MALLOC_STATS();
@@ -2403,11 +2363,13 @@ void GrammarAnalysis::constructLRItemSets()
         CHECK_MALLOC_STATS("moveDotNoClosure");
 
         // see if we already have it, in either set
-        ItemSet *already = itemSetsPending.lookup(withDotMoved);
+        ItemSet *already = sm::getPointerFromSet(itemSetsPending, withDotMoved);
         bool inDoneList = false;
         if (already == NULL) {
-          already = itemSetsDone.get(withDotMoved);
-          inDoneList = true;    // used if 'already' != NULL
+          already = sm::getPointerFromSet(itemSetsDone, withDotMoved);
+          if (already) {
+            inDoneList = true;    // used if 'already' != NULL
+          }
         }
 
         // have it?
@@ -2442,11 +2404,12 @@ void GrammarAnalysis::constructLRItemSets()
             }
             else {
               // we thought we were done with this
-              xassertdb(itemSetsDone.get(already));
+              xassertdb(sm::contains(itemSetsDone, already));
 
               // but we're not: move it back to the 'pending' list
-              itemSetsDone.remove(already);
-              itemSetsPending.push(already, already);
+              itemSetsDone.erase(already);
+              itemSetsPending.insert(already);
+              itemSetsPendingStack.push_back(already);
             }
 
             // it's ok if closure makes more items, or if
@@ -2472,7 +2435,8 @@ void GrammarAnalysis::constructLRItemSets()
           itemSetClosure(*withDotMoved);
 
           // then add it to 'pending'
-          itemSetsPending.push(withDotMoved, withDotMoved);
+          itemSetsPending.insert(withDotMoved);
+          itemSetsPendingStack.push_back(withDotMoved);
 
           // takes into account:
           //   - creation of 'withDotMoved' state
@@ -2511,15 +2475,14 @@ void GrammarAnalysis::constructLRItemSets()
   // we're done constructing item sets, so move all of them out
   // of the 'itemSetsDone' hash and into 'this->itemSets'
   try {
-    for (OwnerKHashTableIter<ItemSet, ItemSet> iter(itemSetsDone);
-         !iter.isDone(); iter.adv()) {
-      itemSets.insert(itemSets.begin(), iter.data());
+    for (ItemSet *set : itemSetsDone) {
+      itemSets.insert(itemSets.begin(), set);
     }
-    itemSetsDone.disownAndForgetAll();
+    itemSetsDone.clear();
   }
   catch (...) {
     breaker();
-    itemSetsDone.disownAndForgetAll();
+    itemSetsDone.clear();
     throw;
   }
 
@@ -2549,6 +2512,10 @@ void GrammarAnalysis::constructLRItemSets()
       itemSet->writeGraph(out, *this);
     }
   }
+
+  // Ensure we didn't leak anything
+  xassert(itemSetsPending.empty());
+  xassert(itemSetsDone.empty());
 }
 
 

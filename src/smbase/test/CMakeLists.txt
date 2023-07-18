@@ -9,7 +9,6 @@ project(vdtllist)
 project(bit2d)
 project(str)
 project(strutil)
-project(strhash)
 project(trdelete)
 project(bflatten)
 project(tobjpool)
@@ -50,11 +49,6 @@ add_executable(str
 # files for strutil
 add_executable(strutil
     ../strutil.cc
-)
-
-# files for strhash
-add_executable(strhash
-    ../strhash.cc
 )
 
 # files for trdelete
@@ -114,7 +108,6 @@ target_compile_options(vdtllist PRIVATE -DTEST_VDTLLIST)
 target_compile_options(bit2d PRIVATE -DTEST_BIT2D)
 target_compile_options(str PRIVATE -DTEST_STR)
 target_compile_options(strutil PRIVATE -DTEST_STRUTIL)
-target_compile_options(strhash PRIVATE -DTEST_STRHASH)
 target_compile_options(trdelete PRIVATE -DTEST_TRDELETE)
 target_compile_options(bflatten PRIVATE -DTEST_BFLATTEN)
 target_compile_options(cycles PRIVATE -DTEST_CYCLES)
@@ -130,7 +123,6 @@ target_link_libraries(vdtllist smbase)
 target_link_libraries(bit2d smbase)
 target_link_libraries(str smbase)
 target_link_libraries(strutil smbase)
-target_link_libraries(strhash smbase)
 target_link_libraries(trdelete smbase)
 target_link_libraries(bflatten smbase)
 target_link_libraries(tobjpool smbase)
@@ -146,7 +138,6 @@ add_test(NAME vdtllist COMMAND ./vdtllist)
 add_test(NAME bit2d COMMAND ./bit2d)
 add_test(NAME str COMMAND ./str)
 add_test(NAME strutil COMMAND ./strutil)
-add_test(NAME strhash COMMAND ./strhash)
 add_test(NAME trdelete COMMAND ./trdelete)
 add_test(NAME bflatten COMMAND ./bflatten)
 add_test(NAME tobjpool COMMAND ./tobjpool)
