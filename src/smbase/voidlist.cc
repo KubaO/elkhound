@@ -781,7 +781,7 @@ void testSorting()
       list1.removeAll();    // clear them in case we have to build it more than once
       list3.removeAll();
       numItems = rand()%ITEMS;
-      loopj(numItems) {
+      for (int j = 0; j < numItems; ++j) {
         void *toInsert = (void*)( (size_t)(rand()%ITEMS) * 4 );
         list1.prepend(toInsert);
         list3.insertSorted(toInsert, VoidList::pointerAddressDiff);
