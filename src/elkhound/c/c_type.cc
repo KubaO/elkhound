@@ -45,18 +45,6 @@ string makeIdComment(uintptr_t id)
 // ------------------ AtomicType -----------------
 ALLOC_STATS_DEFINE(AtomicType)
 
-AtomicType::AtomicType()
-  //: id(NULL_ATOMICTYPEID)
-{
-  ALLOC_STATS_IN_CTOR
-}
-
-
-AtomicType::~AtomicType()
-{
-  ALLOC_STATS_IN_DTOR
-}
-
 
 CAST_MEMBER_IMPL(AtomicType, SimpleType)
 CAST_MEMBER_IMPL(AtomicType, CompoundType)
@@ -511,17 +499,6 @@ EnumType::Value::~Value()
 
 // --------------- Type ---------------
 ALLOC_STATS_DEFINE(Type)
-
-Type::Type()
-  //: id(NULL_TYPEID)
-{
-  ALLOC_STATS_IN_CTOR
-}
-
-Type::~Type()
-{
-  ALLOC_STATS_IN_DTOR
-}
 
 
 CAST_MEMBER_IMPL(Type, CVAtomicType)

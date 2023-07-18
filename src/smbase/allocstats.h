@@ -4,29 +4,42 @@
 #ifndef ELK_ALLOCSTATS_H
 #define ELK_ALLOCSTATS_H
 
-// for a class that maintains allocated-node stats
-#define ALLOC_STATS_DECLARE                     \
-  static int numAllocd;                         \
-  static int maxAllocd;                         \
+template <class For>
+class AllocStats
+{
+public:
   static void printAllocStats(bool anyway);
 
-// these would go in a .cc file, whereas above goes in .h file
-#define ALLOC_STATS_DEFINE(classname)                      \
-  int classname::numAllocd = 0;                            \
-  int classname::maxAllocd = 0;                            \
-  STATICDEF void classname::printAllocStats(bool anyway)   \
-  {                                                        \
-    if (anyway || numAllocd != 0) {                        \
-      std::cout << #classname << " nodes: " << numAllocd   \
-           << ", max  nodes: " << maxAllocd                \
-           << std::endl;                                   \
-    }                                                      \
+protected:
+  static int numAllocd;
+  static int maxAllocd;
+
+  AllocStats()
+  {
+    numAllocd++;
+    if (numAllocd > maxAllocd) {
+      maxAllocd = numAllocd;
+    }
   }
 
-#define ALLOC_STATS_IN_CTOR                     \
-  INC_HIGH_WATER(numAllocd, maxAllocd);
+  ~AllocStats()
+  {
+    numAllocd--;
+  }
+};
 
-#define ALLOC_STATS_IN_DTOR                     \
-  numAllocd--;
+
+// these would go in a .cc files
+#define ALLOC_STATS_DEFINE(classname)                                \
+  int AllocStats<classname>::numAllocd = 0;                          \
+  int AllocStats<classname>::maxAllocd = 0;                          \
+  STATICDEF void AllocStats<classname>::printAllocStats(bool anyway) \
+  {                                                                  \
+    if (anyway || numAllocd != 0) {                                  \
+      std::cout << #classname << " nodes: " << numAllocd             \
+           << ", max  nodes: " << maxAllocd                          \
+           << std::endl;                                             \
+    }                                                                \
+  }
 
 #endif // ELK_ALLOCSTATS_H
