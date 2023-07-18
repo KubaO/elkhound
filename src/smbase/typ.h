@@ -51,12 +51,4 @@
 #endif
 
 
-// division with rounding towards +inf
-// (when operands are positive)
-template <class T>
-inline T div_up(T const &x, T const &y)
-{ return (x + y - 1) / y; }
-
-
-
 #endif // __TYP_H
