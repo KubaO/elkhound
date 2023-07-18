@@ -816,7 +816,7 @@ void ItemSet::changedItems()
 
   // compute CRC; in this function, I just allocate here since this
   // function is already allocation-happy
-  GrowArray<DottedProduction const*> array(0 /*allocate later*/);
+  std::vector<DottedProduction const*> array;
   computeKernelCRC(array);
 
   // compute this so we can throw away items later if we want to
@@ -824,12 +824,12 @@ void ItemSet::changedItems()
 }
 
 
-void ItemSet::computeKernelCRC(GrowArray<DottedProduction const*> &array)
+void ItemSet::computeKernelCRC(std::vector<DottedProduction const*> &array)
 {
   int numKernelItems = kernelItems.size();
 
-  // expand as necessary, but don't get smaller
-  array.ensureAtLeast(numKernelItems);
+  // expand as necessary
+  array.resize((std::max)(numKernelItems, int(array.size())));
 
   // we will crc the prod/dot fields, using the pointer representation
   // of 'dprod'; assumes the items have already been sorted!
@@ -840,8 +840,8 @@ void ItemSet::computeKernelCRC(GrowArray<DottedProduction const*> &array)
   }
 
   // CRC the buffer
-  kernelItemsCRC = crc32((unsigned char const*)(array.getArray()),
-                         sizeof(array[0]) * numKernelItems);
+  kernelItemsCRC = crc32((unsigned char const*)(&array[0]),
+                         sizeof(void*) * numKernelItems);
 }
 
 
@@ -2109,7 +2109,7 @@ void GrammarAnalysis::disposeItemSet(ItemSet *is)
 //   space for computing kernel CRCs
 void GrammarAnalysis::moveDotNoClosure(ItemSet const *source, Symbol const *symbol,
                                        ItemSet *dest, std::vector<LRItem *> &unusedTail,
-                                       GrowArray<DottedProduction const*> &array)
+                                       std::vector<DottedProduction const*> &array)
 {
   //ItemSet *ret = makeItemSet();
 
@@ -2254,7 +2254,8 @@ void GrammarAnalysis::constructLRItemSets()
 
   // similar to the scratch state, make a scratch array for the
   // kernel CRC computation
-  GrowArray<DottedProduction const*> kernelCRCArray(BIG_VALUE);
+  std::vector<DottedProduction const*> kernelCRCArray;
+  kernelCRCArray.reserve(BIG_VALUE);
 
   // start by constructing closure of first production
   // (basically assumes first production has start symbol
