@@ -175,8 +175,6 @@ Miscellaneous
 
 * [gprintf.h](gprintf.h), [gprintf.c](gprintf.c): General printf; calls a function to emit each piece.
 
-* [owner.h](owner.h): Owner, a pointer that deallocates its referrent in its destructor. Similar to auto_ptr in the C++ Standard.
-
 * [point.h](point.h), [point.cc](point.cc): Point, a pair of integers.
 
 Test Drivers
