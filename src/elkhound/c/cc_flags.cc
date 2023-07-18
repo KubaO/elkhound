@@ -2,7 +2,6 @@
 // code for cc_flags.h
 
 #include "cc_flags.h"     // this module
-#include "macros.h"       // STATIC_ASSERT
 #include "xassert.h"      // xassert
 #include "trace.h"        // tracingSys
 
@@ -153,7 +152,8 @@ static SimpleTypeInfo const simpleTypeInfoArray[] = {
 
 SimpleTypeInfo const &simpleTypeInfo(SimpleTypeId id)
 {
-  STATIC_ASSERT(TABLESIZE(simpleTypeInfoArray) == NUM_SIMPLE_TYPES);
+  static_assert(TABLESIZE(simpleTypeInfoArray) == NUM_SIMPLE_TYPES,
+                "simpleTypeInfoArray has wrong size relative to SimpleTypeId enum");
   xassert(isValid(id));
   return simpleTypeInfoArray[id];
 }

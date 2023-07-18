@@ -13,7 +13,8 @@ string toString(AssocKind k)
     "AK_NEVERASSOC",
     "AK_SPLIT"
   };
-  STATIC_ASSERT(TABLESIZE(arr) == NUM_ASSOC_KINDS);
+  static_assert(TABLESIZE(arr) == NUM_ASSOC_KINDS,
+                "arr has wrong size relative to the AssocKind enum");
   xassert((unsigned)k < NUM_ASSOC_KINDS);
   return string(arr[k]);
 }

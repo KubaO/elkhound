@@ -47,13 +47,6 @@
 #endif
 
 
-// assert something at compile time (must use this inside a function);
-// works because compilers won't let us declare negative-length arrays
-// (the expression below works with egcs-1.1.2, gcc-2.x, gcc-3.x)
-#define STATIC_ASSERT(cond) \
-  { (void)((int (*)(char failed_static_assertion[(cond)?1:-1]))0); }
-
-
 // for silencing variable-not-used warnings
 template <class T>
 inline void pretendUsedFn(T const &) {}
