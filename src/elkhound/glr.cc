@@ -321,7 +321,10 @@ inline void StackNode::init(StateId st, GLR *g)
   glr = g;
 
   #if DO_ACCOUNTING
-    INC_HIGH_WATER(numStackNodesAllocd, maxStackNodesAllocd);
+    numStackNodesAllocd++;
+    if (numStackNodesAllocd > maxStackNodesAllocd) {
+      maxStackNodesAllocd = numStackNodesAllocd;
+    };
     //TRACE("nodes", "(!!!) init stack node: num=" << numStackNodesAllocd
     //            << ", max=" << maxStackNodesAllocd);
   #endif
