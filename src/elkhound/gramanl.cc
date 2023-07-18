@@ -1844,7 +1844,7 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
 
   // every 'item' on the worklist has item->dprod->backPointer == item;
   // every 'dprod' not associated has dprod->backPointer == NULL
-  ArrayStack<LRItem*> worklist;
+  sm::stack<LRItem*> worklist;
 
   // scratch terminal set for singleItemClosure
   TerminalSet scratchSet(numTerminals());
@@ -1865,9 +1865,10 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
     singleItemClosure(finished, worklist, ik, scratchSet);
   }
 
-  while (worklist.isNotEmpty()) {
+  while (!worklist.empty()) {
     // pull the first production
-    LRItem *item = worklist.pop();
+    LRItem* item = worklist.top();
+    worklist.pop();
     xassert(item->dprod->backPointer == item);     // was on worklist
     item->dprod->backPointer = NULL;               // now off of worklist
 
@@ -1911,7 +1912,7 @@ void GrammarAnalysis::itemSetClosure(ItemSet &itemSet)
 
 void GrammarAnalysis
   ::singleItemClosure(Finished &finished,
-                      ArrayStack<LRItem*> &worklist,
+                      sm::stack<LRItem*> &worklist,
                       LRItem const *item, TerminalSet &newItemLA)
 {
   INITIAL_MALLOC_STATS();
@@ -3260,7 +3261,7 @@ void GrammarAnalysis::computeParseTables(bool allowAmbig)
       int actions = (shiftDest? 1 : 0) + reductions.size();
       if (actions >= 2) {
         // make a new ambiguous-action entry-set
-        ArrayStack<ActionEntry> set;
+        sm::stack<ActionEntry> set;
 
         // fill in the actions
         if (shiftDest) {
@@ -3269,7 +3270,7 @@ void GrammarAnalysis::computeParseTables(bool allowAmbig)
         for (Production const *prod : reductions) {
           set.push(tables->encodeReduce(prod->prodIndex, state->id));
         }
-        xassert(set.length() == actions);
+        xassert(set.size() == actions);
 
         cellAction = tables->encodeAmbig(set, state->id);
       }
@@ -3676,9 +3677,9 @@ void GrammarAnalysis::lrParse(char const *input)
   // parser state
   int currentToken = 0;               // index of current token
   StateId state = startState->id;     // current parser state
-  ArrayStack<StateId> stateStack;     // stack of parser states; top==state
+  sm::stack<StateId> stateStack;      // stack of parser states; top==state
   stateStack.push(state);
-  ArrayStack<Symbol const*> symbolStack;    // stack of shifted symbols
+  sm::stack<Symbol const*> symbolStack;    // stack of shifted symbols
 
   // for each token of input
   for(string_view tok : tokens) {
@@ -3718,9 +3719,9 @@ void GrammarAnalysis::lrParse(char const *input)
 
       // pop as many symbols off stacks as there are symbols on
       // the right-hand side of 'prod'
-      stateStack.popMany(info.rhsLen);
+      stateStack.pop_n(info.rhsLen);
       state = stateStack.top();
-      symbolStack.popMany(info.rhsLen);
+      symbolStack.pop_n(info.rhsLen);
 
       // find out where to go
       StateId destState = tables->decodeGoto(
@@ -3780,18 +3781,17 @@ void GrammarAnalysis::lrParse(char const *input)
 
   // print final contents of stack; if the parse was successful,
   // I want to see what remains; if not, it's interesting anyway
-  trace("parse") << "final contents of stacks (right is top):\n";
+  trace("parse") << "final contents of stacks (left is top):\n";
 
   std::ostream &os = trace("parse") << "  state stack:";
-  int i;
-  for (i=0; i < stateStack.length(); i++) {
-    os << " " << stateStack[i];
+  for (auto const &s : stateStack) {
+    os << " " << s;
   }
   os << " <-- current" << std::endl;
 
   os << "  symbol stack:";
-  for (i=0; i < symbolStack.length(); i++) {
-    os << " " << symbolStack[i]->name;
+  for (Symbol const *s : symbolStack) {
+    os << " " << s->name;
   }
   os << std::endl;
 }

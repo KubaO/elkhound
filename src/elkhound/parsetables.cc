@@ -8,7 +8,6 @@
 #include "emitcode.h"       // EmitCode
 #include "bit2d.h"          // Bit2d
 
-#include <vector>           // std::vector
 #include <string.h>         // memset
 
 
@@ -182,12 +181,9 @@ ParseTables::~ParseTables()
 ParseTables::TempData::TempData(int numStates)
   : ambigTable(),
     bigProductionList(),
-    productionsForState(numStates),
-    ambigStateTable(numStates)
-{
-  productionsForState.setAll(UNASSIGNED);
-  ambigStateTable.setAll(UNASSIGNED);
-}
+    productionsForState(numStates, UNASSIGNED),
+    ambigStateTable(numStates, UNASSIGNED)
+{}
 
 ParseTables::TempData::~TempData()
 {}
@@ -293,7 +289,7 @@ ActionEntry ParseTables::encodeReduce(int prodId, StateId inWhatState)
 
 
 ActionEntry ParseTables::encodeAmbig
-  (ArrayStack<ActionEntry> const &set, StateId inWhatState)
+  (sm::stack<ActionEntry> const &set, StateId inWhatState)
 {
   #if ENABLE_CRS_COMPRESSION
     int begin = temp->ambigStateTable[inWhatState];
@@ -314,7 +310,7 @@ ActionEntry ParseTables::encodeAmbig
       // would not be enough.
 
       // # of big-table entries that will be used
-      int encodeLen = set.length()+1;
+      int encodeLen = set.size()+1;
 
       for (int i=begin; i+encodeLen <= end; i++) {
         // does this offset contain the same set of actions?
@@ -329,29 +325,31 @@ ActionEntry ParseTables::encodeAmbig
     }
 
   #else
-    int end = temp->ambigTable.length();
+    int end = temp->ambigTable.size();
     appendAmbig(set);
     return validateAction(numStates+end+1);
   #endif
 }
 
 
-void ParseTables::appendAmbig(ArrayStack<ActionEntry> const &set)
+void ParseTables::appendAmbig(sm::stack<ActionEntry> const &set)
 {
-  temp->ambigTable.push(set.length());
-  for (int j=0; j < set.length(); j++) {
-    temp->ambigTable.push(set[j]);
+  temp->ambigTable.push_back(set.size());
+  for (auto e = set.rbegin(); e != set.rend(); e++) {
+    temp->ambigTable.push_back(*e);
   }
 }
 
-bool ParseTables::compareAmbig(ArrayStack<ActionEntry> const &set,
+
+bool ParseTables::compareAmbig(sm::stack<ActionEntry> const &set,
                                int startIndex)
 {
-  if (temp->ambigTable[startIndex] != set.length()) {
+  if (temp->ambigTable[startIndex] != set.size()) {
     return false;           // mismatch in 1st entry
   }
-  for (int j=0; j < set.length(); j++) {
-    if (temp->ambigTable[startIndex+1+j] != set[j]) {
+  int j = 0;
+  for (auto e = set.rbegin(); e != set.rend(); e++) {
+    if (temp->ambigTable[startIndex+1+j] != *e) {
       return false;         // mismatch in j+2nd entry
     }
   }
@@ -383,17 +381,17 @@ GotoEntry ParseTables::encodeGoto(StateId destState, int shiftedNontermId) const
 
 // simple alloc + copy
 template <class T>
-void copyArray(int &len, T *&dest, ArrayStack<T> const &src)
+void copyArray(int &len, T *&dest, std::vector<T> const &src)
 {
-  len = src.length();
+  len = src.size();
   dest = new T[len];
-  memcpy(dest, src.getArray(), sizeof(T) * len);
+  memcpy(dest, src.data(), sizeof(T) * len);
 }
 
 // given an array 'src' of indices relative to 'base', allocate the
 // array 'dest' and fill it in with actual pointers into 'base'
 template <class T>
-void copyIndexPtrArray(int len, T **&dest, T *base, ArrayStack<int> const &src)
+void copyIndexPtrArray(int len, T **&dest, T *base, std::vector<int> const &src)
 {
   dest = new T* [len];
   for (int i=0; i<len; i++) {

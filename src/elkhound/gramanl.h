@@ -20,6 +20,7 @@
 #include "grammar.h"      // Grammar and friends
 #include "glrconfig.h"    // SOURCELOC
 #include "parsetables.h"  // ParseTables, GrowArray
+#include "stack.h"        // sm::stack
 
 #include <vector>         // std::vector
 
@@ -537,7 +538,7 @@ private:    // funcs
   friend void ItemSet::xferSerfs(Flatten &flat, GrammarAnalysis &g);
 
   void singleItemClosure(Finished &finished,
-                         ArrayStack<LRItem*> &worklist,
+                         sm::stack<LRItem*> &worklist,
                          LRItem const *item, TerminalSet &scratchSet);
 
 public:	    // funcs
