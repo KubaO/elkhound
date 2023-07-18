@@ -4,22 +4,23 @@
 #ifndef __BIT2D_H
 #define __BIT2D_H
 
-#include "typ.h"             // byte, bool
 #include "point.h"           // point
+
+#include <stdint.h>          // uint8_t
 
 class Flatten;
 
 class Bit2d {
 private:     // data
-  byte *data;       // bits; [0..stride-1] is first row, etc.
+  uint8_t *data;    // bits; [0..stride-1] is first row, etc.
   bool owning;      // when false, 'data' is not owned by this object
   point size;       // size.x is # of cols, size.y is # of rows
   int stride;       // bytes between starts of adjacent rows;
                     // computable from size.x but stored for quick access
 
 private:     // funcs
-  byte *byteptr(point const &p)               { return data + p.y * stride + (p.x>>3); }
-  byte const *byteptrc(point const &p) const  { return data + p.y * stride + (p.x>>3); }
+  uint8_t *byteptr(point const &p)               { return data + p.y * stride + (p.x>>3); }
+  uint8_t const *byteptrc(point const &p) const  { return data + p.y * stride + (p.x>>3); }
 
   // this is the number of bytes allocated in 'data'
   int datasize() const                        { return size.y * stride; }
@@ -60,8 +61,8 @@ public:      // funcs
   // bit of a hack: I want to be able to save the data as code which,
   // when compiled, will build a bit2d from static data.. for this
   // I need access to some private fields and a special ctor
-  Bit2d(byte * /*serf*/ data, point const &size, int stride);
-  byte *private_data() { return data; }
+  Bit2d(uint8_t * /*serf*/ data, point const &size, int stride);
+  uint8_t *private_data() { return data; }
   int private_datasize() const { return datasize(); }
   int private_stride() const { return stride; }
 };

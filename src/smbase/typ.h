@@ -7,13 +7,6 @@
 
 #include <stdint.h>
 
-// byte
-typedef unsigned char byte;
-typedef signed char signed_byte;
-
-
-// int32 used to be here, but defined nonportably, and I don't use
-// it anyway, so I ripped it out
 
 
 // NULL
