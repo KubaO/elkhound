@@ -20,7 +20,7 @@ MLSubstrate::MLSubstrate(ReportError *err)
 void MLSubstrate::reset(int initNest)
 {
   state = ST_NORMAL;
-  delims.empty();
+  delims.clear();
   nestingBias = initNest;
   comNesting = 0;
   prev = 0;

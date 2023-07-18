@@ -6,7 +6,7 @@
 #define MLSSTR_H
 
 #include "embedded.h"      // EmbeddedLang
-#include "array.h"         // ArrayStack
+#include "stack.h"         // sm::stack
 
 class MLSubstrateTest;
 
@@ -20,7 +20,7 @@ private:
     ST_APOSTROPHE2,  // char before last was an apostrophe
     NUM_STATES
   } state;
-  ArrayStack<char> delims; // stack of paren/bracket/brace delimiters
+  sm::stack<char> delims;  // stack of paren/bracket/brace delimiters
   int nestingBias;         // modifies the nesting level
   int comNesting;          // depth of comment nesting; 0 means not in comment
   char prev;               // previous character
@@ -35,7 +35,7 @@ private:
 
 private:
   // depth of delimiter nesting
-  int nesting() const { return delims.length() + nestingBias; }
+  int nesting() const { return delims.size() + nestingBias; }
 
   // whether we are in a comment
   bool inComment() const { return comNesting>0; }
