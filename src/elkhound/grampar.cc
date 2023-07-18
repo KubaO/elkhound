@@ -409,7 +409,7 @@ void astParseTerminals(Environment &env, TF_terminals const &terms)
       }
 
       // track what terminals have codes
-      maxCode = max(code, maxCode);
+      maxCode = (std::max)(code, maxCode);
       codeHasTerm.ensureIndexDoubler(code);
       codeHasTerm[code].b = true;
     }

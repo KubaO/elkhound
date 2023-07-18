@@ -4,6 +4,8 @@
 #include "c_type.h"     // this module
 #include "trace.h"      // tracingSys
 #include "xassert.h"    // xassert
+
+#include <algorithm>    // std::min,max
 #include <assert.h>     // assert
 
 
@@ -391,7 +393,7 @@ int CompoundType::reprSize() const
     int membSize = field.type->reprSize();
     if (keyword == K_UNION) {
       // representation size is max over field sizes
-      total = max(total, membSize);
+      total = (std::max)(total, membSize);
     }
     else {
       // representation size is sum over field sizes
