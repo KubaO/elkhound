@@ -8,9 +8,10 @@
 #include <map>            // std::map
 #include <vector>         // std::vector
 
-#include "str.h"          // string
-#include "macros.h"       // STATS macros
+#include "allocstats.h"   // STATS macros
 #include "cc_flags.h"     // CVFlags, DeclFlags, SimpleTypeId
+#include "macros.h"       // CAST_MEMBER_FN macro
+#include "str.h"          // string
 #include "strtable.h"     // StringRef
 
 // below, the type language refers to the AST language in exactly
