@@ -8,7 +8,6 @@
 #include "trace.h"           // tracing debug functions
 #include "gramast.ast.gen.h" // grammar AST nodes
 #include "grammar.h"         // Grammar, Production, etc.
-#include "owner.h"           // Owner (redundant dependency; dot's layout is better with it though)
 #include "syserr.h"          // xsyserror
 #include "strutil.h"         // quoted
 #include "grampar.tab.h"     // token constant codes, union YYSTYPE
@@ -16,6 +15,7 @@
 #include "mlsstr.h"          // MLSubstrate
 
 #include <fstream>           // std::ifstream
+#include <memory>            // std::unique_ptr
 #include <ctype.h>           // isspace, isalnum
 
 #define LIT_STR(s) LocString(SL_INIT, grammarStringTable.add(s))
@@ -1200,12 +1200,12 @@ GrammarAST *parseGrammarFile(rostring origFname, bool useML)
   #endif // NDEBUG
 
   // open input file
-  Owner<std::ifstream> in;
+  std::unique_ptr<std::ifstream> in;
   if (fname.empty()) {
     fname = "<stdin>";
   }
   else {
-    in = new std::ifstream(fname);
+    in.reset(new std::ifstream(fname));
     if (!*in) {
       xsyserror("open", stringc << "error opening input file " << fname);
     }
@@ -1221,7 +1221,7 @@ GrammarAST *parseGrammarFile(rostring origFname, bool useML)
   GrammarLexer lexer(isGramlexEmbed,
                      grammarStringTable,
                      fname.c_str(),
-                     in.xfr(),
+                     in.release(),
                      embed);
   if (embed) {
     // install the refined error reporter
@@ -1278,11 +1278,11 @@ void parseGrammarAST(Grammar &g, GrammarAST *treeTop)
 void readGrammarFile(Grammar &g, rostring fname)
 {
   // make sure the tree gets deleted
-  Owner<GrammarAST> treeTop(parseGrammarFile(fname, false /*useML*/));
+  std::unique_ptr<GrammarAST> treeTop(parseGrammarFile(fname, false /*useML*/));
 
-  parseGrammarAST(g, treeTop);
+  parseGrammarAST(g, treeTop.get());
 
-  treeTop.del();
+  treeTop.reset();
 
   // hmm.. I'd like to restore this functionality...
   //if (ASTNode::nodeCount > 0) {

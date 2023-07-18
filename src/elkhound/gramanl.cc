@@ -18,7 +18,7 @@
 #include "genml.h"       // emitMLActionCode
 
 #include <functional>    // std::hash
-#include <memory>        // std::make_unique
+#include <memory>        // std::make_unique, unique_ptr
 #include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
 #include <vector>        // std::vector
@@ -2237,7 +2237,7 @@ void GrammarAnalysis::constructLRItemSets()
   // which we'll fill with kernel items every time we think we *might*
   // make a new state, and if it turns out we really do need a new
   // state, then the kernel items in this one will be copied elsewhere
-  Owner<ItemSet> scratchState(
+  std::unique_ptr<ItemSet> scratchState(
     new ItemSet((StateId)-1 /*id*/, numTerms, numNonterms));
 
   // fill the scratch state with lots of kernel items to start with;
@@ -2357,8 +2357,8 @@ void GrammarAnalysis::constructLRItemSets()
         // this call also yields the unused remainder of the kernel items,
         // so we can add them back in at the end
         std::vector<LRItem *> unusedTail;
-        moveDotNoClosure(itemSet, sym, scratchState, unusedTail, kernelCRCArray);
-        ItemSet *withDotMoved = scratchState;    // clarify role from here down
+        moveDotNoClosure(itemSet, sym, scratchState.get(), unusedTail, kernelCRCArray);
+        ItemSet *withDotMoved = scratchState.get();    // clarify role from here down
 
         CHECK_MALLOC_STATS("moveDotNoClosure");
 
@@ -4925,14 +4925,14 @@ int inner_entry(int argc, char **argv)
   // parse the grammar
   string grammarFname = argv[0];
   SHIFT;
-  Owner<GrammarAST> ast(parseGrammarFile(grammarFname, useML));
+  std::unique_ptr<GrammarAST> ast(parseGrammarFile(grammarFname, useML));
 
   // parse and merge its extension modules
   while (argv[0]) {
-    Owner<GrammarAST> ext(parseGrammarFile(argv[0], useML));
+    std::unique_ptr<GrammarAST> ext(parseGrammarFile(argv[0], useML));
 
     traceProgress() << "merging module: " << argv[0] << std::endl;
-    mergeGrammar(ast, ext);
+    mergeGrammar(ast.get(), ext.get());
 
     SHIFT;
   }
@@ -4942,8 +4942,8 @@ int inner_entry(int argc, char **argv)
   if (useML) {
     g.targetLang = "OCaml";
   }
-  parseGrammarAST(g, ast);
-  ast.del();              // done with it
+  parseGrammarAST(g, ast.get());
+  ast.reset();              // done with it
 
   if (tracingSys("treebuild")) {
     std::cout << "replacing given actions with treebuilding actions\n";
