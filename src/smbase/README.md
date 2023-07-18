@@ -1,23 +1,25 @@
 smbase: A Utility Library
 =========================
 
+This document has been updated to cover all the files in this library.
+
 Introduction
 ============
 
 "smbase" stands for Scott McPeak's Base Library (sorry, naming things is not my specialty). It's a bunch of utility modules I use in virtually all of my projects. The entire library is in the public domain.
 
-*Functionality that overlaps the C++ Standard Library is being removed to ease maintenance.*
-
-There is some overlap in functionality between smbase and the C++ Standard Library. Partly this is because smbase predates the standard library, and partly this is because that library has aspects to its design that I disagree with (for example, I think it is excessively templatized, given flaws in the C++ template mechanism). However, the intent is that client code can use smbase and the standard library at the same time.
-
 smbase has developed organically, in response to specific needs. While each module individually has been reasonably carefully designed, the library as a whole has not. Consequently, the modules to not always orthogonally cover a given design space, and some of the modules are now considered obsolete (marked below as such).
+
+This library used to provide containers with functionality similar to that of the C++ standard library. Elkhound code has been ported to use equivalent C++ library continers. It eases the maintenance burden, as we don't need to deal with QA for those. Since C++11, the standard library performs well and has most of the functionality we need.
+
+> This library provides what Elkhound needs. Everything else has been stripped out. If you're looking for a complete version of this library, look in the initial commits to this repository.
 
 Some of the links below refer to generated documentation files. If you are reading this from your local filesystem, you may have to say "make gendoc" (after "./configure") to get them.
 
 Build Instructions
 ==================
 
-SMBase is a static library. The build is configured by cmake.
+SMBase is a static library. The build is managed by cmake.
 
 Modules
 =======
@@ -92,10 +94,6 @@ The following modules provide access to or wrappers around various low-level sys
 
 * [cycles.h](cycles.h) [cycles.c](cycles.c): Report total number of processor cycles since the machine was turned on. Uses the RDTSC instruction on x86.
 
-* [missing.h](missing.h), [missing.cpp](missing.cpp): Implementations of a few C library functions that are not present on all platforms.
-
-* [mypopen.h](mypopen.h), [mypopen.c](mypopen.c): Open a process, yielding two pipes: one for writing, one for reading.
-
 * [syserr.h](syserr.h), [syserr.cpp](syserr.cpp): Intended to be a portable encapsulation of system-dependent error facilities like UNIX's errno and Win32's GetLastError(). It's not very complete right now.
 
 
@@ -105,6 +103,8 @@ Portability
 These modules help insulate client code from the details of the system it is running on.
 
 * [nonport.h](nonport.h), [nonport.cpp](nonport.cpp): A library of utility functions whose implementation is system-specific. Generally, I try to encapsulate all system depenencies as functions defined in nonport.
+
+* [sm_flexlexer.h](sm_flexlexer.h): A compatibility layer for mutually incompatible versions of Flex.
 
 * [macros.h](macros.h): Defines bunch of useful macros. Does not include any other headers.
 
@@ -130,7 +130,7 @@ These modules define or throw exceptions.
 Serialization
 -------------
 
-The "flatten" serialization scheme is intended to allow sets of objects to read and write themselves to files.
+The "flatten" serialization scheme is intended to allow sets of objects to read and write themselves to files. *This is currently broken due to removal of several of the custom containers that it used to serialize. That needs to be reimplemented for C++ standard containers. Search for FIXME to locate the work areas.*
 
 * [bflatten.h](bflatten.h), [bflatten.cc](bflatten.cc): Implementation of the Flatten interface ([flatten.h](flatten.h)) for reading/writing binary files.
 
