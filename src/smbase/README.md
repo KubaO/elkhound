@@ -81,9 +81,9 @@ Arrays of bits are handled specially, because they are implemented by storing mu
 Strings
 -------
 
-Strings are sequences of characters.
+Strings are sequences of characters. We use `std::string` aliased to `string`, and `nonstd::string_view` aliased to `string_view`. The latter reverts to `std::string_view` on platforms that support that. The goal is to use C++ library classes. See [string.txt](string.txt) for an old discussion of what the string strategy was.
 
-* [str.h](str.h), [str.cpp](str.cpp): The string class itself. Using the string class instead of char* makes handling strings as convenent as manipulating fundamental types like int or float. See also [string.txt](string.txt).
+* [str.h](str.h), [str.cpp](str.cpp): string, string_view and rostring aliases. 
 
 * [strtokp.h](strtokp.h), [strtokp.cpp](strtokp.cpp): StrtokParse, a class that parses a string similar to how strtok() works, but provides a more convenient (and thread-safe) interface. Similar to Java's StringTokenizer.
 
@@ -188,7 +188,6 @@ Test drivers. Below are the modules that are purely test drivers for other modul
 
 * [testarray.cc](testarray.cc): Test driver for [array.h](array.h).
 * [testcout.cc](testcout.cc): This is a little test program for use by [configure.pl](configure.pl).
-* [tobjlist.cc](tobjlist.cc): Test driver for [objlist.h](objlist.h).
 * [tobjpool.cc](tobjpool.cc) Test driver for [objpool.h](objpool.h).
 
 Utility Scripts

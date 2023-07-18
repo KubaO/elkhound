@@ -1,37 +1,85 @@
 string.txt
-This document describes handling of string classes in smbase.
+==========
+
+Current Conventions
+-------------------
+
+### Convenience Aliases - used to reduce verbosity
+
+- `string` aliases `std::string`,
+- `string_view` aliases `nonstd::string_view` or `std::string_view`,
+  if the latter is available.
+  
+### Deprecated Aliases
+
+- `rostring` aliases `std::string const &`. This is being migrated
+  to `string_view` generally, and explicit `string const &` where about
+  C string is needed within a class
+
+### Good Practices
+
+1. `string_view` is the default way of passing strings as arguments.
+   
+   It is passed *by value*!
+
+2. `string` is passed by const-reference *only where C strings are
+  required* inside the function. Otherwise use `string-view`.
+  
+  If a `std::string` is available, that instance will be used; or a
+  fresh copy will be made at the call site, typically from `const char *`
+  or `string_view`. The compiler deals with that.
+  
+3. A `string_view` can be returned from a function in the following
+   two cases:
+   
+   1. It is a sub-view of a `string_view` passed as an argument, or
+   
+   2. It is a sub-view of a string whose value is held by the class.
+      
+      If the class returns the view of an entire `string`, it's best
+      to return `string const &` instead.
+      
+   Using `string_view` as a return value requires care in the 2nd case.
+   It is always a good idea in the 1st case, since that has minimal
+   overhead and doesn't create unnecessary string copies.
+
+### Future Directions
+
+The goal is to use `fmt::format` or `std::format` if the latter is
+available.
+
+Sub-goals are:
+
+- Removal of the stream-like appending operators that are defined 
+  for `std::string` in `str.h`.
+  
+  Those are non-standard and can be  quite confusing, since no one
+  expects them. `fmt::format`, on the  other hand, makes formatting
+  explicit and offers a lot of flexibility. This work has been done
+  and will be rebased and committed soon.
+
+- Removal of printf-like formatting and the printf-like wrappers in
+  `str.h`.
+
+- Use of some sort of light template mechanism for generating output
+  files from various tools.
+  
+  Currently, the tools generate output C++ and Caml files in an
+  ad-hoc manner. This makes it harder to reason about what the output
+  is, and where to modify things to change it.
+  
+  It'd also allow the end-user to modify the templates to an extent,
+  without needing to rebuild the tools.
 
 
+`str.h` and `strutil.h` will be merged once `str.h` sheds the
+"string streaming" operators and perhaps other cruft.
 
-The 'string' class defined in str.h predates std::string by several
-years.  I find its interface quite satisfactory.
+Historical Note
+---------------
 
-However, as part of the goal of releasing Elsa (etc.) is to let others
-use it in their projects, and std::string is understandably becoming
-quite popular, it must at a minimum be possible to integrate
-smbase-based code with code that uses std::string.
-
-One option is to simply put my string class into its own namespace,
-say smbase::string, or maybe rename it to sm_string or something.  But
-it was never my intent to have more than one notion of 'string' in a
-given code base; I made my own simply because there was nothing else
-at the time.  The programmer should not be forced to choose among
-string classes for routine tasks; a string is a string.
-
-Therefore my plan is to evolve my string (hereafter: smbase::string,
-even though it is not actually in a namespace at the moment) towards
-interface compatibility with std::string.  The ideal end state is that
-one could simply choose at compile-time which implementation to use,
-and all the client code would work, and the only difference (if any)
-would be performance.
-
-In other words, make smbase::string a subset of std::string.
-
-
-Now, that is all well and good, but there is one major problem:
-std::string does not implicitly convert to 'char const *', whereas
-smbase::string does (or used to), and a great deal of my code relies
-on this conversion.
+This is not relevant anymore, as the modern directions differ. See
+above.
 
 My general approach had been to use parameters of type 'char const *'
 whenever a function was (1) not going to modify the string, and (2)
@@ -283,12 +331,3 @@ reason to #include str.h under the old 'char const *' regime, for
 example autofile.h, then it may be best to stick with 'char const *'
 in the interest of minimizing dependencies.  (This is debatable.)
 
-
-
-
-
-
-
-
-
-EOF
