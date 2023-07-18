@@ -6,8 +6,6 @@
 #define __TYP_H
 
 #include <stdint.h>
-#include <stddef.h>         // NULL
-
 
 
 // tag for definitions of static member functions; there is no

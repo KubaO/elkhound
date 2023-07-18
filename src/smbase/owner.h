@@ -4,7 +4,7 @@
 #ifndef OWNER_H
 #define OWNER_H
 
-#include "typ.h"      // NULL
+#include <stddef.h>      // NULL
 
 // I'm tossing these in here so they are somewhere in smbase, even
 // though they don't have much to do with the Owner class.
