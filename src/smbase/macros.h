@@ -22,7 +22,6 @@
 // concise way to loop on an integer range
 #define loopi(end) for(int i=0; i<(int)(end); i++)
 #define loopj(end) for(int j=0; j<(int)(end); j++)
-#define loopk(end) for(int k=0; k<(int)(end); k++)
 
 
 // for using selfCheck methods
@@ -48,85 +47,8 @@
 #endif
 
 
-// complement of ==
-#define NOTEQUAL_OPERATOR(T)             \
-  bool operator != (T const &obj) const  \
-    { return !operator==(obj); }
-
-// toss this into a class that already has == and < defined, to
-// round out the set of relational operators (assumes a total
-// order, i.e.  a < b  <=>  b < a)
-#define RELATIONAL_OPERATORS(T)                    \
-  NOTEQUAL_OPERATOR(T)                             \
-  bool operator <= (T const &obj) const            \
-    { return !obj.operator<(*this); }              \
-  bool operator > (T const &obj) const             \
-    { return obj.operator<(*this); }               \
-  bool operator >= (T const &obj) const            \
-    { return !operator<(obj); }
-
-
 // member copy in constructor initializer list
 #define DMEMB(var) var(obj.var)
-
-// member copy in operator =
-#define CMEMB(var) var = obj.var
-
-// member comparison in operator ==
-#define EMEMB(var) var == obj.var
-
-
-// standard insert operator
-// (note that you can put 'virtual' in front of the macro call if desired)
-#define INSERT_OSTREAM(T)                                \
-  void insertOstream(std::ostream &os) const;                 \
-  friend std::ostream& operator<< (std::ostream &os, T const &obj) \
-    { obj.insertOstream(os); return os; }
-
-
-// usual declarations for a data object (as opposed to control object)
-#define DATA_OBJ_DECL(T)                \
-  T();                                  \
-  T(T const &obj);                      \
-  ~T();                                 \
-  T& operator= (T const &obj);          \
-  bool operator== (T const &obj) const; \
-  NOTEQUAL_OPERATOR(T)                  \
-  INSERTOSTREAM(T)
-
-
-// copy this to the .cc file for implementation of DATA_OBJ_DECL
-#if 0
-T::T()
-{}
-
-T::T(T const &obj)
-  : DMEMB(),
-    DMEMB(),
-    DMEMB()
-{}
-
-T::~T()
-{}
-
-T& T::operator= (T const &obj)
-{
-  if (this != &obj) {
-    CMEMB();
-  }
-  return *this;
-}
-
-bool T::operator== (T const &obj) const
-{
-  return
-    EMEMB() &&
-    EMEMB();
-}
-
-void T::insertOstream(std::ostream &os) const
-{}
-#endif // 0
 
 
 // assert something at compile time (must use this inside a function);
@@ -134,12 +56,6 @@ void T::insertOstream(std::ostream &os) const
 // (the expression below works with egcs-1.1.2, gcc-2.x, gcc-3.x)
 #define STATIC_ASSERT(cond) \
   { (void)((int (*)(char failed_static_assertion[(cond)?1:-1]))0); }
-
-// assert that a table is an expected size; the idea is to make sure
-// that static data in some table gets updated when a corresponding
-// symbolic constant is changed
-#define ASSERT_TABLESIZE(table, size) \
-  STATIC_ASSERT(TABLESIZE(table) == (size))
 
 
 // for silencing variable-not-used warnings
@@ -173,33 +89,12 @@ inline void pretendUsedFn(T const &) {}
   }
 
 
-// same as the above, but returning pointers; I think returning
-// references was a mistake
-#define DOWNCAST_FN(destType)                                                   \
-  destType const *as##destType##C() const;                                      \
-  destType *as##destType() { return const_cast<destType*>(as##destType##C()); }
-
-#define DOWNCAST_IMPL(inClass, destType)            \
-  destType const *inClass::as##destType##C() const  \
-  {                                                 \
-    xassert(is##destType());                        \
-    return static_cast<destType const*>(this);      \
-  }
-
-
 // keep track of a count and a high water mark
 #define INC_HIGH_WATER(count, highWater)  \
   count++;                                \
   if (count > highWater) {                \
     highWater = count;                    \
   }
-
-
-// egcs has the annoying "feature" that it warns
-// about switches on enums where not all cases are
-// covered .... what is this, f-ing ML??
-#define INCL_SWITCH \
-  default: break; /*silence warning*/
 
 
 // for a class that maintains allocated-node stats
@@ -256,47 +151,6 @@ public:
     variable = prevValue;
   }
 };
-
-
-// declare a bunch of a set-like operators for enum types
-#define ENUM_BITWISE_AND(Type)                  \
-  inline Type operator& (Type f1, Type f2)      \
-    { return (Type)((int)f1 & (int)f2); }       \
-  inline Type& operator&= (Type &f1, Type f2)   \
-    { return f1 = f1 & f2; }
-
-#define ENUM_BITWISE_OR(Type)                   \
-  inline Type operator| (Type f1, Type f2)      \
-    { return (Type)((int)f1 | (int)f2); }       \
-  inline Type& operator|= (Type &f1, Type f2)   \
-    { return f1 = f1 | f2; }
-
-#define ENUM_BITWISE_XOR(Type)                  \
-  inline Type operator^ (Type f1, Type f2)      \
-    { return (Type)((int)f1 ^ (int)f2); }       \
-  inline Type& operator^= (Type &f1, Type f2)   \
-    { return f1 = f1 ^ f2; }
-
-#define ENUM_BITWISE_NOT(Type, ALL)             \
-  inline Type operator~ (Type f)                \
-    { return (Type)((~(int)f) & ALL); }
-
-#define ENUM_BITWISE_OPS(Type, ALL)             \
-  ENUM_BITWISE_AND(Type)                        \
-  ENUM_BITWISE_OR(Type)                         \
-  ENUM_BITWISE_XOR(Type)                        \
-  ENUM_BITWISE_NOT(Type, ALL)
-
-
-// macro to conditionalize something on NDEBUG; I typically use this
-// to hide the declaration of a variable whose value is only used by
-// debugging trace statements (and thus provokes warnings about unused
-// variables if NDEBUG is set)
-#ifdef NDEBUG
-  #define IFDEBUG(stuff)
-#else
-  #define IFDEBUG(stuff) stuff
-#endif
 
 
 // put at the top of a class for which the default copy ctor
