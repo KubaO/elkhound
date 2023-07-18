@@ -5,8 +5,8 @@
 #define __GRAMPAR_H
 
 #include <map>            // std::map<string, TF_nonterm>
+#include <stddef.h>       // NULL
 
-#include "typ.h"          // NULL
 #include "exc.h"          // xBase
 #include "locstr.h"       // LocString
 

@@ -8,10 +8,10 @@
 #include "grampar.h"        // yylex, etc.
 #include "gramast.ast.gen.h"// grammar syntax AST definition
 #include "gramlex.h"        // GrammarLexer
-#include "owner.h"          // Owner
 
 #include <stdlib.h>         // malloc, free
 #include <iostream>         // std::cout
+#include <memory>           // std::unique_ptr
 
 // enable debugging the parser
 #ifndef NDEBUG
@@ -344,7 +344,7 @@ Subsets: /*empty*/                  { $$ = NULL; }
 AssocKind whichKind(LocString * /*owner*/ kind)
 {
   // delete 'kind' however we exit
-  Owner<LocString> killer(kind);
+  std::unique_ptr<LocString> killer(kind);
 
   #define CHECK(syntax, value)   \
     if (kind->equals(syntax)) {  \

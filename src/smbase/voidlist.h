@@ -7,8 +7,9 @@
 #define __VOIDLIST_H
 
 #include "xassert.h"     // xassert
-#include "typ.h"         // bool
 #include "trdelete.h"    // TRASHINGDELETE
+
+#include <stddef.h>      // NULL
 
 // -------------------------- non-typesafe core -----------------------------
 // non-typesafe list node

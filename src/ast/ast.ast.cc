@@ -398,7 +398,8 @@ string toString(AccessCtl acc)
     "dtor",
     "pure_virtual"
   };
-  STATIC_ASSERT(TABLESIZE(arr) == NUM_ACCESSCTLS);
+  static_assert(TABLESIZE(arr) == NUM_ACCESSCTLS,
+                "arr has wrong size relative to AccessCtl enum");
   xassert((unsigned)acc < NUM_ACCESSCTLS);
   return string(arr[acc]);
 }

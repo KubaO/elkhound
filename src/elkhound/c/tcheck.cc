@@ -4,6 +4,7 @@
 #include "c.ast.gen.h"      // C ast
 #include "c_type.h"         // Type, AtomicType, etc.
 #include "c_env.h"          // Env
+#include "restorer.h"       // Restorer
 #include "strutil.h"        // quoted
 #include "trace.h"          // trace
 #include "paths.h"          // printPaths

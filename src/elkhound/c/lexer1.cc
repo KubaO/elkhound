@@ -2,7 +2,7 @@
 // non-parser code for Lexer 1, declared in lexer1.h
 
 #include "lexer1.h"       // this module
-#include "typ.h"          // staticAssert, TABLESIZE
+#include "macros.h"       // TABLESIZE
 #include "trace.h"        // tracing stuff
 #include "strutil.h"      // encodeWithEscapes
 

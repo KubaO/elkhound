@@ -115,9 +115,7 @@ These modules help insulate client code from the details of the system it is run
 
 * [nonport.h](nonport.h), [nonport.cpp](nonport.cpp): A library of utility functions whose implementation is system-specific. Generally, I try to encapsulate all system depenencies as functions defined in nonport.
 
-* [macros.h](macros.h): A bunch of useful macros.
-
-* [typ.h](typ.h): Some type definitions like byte and bool, plus a few utility macros. Not clearly distinguished from [macros.h](macros.h) in purpose.
+* [macros.h](macros.h): Defines bunch of useful macros. Does not include any other headers.
 
 Allocation
 ----------
@@ -177,9 +175,11 @@ Miscellaneous
 
 * [gprintf.h](gprintf.h), [gprintf.c](gprintf.c): General printf; calls a function to emit each piece.
 
-* [owner.h](owner.h): Owner, a pointer that deallocates its referrent in its destructor. Similar to auto_ptr in the C++ Standard.
-
 * [point.h](point.h), [point.cc](point.cc): Point, a pair of integers.
+
+* [restorer.h](restorer.h): A RAII utility to restore previous variable value when the scope ends.
+
+* [allocstats.h](allocstats.h): A mixin to track allocation statistics of a class.
 
 Test Drivers
 ------------

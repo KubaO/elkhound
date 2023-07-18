@@ -29,7 +29,6 @@
 #include "str.h"         // string
 #include "util.h"        // OSTREAM_OPERATOR, INTLOOP
 #include "locstr.h"      // LocString, StringRef
-#include "owner.h"       // Owner
 #include "asockind.h"    // AssocKind
 
 class StrtokParse;       // strtokp.h

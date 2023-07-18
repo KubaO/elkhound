@@ -7,7 +7,6 @@
 #include <map>            // std::map<...>
 
 #include "c_type.h"       // Type, AtomicType, etc. (r)
-#include "owner.h"        // Owner
 #include "exc.h"          // xBase
 #include "c.ast.gen.h"    // C ast components
 #include "c_variable.h"   // Variable (r)

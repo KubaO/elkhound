@@ -6,13 +6,13 @@
 #include "gramlex.h"         // GrammarLexer
 #include "exc.h"             // xformat
 #include "trace.h"           // tracing debugging functions
-#include "owner.h"           // Owner
 #include "strutil.h"         // trimWhitespace
 #include "strtable.h"        // StringTable
 
 #include <string.h>          // strncmp
 #include <ctype.h>           // isalnum
 #include <fstream>           // std::ifstream
+#include <memory>            // std::unique_ptr
 
 
 string unbox(string *s)
@@ -138,20 +138,20 @@ ASTSpecFile *readAbstractGrammar(char const *fname)
     #endif
   }
 
-  Owner<GrammarLexer> lexer;
-  Owner<std::ifstream> in;
+  std::unique_ptr <GrammarLexer> lexer;
+  std::unique_ptr <std::ifstream> in;
   if (fname == NULL) {
     // stdin
-    lexer = new GrammarLexer(isAGramlexEmbed, stringTable);
+    lexer.reset(new GrammarLexer(isAGramlexEmbed, stringTable));
   }
   else {
     // file
-    in = new std::ifstream(fname);
+    in.reset(new std::ifstream(fname));
     if (!*in) {
       throw_XOpen(fname);
     }
     trace("tmp") << "in is " << in.get() << std::endl;
-    lexer = new GrammarLexer(isAGramlexEmbed, stringTable, fname, in.xfr());
+    lexer.reset(new GrammarLexer(isAGramlexEmbed, stringTable, fname, in.release()));
   }
 
   ASTParseParams params(*lexer);

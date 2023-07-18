@@ -8,9 +8,10 @@
 #include <map>            // std::map
 #include <vector>         // std::vector
 
-#include "str.h"          // string
-#include "macros.h"       // STATS macros
+#include "allocstats.h"   // AllocStats
 #include "cc_flags.h"     // CVFlags, DeclFlags, SimpleTypeId
+#include "macros.h"       // CAST_MEMBER_FN macro
+#include "str.h"          // string
 #include "strtable.h"     // StringRef
 
 // below, the type language refers to the AST language in exactly
@@ -39,13 +40,12 @@ void cc_type_checker();
 // --------------------- atomic types --------------------------
 // interface to types that are atomic in the sense that no
 // modifiers can be stripped away; see types.txt
-class AtomicType {
+class AtomicType : public AllocStats<AtomicType> {
 public:     // types
   enum Tag { T_SIMPLE, T_COMPOUND, T_ENUM, NUM_TAGS };
 
 public:     // funcs
-  AtomicType();
-  virtual ~AtomicType();
+  virtual ~AtomicType() {}
 
   // stand-in if I'm not really using ids..
   uintptr_t getId() const { return (uintptr_t)this; }
@@ -79,8 +79,6 @@ public:     // funcs
 
   // size this type's representation occupies in memory
   virtual int reprSize() const = 0;
-
-  ALLOC_STATS_DECLARE
 };
 
 
@@ -226,7 +224,7 @@ public:     // funcs
 
 // ------------------- constructed types -------------------------
 // generic constructed type
-class Type {
+class Type : public AllocStats<Type> {
 public:     // types
   enum Tag { T_ATOMIC, T_POINTER, T_FUNCTION, T_ARRAY };
 
@@ -234,8 +232,7 @@ private:    // funcs
   string idComment() const;
 
 public:     // funcs
-  Type();
-  virtual ~Type();
+  virtual ~Type() {}
 
   long getId() const { return (long)this; }
 
@@ -290,8 +287,6 @@ public:     // funcs
   bool isReference() const;
   bool isLval() const { return isReference(); }    // C terminology
   Type const *asRval() const;            // if I am a reference, return referrent type
-
-  ALLOC_STATS_DECLARE
 };
 
 
@@ -311,8 +306,6 @@ private:    // funcs
 public:     // funcs
   CVAtomicType(AtomicType const *a, CVFlags c)
     : atomic(a), cv(c) {}
-  CVAtomicType(CVAtomicType const &obj)
-    : DMEMB(atomic), DMEMB(cv) {}
 
   bool innerEquals(CVAtomicType const *obj) const;
 
@@ -340,8 +333,6 @@ public:
 
 public:
   PointerType(PtrOper o, CVFlags c, Type const *a);
-  PointerType(PointerType const &obj)
-    : DMEMB(op), DMEMB(cv), DMEMB(atType) {}
 
   bool innerEquals(PointerType const *obj) const;
 

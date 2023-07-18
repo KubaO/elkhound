@@ -4,6 +4,8 @@
 #include "c_type.h"     // this module
 #include "trace.h"      // tracingSys
 #include "xassert.h"    // xassert
+
+#include <algorithm>    // std::min,max
 #include <assert.h>     // assert
 
 
@@ -42,18 +44,6 @@ string makeIdComment(uintptr_t id)
 
 // ------------------ AtomicType -----------------
 ALLOC_STATS_DEFINE(AtomicType)
-
-AtomicType::AtomicType()
-  //: id(NULL_ATOMICTYPEID)
-{
-  ALLOC_STATS_IN_CTOR
-}
-
-
-AtomicType::~AtomicType()
-{
-  ALLOC_STATS_IN_DTOR
-}
 
 
 CAST_MEMBER_IMPL(AtomicType, SimpleType)
@@ -391,7 +381,7 @@ int CompoundType::reprSize() const
     int membSize = field.type->reprSize();
     if (keyword == K_UNION) {
       // representation size is max over field sizes
-      total = max(total, membSize);
+      total = (std::max)(total, membSize);
     }
     else {
       // representation size is sum over field sizes
@@ -509,17 +499,6 @@ EnumType::Value::~Value()
 
 // --------------- Type ---------------
 ALLOC_STATS_DEFINE(Type)
-
-Type::Type()
-  //: id(NULL_TYPEID)
-{
-  ALLOC_STATS_IN_CTOR
-}
-
-Type::~Type()
-{
-  ALLOC_STATS_IN_DTOR
-}
 
 
 CAST_MEMBER_IMPL(Type, CVAtomicType)

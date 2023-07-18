@@ -7,6 +7,7 @@ verbatim {
   #include "cc_flags.h"      // CVFlags, DeclFlags, etc. (r)
   #include "c_type.h"        // Type, FunctonType, CompoundType
 
+  #include <algorithm>       // std::min,max
   #include <set>             // std::set
   #include <vector>          // std::vector
 
@@ -384,9 +385,9 @@ class Expression {
   public int numPaths;
   ctor numPaths=0;
   public void recordSideEffect()
-    { numPaths = max(numPaths, 1); };
+    { numPaths = (std::max)(numPaths, 1); };
   public int numPaths1() const
-    { return max(numPaths, 1); };
+    { return (std::max)(numPaths, 1); };
 
   // print numPaths and type
   public string extrasToString() const;

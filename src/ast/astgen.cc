@@ -4,16 +4,15 @@
 #include "agrampar.h"      // readAbstractGrammar
 #include "test.h"          // ARGS_MAIN
 #include "trace.h"         // TRACE_ARGS
-#include "owner.h"         // Owner
 #include "ckheap.h"        // checkHeap
 #include "strutil.h"       // replace, translate, localTimeString
 #include "srcloc.h"        // SourceLocManager
 #include "strtokp.h"       // StrtokParse
 #include "exc.h"           // xfatal
 
-#include <vector>          // std::vector
-#include <set>             // std::set
 #include <fstream>         // std::ofstream
+#include <memory>          // std::unique_ptr
+#include <set>             // std::set
 #include <vector>          // std::vector
 #include <string.h>        // strncmp
 #include <ctype.h>         // isalnum
@@ -3305,9 +3304,9 @@ void entry(int argc, char **argv)
   argv++;
 
   // parse the grammar spec
-  Owner<ASTSpecFile> ast;
-  ast = readAbstractGrammar(srcFname);
-  wholeAST = ast;
+  std::unique_ptr<ASTSpecFile> ast;
+  ast.reset(readAbstractGrammar(srcFname));
+  wholeAST = ast.get();
 
   // parse and merge extension modules
   std::vector<string> modules;
@@ -3317,10 +3316,10 @@ void entry(int argc, char **argv)
 
     modules.emplace_back(fname);
 
-    Owner<ASTSpecFile> extension;
-    extension = readAbstractGrammar(fname);
+    std::unique_ptr<ASTSpecFile> extension;
+    extension.reset(readAbstractGrammar(fname));
 
-    mergeExtension(ast, extension);
+    mergeExtension(ast.get(), extension.get());
   }
 
   // scan options, and fill 'allClasses'

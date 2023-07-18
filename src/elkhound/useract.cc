@@ -2,7 +2,7 @@
 // code for useract.h
 
 #include "useract.h"     // this module
-#include "typ.h"         // STATICDEF
+#include "macros.h"      // STATICDEF
 #include "xassert.h"     // xfailure
 
 

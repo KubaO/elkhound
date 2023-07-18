@@ -497,7 +497,7 @@ int countPaths(Env &env, Expression *ths)
     return 0;
   }
 
-  #define SIDE_EFFECT() numPaths = max(numPaths,1) /* user ; */
+  #define SIDE_EFFECT() numPaths = (std::max)(numPaths,1) /* user ; */
 
   ASTSWITCH(Expression, ths) {
     ASTCASE(E_funCall, ths) {
@@ -525,7 +525,7 @@ int countPaths(Env &env, Expression *ths)
       numPaths = ths->obj->numPaths;
     }
     ASTNEXT(E_sizeof, ths) {
-      PRETEND_USED(ths);     // silence warning
+      ELK_UNUSED(ths);     // silence warning
       numPaths = 0;
     }
     ASTNEXT(E_unary, ths) {
@@ -606,7 +606,7 @@ int countPaths(Env &env, Expression *ths)
     ASTNEXT(E_comma, ths) {
       numPaths = ths->e1->numPaths;
       if (ths->e2->numPaths > 0) {
-        numPaths = mult(max(numPaths,1), ths->e2->numPaths);
+        numPaths = mult((std::max)(numPaths,1), ths->e2->numPaths);
       }
     }
     ASTNEXT(E_assign, ths) {
@@ -616,7 +616,7 @@ int countPaths(Env &env, Expression *ths)
     }
     ASTNEXT(E_quantifier, ths) {
       xfailure("shouldn't get here because only allowed in predicates");
-      PRETEND_USED(ths);
+      ELK_UNUSED(ths);
     }
     ASTENDCASED
   }
@@ -653,7 +653,7 @@ void printPath(int index, Expression const *ths)
       printPath(index, ths->obj);
     }
     ASTNEXTC(E_sizeof, ths) {
-      PRETEND_USED(ths);     // silence warning
+      ELK_UNUSED(ths);     // silence warning
     }
     ASTNEXTC(E_unary, ths) {
       printPath(index, ths->expr);

@@ -149,7 +149,7 @@ XOpen::XOpen(rostring fname)
 
 XOpen::XOpen(XOpen const &obj)
   : xBase(obj),
-    DMEMB(filename)
+    filename(obj.filename)
 {}
 
 XOpen::~XOpen()
@@ -176,8 +176,8 @@ XOpenEx::XOpenEx(rostring fname, rostring m, rostring c)
 
 XOpenEx::XOpenEx(XOpenEx const &obj)
   : XOpen(obj),
-    DMEMB(mode),
-    DMEMB(cause)
+    mode(obj.mode),
+    cause(obj.cause)
 {}
 
 XOpenEx::~XOpenEx()

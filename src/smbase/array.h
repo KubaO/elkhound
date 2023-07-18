@@ -337,7 +337,8 @@ T *ArrayStack<T>::getArrayCopy() const
 // switch between it and SObjList as a representation
 template <class T>
 class ArrayStackIterNC {
-  NO_OBJECT_COPIES(ArrayStackIterNC);   // for now
+  ArrayStackIterNC(ArrayStackIterNC &) = delete;
+  ArrayStackIterNC& operator=(ArrayStackIterNC &) = delete;
 
 private:     // data
   ArrayStack<T> /*const*/ &arr;   // array being accessed

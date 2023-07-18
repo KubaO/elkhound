@@ -10,6 +10,7 @@
 #include "flatten.h"   // Flatten
 #include "flatutil.h"  // various xfer helpers
 
+#include <algorithm>   // std::max
 #include <stdarg.h>    // variable-args stuff
 #include <stdio.h>     // FILE, etc.
 #include <ctype.h>     // isupper
@@ -978,7 +979,7 @@ void Grammar::printAsBison(std::ostream &os) const
     // first, compute the highest precedence used anywhere in the grammar
     int highMark=0;
     for (const auto& t : terminals) {
-      highMark = max(t.precedence, highMark);
+      highMark = (std::max)(t.precedence, highMark);
     }
 
     // map AssocKind to bison declaration; map stuff bison doesn't

@@ -259,7 +259,8 @@ KeywordMap c_KeywordMap[] = {
 Lexer2TokenType lookupKeyword(CCLang &lang, rostring keyword)
 {
   // works?
-  STATIC_ASSERT(TABLESIZE(l2TokTypes) == L2_NUM_TYPES);
+  static_assert(TABLESIZE(l2TokTypes) == L2_NUM_TYPES,
+                "l2TokTypes has wrong size relative to Lexer2TokenType enum");
 
   xassert(TABLESIZE(l2TokTypes) == L2_NUM_TYPES);
 
