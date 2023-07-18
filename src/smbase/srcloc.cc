@@ -3,13 +3,11 @@
 
 #include "srcloc.h"     // this module
 #include "autofile.h"   // AutoFILE
-#include "array.h"      // ArrayStack
 #include "syserr.h"     // xsyserror
 #include "trace.h"      // traceProgress
 #include "hashline.h"   // HashLineMap
 
 #include <stdio.h>      // fprintf
-#include <string.h>     // memcpy
 
 
 // this parameter controls the frequency of Markers in
@@ -19,16 +17,16 @@ enum { MARKER_PERIOD = 100 };    // 100 is about a 10% overhead
 
 
 // ------------------------- File -----------------------
-void addLineLength(ArrayStack<unsigned char> &lengths, int len)
+void addLineLength(std::vector<unsigned char> &lengths, int len)
 {
   while (len >= 255) {
     // add a long-line marker, which represents 254 chars of input
-    lengths.push(255);
+    lengths.push_back(255);
     len -= 254;
   }
 
   // add the short count at the end
-  lengths.push((unsigned char)len);
+  lengths.push_back((unsigned char)len);
 }
 
 
@@ -56,11 +54,11 @@ SourceLocManager::File::File(char const *n, SourceLoc aStartLoc)
   // discarded after the file has been read.  They keep track of their
   // own 'next index' values.  I chose to use a growable array instead
   // of making two passes over the file to reduce i/o.
-  ArrayStack<unsigned char> lineLengths;
-  ArrayStack<Marker> index;
+  std::vector<unsigned char> lineLengths;
+  std::vector<Marker> index;
 
   // put a marker at the start for uniformity
-  index.push(Marker(0, 1, 0));
+  index.push_back(Marker(0, 1, 0));
 
   // how many lines to go before I insert the next marker
   int indexDelay = MARKER_PERIOD;
@@ -117,7 +115,7 @@ SourceLocManager::File::File(char const *n, SourceLoc aStartLoc)
 
       if (--indexDelay == 0) {
         // insert a marker to remember this location
-        index.push(Marker(charOffset, lineNum, lineLengths.length()));
+        index.push_back(Marker(charOffset, lineNum, lineLengths.size()));
         indexDelay = MARKER_PERIOD;
       }
     }
@@ -146,13 +144,8 @@ SourceLocManager::File::File(char const *n, SourceLoc aStartLoc)
     this->avgCharsPerLine = numChars / numLines;
   }
 
-  this->lineLengthsSize = lineLengths.length();
-  this->lineLengths = new unsigned char[lineLengthsSize];
-  memcpy(this->lineLengths, lineLengths.getArray(),
-         lineLengthsSize * sizeof(this->lineLengths[0]));
-
-  this->indexSize = index.length();
-  this->index = index.getArrayCopy();
+  this->lineLengths = std::move(lineLengths);
+  this->index = std::move(index);
 
   // 'fp' closed by the AutoFILE
 }
@@ -160,10 +153,7 @@ SourceLocManager::File::File(char const *n, SourceLoc aStartLoc)
 
 SourceLocManager::File::~File()
 {
-  if (hashLines) {
-    delete hashLines;
-  }
-  delete[] lineLengths;
+  delete hashLines;
 }
 
 
@@ -214,8 +204,8 @@ int SourceLocManager::File::lineToChar(int lineNum)
   else {
     // do a binary search on the index to find the marker whose
     // lineOffset is closest to 'lineNum' without going over
-    int low = 0;              // lowest index under consideration
-    int high = indexSize-1;   // highest index under consideration
+    int low = 0;                  // lowest index under consideration
+    int high = index.size() - 1;  // highest index under consideration
     while (low < high) {
       // check the midpoint (round up to ensure progress when low+1 == high)
       int mid = (low+high+1)/2;
@@ -243,7 +233,7 @@ int SourceLocManager::File::lineToChar(int lineNum)
   }
 
   // make sure we never go beyond the end of the array
-  xassert(marker.arrayOffset < lineLengthsSize);
+  xassert(marker.arrayOffset < lineLengths.size());
 
   // if we didn't move the marker, we might not be in column 1
   return marker.charOffset - (markerCol-1);
@@ -297,7 +287,7 @@ int SourceLocManager::File::lineColToChar(int lineNum, int col)
     xassertdb(col > 0);
 
     index++;
-    xassert(index < lineLengthsSize);
+    xassert(index < lineLengths.size());
   }
 }
 
@@ -321,7 +311,7 @@ void SourceLocManager::File::charToLineCol(int offset, int &line, int &col)
   else {
     // binary search, like above
     int low = 0;
-    int high = indexSize-1;
+    int high = index.size() - 1;
     while (low < high) {
       // check midpoint
       int mid = (low+high+1)/2;
@@ -347,7 +337,7 @@ void SourceLocManager::File::charToLineCol(int offset, int &line, int &col)
   }
 
   // make sure we never go beyond the end of the array
-  xassert(marker.arrayOffset < lineLengthsSize);
+  xassert(marker.arrayOffset < lineLengths.size());
 
   // read off line/col
   line = marker.lineOffset;
