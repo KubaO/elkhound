@@ -525,7 +525,7 @@ int countPaths(Env &env, Expression *ths)
       numPaths = ths->obj->numPaths;
     }
     ASTNEXT(E_sizeof, ths) {
-      PRETEND_USED(ths);     // silence warning
+      ELK_UNUSED(ths);     // silence warning
       numPaths = 0;
     }
     ASTNEXT(E_unary, ths) {
@@ -616,7 +616,7 @@ int countPaths(Env &env, Expression *ths)
     }
     ASTNEXT(E_quantifier, ths) {
       xfailure("shouldn't get here because only allowed in predicates");
-      PRETEND_USED(ths);
+      ELK_UNUSED(ths);
     }
     ASTENDCASED
   }
@@ -653,7 +653,7 @@ void printPath(int index, Expression const *ths)
       printPath(index, ths->obj);
     }
     ASTNEXTC(E_sizeof, ths) {
-      PRETEND_USED(ths);     // silence warning
+      ELK_UNUSED(ths);     // silence warning
     }
     ASTNEXTC(E_unary, ths) {
       printPath(index, ths->expr);

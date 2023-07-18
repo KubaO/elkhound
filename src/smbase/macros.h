@@ -47,10 +47,7 @@
 #endif
 
 
-// for silencing variable-not-used warnings
-template <class T>
-inline void pretendUsedFn(T const &) {}
-#define PRETEND_USED(arg) pretendUsedFn(arg) /* user ; */
+#define ELK_UNUSED(arg) ((void)(arg))
 
 
 // appended to function declarations to indicate they do not
