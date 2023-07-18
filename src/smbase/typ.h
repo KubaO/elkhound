@@ -6,22 +6,7 @@
 #define __TYP_H
 
 #include <stdint.h>
-
-
-
-// NULL
-#ifndef NULL
-#  define NULL 0
-#endif // NULL
-
-
-// bool
-#ifdef LACKS_BOOL
-  typedef int bool;
-  bool const false=0;
-  bool const true=1;
-#endif // LACKS_BOOL
-
+#include <stddef.h>         // NULL
 
 
 
@@ -72,17 +57,6 @@ template <class T>
 inline T div_up(T const &x, T const &y)
 { return (x + y - 1) / y; }
 
-
-#define SWAP(a,b) \
-  temp = a;       \
-  a = b;          \
-  b = temp /*user supplies semicolon*/
-
-
-// verify something is true at compile time (will produce
-// a compile error if it isn't)
-// update: use STATIC_ASSERT defined in macros.h instead
-//#define staticAssert(cond) extern int dummyArray[cond? 1 : 0]
 
 
 #endif // __TYP_H
