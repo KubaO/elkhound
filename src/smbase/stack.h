@@ -57,6 +57,7 @@ namespace sm {
     void emplace(Args&&...args) { c.emplace_back(std::forward<Args>(args)...); }
 
     void pop() { c.pop_back(); }
+    void pop_n(size_t count) { c.resize(c.size() - count); }
 
     void clear() { c.clear(); }
 
