@@ -78,16 +78,6 @@ Arrays of bits are handled specially, because they are implemented by storing mu
 * [bit2d.h](bit2d.h), [bit2d.cc](bit2d.cc): Two-dimensional array of bits.
 
 
-Hash Tables and Maps
---------------------
-
-Maps support mapping from arbitrary domains to arbitrary ranges. Mappings can be added and queried in amortized O(1) time, but the constant factor is considerably higher than for arrays and lists.
-
-If the key can always be derived from the data (for example, the key is stored in the data object), then it is inefficient to store both in the table. The following variants require a function pointer to map from data to keys.
-
-* [hashtbl.h](hashtbl.h), [hashtbl.cc](hashtbl.cc): HashTable, a hash table. Maps void* to void*.
-
-
 Strings
 -------
 
