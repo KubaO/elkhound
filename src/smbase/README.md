@@ -177,6 +177,8 @@ Miscellaneous
 
 * [point.h](point.h), [point.cc](point.cc): Point, a pair of integers.
 
+* [restorer.h](restorer.h): A RAII utility to restore previous variable value when the scope ends.
+
 * [allocstats.h](allocstats.h): A mixin to track allocation statistics of a class.
 
 Test Drivers

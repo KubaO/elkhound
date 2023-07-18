@@ -82,34 +82,4 @@
   }
 
 
-// ----------- automatic data value restorer -------------
-// used when a value is to be set to one thing now, but restored
-// to its original value on return (even when the return is by
-// an exception being thrown)
-template <class T>
-class Restorer {
-  T &variable;
-  T prevValue;
-
-public:
-  Restorer(T &var, T newValue)
-    : variable(var),
-      prevValue(var)
-  {
-    variable = newValue;
-  }
-
-  // this one does not set it to a new value, just remembers the current
-  Restorer(T &var)
-    : variable(var),
-      prevValue(var)
-  {}
-
-  ~Restorer()
-  {
-    variable = prevValue;
-  }
-};
-
-
 #endif // __MACROS_H
