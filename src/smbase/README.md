@@ -115,9 +115,7 @@ These modules help insulate client code from the details of the system it is run
 
 * [nonport.h](nonport.h), [nonport.cpp](nonport.cpp): A library of utility functions whose implementation is system-specific. Generally, I try to encapsulate all system depenencies as functions defined in nonport.
 
-* [macros.h](macros.h): A bunch of useful macros.
-
-* [typ.h](typ.h): Some type definitions like byte and bool, plus a few utility macros. Not clearly distinguished from [macros.h](macros.h) in purpose.
+* [macros.h](macros.h): Defines bunch of useful macros. Does not include any other headers.
 
 Allocation
 ----------
