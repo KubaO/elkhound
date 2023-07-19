@@ -9,6 +9,7 @@
 #include "trace.h"          // trace
 #include "paths.h"          // printPaths
 #include "cc_lang.h"        // CCLang
+#include "voidlist.h"       // VoidList
 
 #define IN_PREDICATE(env) Restorer<bool> restorer(env.inPredicate, true)
 
@@ -51,7 +52,7 @@ Type const *checkLval(Env &env, Type const *t, Expression const *e)
 void TranslationUnit::tcheck(Env &env)
 {
   FOREACH_ASTLIST_NC(TopForm, topForms, iter) {
-    iter.data()->tcheck(env);
+    iter->tcheck(env);
   }
 }
 
@@ -92,7 +93,7 @@ void TF_func::itcheck(Env &env)
     D_func *fdecl = nameParams->decl->asD_func();
 
     FOREACH_ASTLIST(ASTTypeId, fdecl->params, iter) {
-      Variable *var = iter.data()->decl->var;
+      Variable *var = iter->decl->var;
       if (var->name) {
         env.addVariable(var->name, var);
       }
@@ -111,8 +112,8 @@ void TF_func::itcheck(Env &env)
     FA_precondition *pre = ftype()->precondition;
     if (pre) {
       FOREACH_ASTLIST_NC(Declaration, pre->decls, iter) {
-        FOREACH_ASTLIST_NC(Declarator, iter.data()->decllist, iter2) {
-          Variable *var = iter2.data()->var;
+        FOREACH_ASTLIST_NC(Declarator, iter->decllist, iter2) {
+          Variable *var = iter2->var;
           env.addVariable(var->name, var);
         }
       }
@@ -234,8 +235,7 @@ void Declaration::tcheck(Env &env)
   Type const *base = spec->tcheck(env);
 
   // apply this type to each of the declared entities
-  FOREACH_ASTLIST_NC(Declarator, decllist, iter) {
-    Declarator *d = iter.data();
+  FOREACH_ASTLIST_NC(Declarator, decllist, d) {
     d->tcheck(env, base, dflags);
 
     // we just declared a local variable, if we're in a function
@@ -319,7 +319,7 @@ Type const *TS_classSpec::tcheck(Env &env)
   // fill in 'ct' with its fields
   env.pushStruct(ct);      // declarations will go into 'ct'
   FOREACH_ASTLIST_NC(Declaration, members, iter) {
-    iter.data()->tcheck(env);
+    iter->tcheck(env);
   }
   env.popStruct();
 
@@ -365,8 +365,7 @@ Type const *TS_enumSpec::tcheck(Env &env)
 
   // fill in 'et' with enumerators
   int nextValue = 0;
-  FOREACH_ASTLIST_NC(Enumerator, elts, iter) {
-    Enumerator *e = iter.data();
+  FOREACH_ASTLIST_NC(Enumerator, elts, e) {
     if (e->expr) {
       nextValue = constEval(env, e->expr);
     }
@@ -417,7 +416,7 @@ void /*Type const * */IDeclarator::tcheck(Env &env, Type const *base,
     //   int  * const * volatile x;
     //   ^^^  ^^^^^^^ ^^^^^^^^^^
     //   base  first    second
-    base = env.makePtrOperType(PO_POINTER, iter.data()->cv, base);
+    base = env.makePtrOperType(PO_POINTER, iter->cv, base);
   }
 
   // call inner function
@@ -442,11 +441,10 @@ void /*Type const * */D_name::itcheck(Env &env, Type const *base,
   // look at the attributes
   if (attr) {
     xassert(attr->name == env.str("attr"));
-    FOREACH_ASTLIST_NC(ThmprvAttr, attr->args, iter) {
-      ThmprvAttr *at = iter.data();
+    FOREACH_ASTLIST_NC(ThmprvAttr, attr->args, at) {
       if (at->name == env.str("addrtaken")) {
         var->setFlag(DF_ADDRTAKEN);
-        if (at->args.count() != 0) {
+        if (!at->args.empty()) {
           env.err(stringc << "addrtaken cannot have parameters");
         }
       }
@@ -487,8 +485,7 @@ void /*Type const * */D_func::itcheck(Env &env, Type const *rettype,
   env.enterScope();
 
   // build the argument types
-  FOREACH_ASTLIST_NC(ASTTypeId, params, iter) {
-    ASTTypeId *ti = iter.data();
+  FOREACH_ASTLIST_NC(ASTTypeId, params, ti) {
 
     // handle "..."
     if (ti->spec->kind() == TypeSpecifier::TS_SIMPLE &&
@@ -512,13 +509,13 @@ void /*Type const * */D_func::itcheck(Env &env, Type const *rettype,
 
   // pass the annotations along via the type language
   FOREACH_ASTLIST_NC(FuncAnnotation, ann, iter) {
-    ASTSWITCH(FuncAnnotation, iter.data()) {
+    ASTSWITCH(FuncAnnotation, iter) {
       ASTCASE(FA_precondition, pre) {
         IN_PREDICATE(env);
 
         // typecheck the precondition
         FOREACH_ASTLIST_NC(Declaration, pre->decls, iter) {
-          iter.data()->tcheck(env);
+          iter->tcheck(env);
         }
         checkBoolean(env, pre->expr->tcheck(env), pre->expr);
 
@@ -674,7 +671,7 @@ void S_compound::itcheck(Env &env)
 {
   env.enterScope();
   FOREACH_ASTLIST_NC(Statement, stmts, iter) {
-    iter.data()->tcheck(env);
+    iter->tcheck(env);
   }
   env.leaveScope();
 }
@@ -1135,7 +1132,7 @@ Type const *E_funCall::itcheck(Env &env)
 
   // check argument types
   FOREACH_ASTLIST_NC(Expression, args, iter) {
-    Type const *atype = iter.data()->tcheck(env);
+    Type const *atype = iter->tcheck(env);
     if (param != end) {
       env.checkCoercible(atype, param->type);
       std::advance(param, 1);
@@ -1147,7 +1144,7 @@ Type const *E_funCall::itcheck(Env &env)
     else {
       // we can only portably pass built-in types across
       // a varargs boundary
-      checkBoolean(env, atype->asRval(), iter.data());
+      checkBoolean(env, atype->asRval(), iter);
     }
   }
   if (param != end) {
@@ -1439,7 +1436,7 @@ Type const *E_quantifier::itcheck(Env &env)
   // add declared variables to the environment
   env.enterScope();
   FOREACH_ASTLIST_NC(Declaration, decls, iter) {
-    Declaration *d = iter.data();
+    Declaration *d = iter;
 
     // mark all these as universal/existential
     d->dflags = (DeclFlags)
@@ -1618,7 +1615,7 @@ string E_funCall::toString() const
     if (count++) {
       sb << ", ";
     }
-    sb << iter.data()->toString();
+    sb << iter->toString();
   }
   sb << ")";
   return sb;
@@ -1680,8 +1677,8 @@ string E_quantifier::toString() const
   sb << (forall? "thmprv_forall(" : "thmprv_exists(");
 
   FOREACH_ASTLIST(Declaration, decls, outer) {
-    FOREACH_ASTLIST(Declarator, outer.data()->decllist, inner) {
-      Variable *var = inner.data()->var;
+    FOREACH_ASTLIST(Declarator, outer->decllist, inner) {
+      Variable *var = inner->var;
 
       sb << var->type->toCString(var->name) << "; ";
     }
@@ -1731,12 +1728,12 @@ void IN_compound::tcheck(Env &env, Type const *type)
 
     // every element should correspond to the element type
     FOREACH_ASTLIST_NC(Initializer, inits, iter) {
-      iter.data()->tcheck(env, at.eltType);
+      iter->tcheck(env, at.eltType);
     }
 
     // check size restriction
-    if (at.hasSize && inits.count() > at.size) {
-      env.err(stringc << "initializer has " << inits.count()
+    if (at.hasSize && inits.size() > at.size) {
+      env.err(stringc << "initializer has " << inits.size()
                       << " elements but array only has " << at.size
                       << " elements");
     }
@@ -1759,14 +1756,14 @@ void IN_compound::tcheck(Env &env, Type const *type)
         env.err(stringc
           << "too many initializers; " << ct.keywordAndName()
           << " only has " << ct.numFields() << " fields, but "
-          << inits.count() << " initializers are present");
+          << inits.size() << " initializers are present");
         return;
       }
 
       CompoundType::Field const *f = ct.getNthField(field);
 
       // check this initializer against the field it initializes
-      iter.data()->tcheck(env, f->type);
+      iter->tcheck(env, f->type);
 
       field++;
     }

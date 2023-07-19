@@ -66,8 +66,8 @@ class PrecSpec (AssocKind kind, int prec, ASTList<LocString> tokens);
 // specification function: formals + code
 class SpecFunc (LocString name, ASTList<LocString> formals, LocString code)
 {
-  public LocString nthFormal(int i) const
-    { return *( formals.nthC(i) ); };
+  public LocString firstFormal() const { return *formals.front(); };
+  public LocString secondFormal() const { return *formals.second(); };
 }
 
 

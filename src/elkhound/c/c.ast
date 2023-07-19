@@ -6,6 +6,7 @@ verbatim {
   #include "c_variable.h"    // Variable
   #include "cc_flags.h"      // CVFlags, DeclFlags, etc. (r)
   #include "c_type.h"        // Type, FunctonType, CompoundType
+  #include "voidlist.h"      // VoidList for NextPtrList
 
   #include <algorithm>       // std::min,max
   #include <set>             // std::set

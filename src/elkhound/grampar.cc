@@ -135,7 +135,7 @@ void setAnnotations(GrammarAST *ast)
 {
   // work through the toplevel forms
   FOREACH_ASTLIST_NC(TopForm, ast->forms, iter) {
-    ASTSWITCH(TopForm, iter.data()) {
+    ASTSWITCH(TopForm, iter) {
       ASTCASE(TF_terminals, t) {
         if (!ast->terms) {
           ast->terms = t;
@@ -191,7 +191,7 @@ void astParseOptions(Grammar &g, GrammarAST *ast)
 {
   // handle TF_verbatim and TF_option
   FOREACH_ASTLIST_NC(TopForm, ast->forms, iter) {
-    ASTSWITCH(TopForm, iter.data()) {
+    ASTSWITCH(TopForm, iter) {
       ASTCASE(TF_context, c) {
         // overwrite the context class name, and append to
         // its body verbatim list
@@ -308,8 +308,8 @@ void astParseGrammar(Grammar &g, GrammarAST *ast)
   // looking at their bodies we can tell if one isn't declared
   {
     FOREACH_ASTLIST_NC(TopForm, ast->forms, iter) {
-      if (!iter.data()->isTF_nonterm()) continue;
-      TF_nonterm *nt = iter.data()->asTF_nonterm();
+      if (!iter->isTF_nonterm()) continue;
+      TF_nonterm *nt = iter->asTF_nonterm();
 
       // check for already declared
       auto ntd = env.nontermDecls.find(nt->name.str);
@@ -344,8 +344,8 @@ void astParseGrammar(Grammar &g, GrammarAST *ast)
   // process nonterminal bodies
   {
     FOREACH_ASTLIST(TopForm, ast->forms, iter) {
-      if (!iter.data()->isTF_nonterm()) continue;
-      TF_nonterm const *nt = iter.data()->asTF_nontermC();
+      if (!iter->isTF_nonterm()) continue;
+      TF_nonterm const *nt = iter->asTF_nontermC();
 
       // new environment since it can contain a grouping construct
       // (at this very moment it actually can't because there is no syntax..)
@@ -385,7 +385,7 @@ void astParseTerminals(Environment &env, TF_terminals const &terms)
     int maxCode = 0;
     std::vector<bool> codeHasTerm(200, false);
     FOREACH_ASTLIST(TermDecl, terms.decls, iter) {
-      TermDecl const &term = *(iter.data());
+      TermDecl const &term = *iter;
 
       // process the terminal declaration
       int code = term.code;
@@ -420,7 +420,7 @@ void astParseTerminals(Environment &env, TF_terminals const &terms)
   // type annotations
   {
     FOREACH_ASTLIST(TermType, terms.types, iter) {
-      TermType const &type = *(iter.data());
+      TermType const &type = *iter;
       trace("grampar") << "token type: name=" << type.name
                        << ", type=" << type.type << std::endl;
 
@@ -441,10 +441,10 @@ void astParseTerminals(Environment &env, TF_terminals const &terms)
   // precedence specifications
   {
     FOREACH_ASTLIST(PrecSpec, terms.prec, iter) {
-      PrecSpec const &spec = *(iter.data());
+      PrecSpec const &spec = *iter;
 
       FOREACH_ASTLIST(LocString, spec.tokens, tokIter) {
-        LocString const &tokName = *(tokIter.data());
+        LocString const &tokName = *tokIter;
         trace("grampar") << "prec: " << toString(spec.kind)
                          << " " << spec.prec << " " << tokName;
 
@@ -478,8 +478,8 @@ void astParseDDM(Environment &env, Symbol *sym,
   Nonterminal *nonterm = sym->ifNonterminal();
 
   FOREACH_ASTLIST(SpecFunc, funcs, iter) {
-    SpecFunc const &func = *(iter.data());
-    int numFormals = func.formals.count();
+    SpecFunc const &func = *iter;
+    int numFormals = func.formals.size();
 
     // decide what to do based on the name
 
@@ -490,7 +490,7 @@ void astParseDDM(Environment &env, Symbol *sym,
       if (sym->dupParam) {
         astParseError(func.name, "duplicate 'dup' function");
       }
-      sym->dupParam = func.nthFormal(0);
+      sym->dupParam = func.firstFormal();
       sym->dupCode = func.code;
     }
 
@@ -501,7 +501,7 @@ void astParseDDM(Environment &env, Symbol *sym,
         sym->delParam = NULL;
       }
       else if (numFormals == 1) {
-        sym->delParam = func.nthFormal(0);
+        sym->delParam = func.firstFormal();
       }
       else {
         astParseError(func.name, "'del' function must have either zero or one formal parameters");
@@ -521,8 +521,8 @@ void astParseDDM(Environment &env, Symbol *sym,
         if (nonterm->mergeParam1) {
           astParseError(func.name, "duplicate 'merge' function");
         }
-        nonterm->mergeParam1 = func.nthFormal(0);
-        nonterm->mergeParam2 = func.nthFormal(1);
+        nonterm->mergeParam1 = func.firstFormal();
+        nonterm->mergeParam2 = func.secondFormal();
         nonterm->mergeCode = func.code;
       }
       else {
@@ -538,7 +538,7 @@ void astParseDDM(Environment &env, Symbol *sym,
         if (nonterm->keepParam) {
           astParseError(func.name, "duplicate 'keep' function");
         }
-        nonterm->keepParam = func.nthFormal(0);
+        nonterm->keepParam = func.firstFormal();
         nonterm->keepCode = func.code;
       }
       else {
@@ -554,7 +554,7 @@ void astParseDDM(Environment &env, Symbol *sym,
         if (term->classifyParam) {
           astParseError(func.name, "duplicate 'classify' function");
         }
-        term->classifyParam = func.nthFormal(0);
+        term->classifyParam = func.firstFormal();
         term->classifyCode = func.code;
       }
       else {
@@ -602,8 +602,8 @@ void addDefaultTypesActions(Grammar &g, GrammarAST *ast)
 
   // iterate over nonterminals
   FOREACH_ASTLIST_NC(TopForm, ast->forms, iter) {
-    if (!iter.data()->isTF_nonterm()) { continue; }
-    TF_nonterm *nt = iter.data()->asTF_nonterm();
+    if (!iter->isTF_nonterm()) { continue; }
+    TF_nonterm *nt = iter->asTF_nonterm();
 
     // default type
     if (forceDefaults || nt->type.isNull()) {
@@ -612,7 +612,7 @@ void addDefaultTypesActions(Grammar &g, GrammarAST *ast)
 
     // iterate over productions
     FOREACH_ASTLIST_NC(ProdDecl, nt->productions, iter2) {
-      ProdDecl *pd = iter2.data();
+      ProdDecl *pd = iter2;
 
       // default action
       if (forceDefaults || pd->actionCode.isNull()) {
@@ -625,7 +625,7 @@ void addDefaultTypesActions(Grammar &g, GrammarAST *ast)
         // the RHSElts anyway
         StringRef empty = grammarStringTable.add("");
         FOREACH_ASTLIST_NC(RHSElt, pd->rhs, iter3) {
-          ASTSWITCH(RHSElt, iter3.data()) {
+          ASTSWITCH(RHSElt, iter3) {
             ASTCASE(RH_name, n)
               n->tag.str = empty;
 
@@ -649,8 +649,8 @@ void synthesizeStartRule(Grammar &g, GrammarAST *ast)
   // find the name of the user's EOF token
   TermDecl const *eof = NULL;
   FOREACH_ASTLIST(TermDecl, ast->terms->decls, iter) {
-    if (iter.data()->code == 0) {
-      eof = iter.data();
+    if (iter->code == 0) {
+      eof = iter;
       break;
     }
   }
@@ -679,7 +679,7 @@ void synthesizeStartRule(Grammar &g, GrammarAST *ast)
         NULL                                     // subsets
       );
 
-  // put it into the AST
+  // put it into the AST; it must be prepended, append would be incorrect
   ast->forms.prepend(earlyStartNT);
 }
 
@@ -696,7 +696,7 @@ void astParseNonterm(Environment &env, TF_nonterm const *nt)
 
   // iterate over the productions
   FOREACH_ASTLIST(ProdDecl, nt->productions, iter) {
-    astParseProduction(env, nonterm, iter.data());
+    astParseProduction(env, nonterm, iter);
   }
 
   // parse dup/del/merge
@@ -704,8 +704,7 @@ void astParseNonterm(Environment &env, TF_nonterm const *nt)
 
   // record subsets
   {
-    FOREACH_ASTLIST(LocString, nt->subsets, iter) {
-      LocString const *ls = iter.data();
+    FOREACH_ASTLIST(LocString, nt->subsets, ls) {
       Nonterminal *sub = env.g.findNonterminal(*ls);
       if (!sub) {
         astParseError(*ls, "nonexistent nonterminal");
@@ -734,8 +733,7 @@ void astParseProduction(Environment &env, Nonterminal *nonterm,
   prod->action = prodDecl->actionCode;
 
   // deal with RHS elements
-  FOREACH_ASTLIST(RHSElt, prodDecl->rhs, iter) {
-    RHSElt const *n = iter.data();
+  FOREACH_ASTLIST(RHSElt, prodDecl->rhs, n) {
     LocString symName;
     LocString symTag;
     bool isString = false;
@@ -954,8 +952,8 @@ void mergeOption(GrammarAST *base, TF_option * /*owner*/ ext)
 {
   // find option with the same name
   FOREACH_ASTLIST_NC(TopForm, base->forms, iter) {
-    if (!iter.data()->isTF_option()) continue;
-    TF_option *op = iter.data()->asTF_option();
+    if (!iter->isTF_option()) continue;
+    TF_option *op = iter->asTF_option();
 
     if (op->name.str == ext->name.str) {
       // replace the old value
@@ -973,8 +971,8 @@ void mergeOption(GrammarAST *base, TF_option * /*owner*/ ext)
 void mergeTerminals(GrammarAST *base, TF_terminals * /*owner*/ ext)
 {
   FOREACH_ASTLIST_NC(TopForm, base->forms, iter) {
-    if (iter.data()->isTF_terminals()) {
-      TF_terminals *t = iter.data()->asTF_terminals();
+    if (iter->isTF_terminals()) {
+      TF_terminals *t = iter->asTF_terminals();
 
       // there's no point to changing codes, so all the
       // TermDecls just get added (collisions are detected
@@ -1000,8 +998,7 @@ void mergeTerminals(GrammarAST *base, TF_terminals * /*owner*/ ext)
 void mergeSpecFunc(TF_nonterm *base, SpecFunc * /*owner*/ ext)
 {
   // find an existing spec func with the same name
-  FOREACH_ASTLIST_NC(SpecFunc, base->funcs, iter) {
-    SpecFunc *f = iter.data();
+  FOREACH_ASTLIST_NC(SpecFunc, base->funcs, f) {
     if (f->name.str == ext->name) {
       // replace the old code with the extension code
       base->funcs.removeItem(f);
@@ -1042,17 +1039,12 @@ bool equalRHSElt(RHSElt const *elt1, RHSElt const *elt2)
 
 bool equalRHS(ProdDecl const *prod1, ProdDecl const *prod2)
 {
-  if (prod1->rhs.count() != prod2->rhs.count()) {
+  if (prod1->rhs.size() != prod2->rhs.size()) {
     return false;
   }
 
-  for (ASTListIter<RHSElt> iter1(prod1->rhs), iter2(prod2->rhs);
-       !iter1.isDone(); iter1.adv(), iter2.adv()) {
-    if (!equalRHSElt(iter1.data(), iter2.data())) {
-      return false;
-    }
-  }
-  return true;
+  return std::equal(prod1->rhs.begin(), prod1->rhs.end(),
+                    prod2->rhs.begin(), equalRHSElt);
 }
 
 
@@ -1061,8 +1053,7 @@ void mergeProduction(TF_nonterm *base, ProdDecl *ext)
   bool found = false;
 
   // look for a production with an identical RHS
-  FOREACH_ASTLIST_NC(ProdDecl, base->productions, iter) {
-    ProdDecl *prod = iter.data();
+  FOREACH_ASTLIST_NC(ProdDecl, base->productions, prod) {
 
     // check RHSs for equality
     if (equalRHS(prod, ext)) {
@@ -1106,9 +1097,9 @@ void mergeNonterminal(GrammarAST *base, TF_nonterm * /*owner*/ ext)
   // find an existing nonterminal with the same name
   TF_nonterm *exist = NULL;
   FOREACH_ASTLIST_NC(TopForm, base->forms, iter) {
-    if (iter.data()->isTF_nonterm() &&
-        iter.data()->asTF_nonterm()->name.str == ext->name) {
-      exist = iter.data()->asTF_nonterm();
+    if (iter->isTF_nonterm() &&
+        iter->asTF_nonterm()->name.str == ext->name) {
+      exist = iter->asTF_nonterm();
     }
   }
 
@@ -1124,14 +1115,16 @@ void mergeNonterminal(GrammarAST *base, TF_nonterm * /*owner*/ ext)
   }
 
   // merge the spec funcs
-  while (ext->funcs.isNotEmpty()) {
-    mergeSpecFunc(exist, ext->funcs.removeFirst());
+  for (SpecFunc * /*owner*/ sf : ext->funcs) {
+    mergeSpecFunc(exist, sf);
   }
+  ext->funcs.clear();
 
   // merge the productions
-  while (ext->productions.isNotEmpty()) {
-    mergeProduction(exist, ext->productions.removeFirst());
+  for (ProdDecl * /*owner*/ pd : ext->productions) {
+    mergeProduction(exist, pd);
   }
+  ext->productions.clear();
 
   delete ext;
 }
@@ -1142,8 +1135,7 @@ void mergeGrammar(GrammarAST *base, GrammarAST *ext)
   // work through all the forms in 'ext', removing each
   // one; it will then either be added to 'base', or
   // discarded entirely
-  while (ext->forms.isNotEmpty()) {
-    TopForm *form = ext->forms.removeFirst();
+  for (TopForm * /*owner*/ form : ext->forms) {
 
     ASTSWITCH(TopForm, form) {
       ASTCASE(TF_context, c) {
@@ -1174,6 +1166,7 @@ void mergeGrammar(GrammarAST *base, GrammarAST *ext)
       ASTENDCASE
     }
   }
+  ext->forms.clear();
 }
 
 

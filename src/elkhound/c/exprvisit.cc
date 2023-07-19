@@ -14,7 +14,7 @@ void walkExpression(ExpressionVisitor &vis, Expression const *root)
     ASTCASEC(E_funCall, e)
       walkExpression(vis, e->func);
       FOREACH_ASTLIST(Expression, e->args, iter) {
-        walkExpression(vis, iter.data());
+        walkExpression(vis, iter);
       }
 
     ASTNEXTC(E_fieldAcc, e)

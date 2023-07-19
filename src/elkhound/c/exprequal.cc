@@ -93,18 +93,14 @@ bool equalExpr(std::unordered_map<Variable const*, VariablePair *> &equiv,
       }
 
     DOUBLECASEC(E_funCall)
-      if (L.args.count() != R.args.count() ||
+      if (L.args.size() != R.args.size() ||
           !equalExpr(equiv, L.func, R.func)) {
         return false;
       }
-      ASTListIter<Expression> iterL(L.args);
-      ASTListIter<Expression> iterR(R.args);
-      for (; !iterL.isDone(); iterL.adv(), iterR.adv()) {
-        if (!equalExpr(equiv, iterL.data(), iterR.data())) {
-          return false;
-        }
-      }
-      return true;
+      return std::equal(L.args.begin(), L.args.end(), R.args.begin(),
+                        [&](auto* l, auto* r) {
+                          return equalExpr(equiv, l, r);
+                        });
 
     DOUBLECASEC(E_fieldAcc)
       return L.fieldName == R.fieldName &&
@@ -159,7 +155,7 @@ bool equalExpr(std::unordered_map<Variable const*, VariablePair *> &equiv,
 
     DOUBLECASEC(E_quantifier)
       if (L.forall != R.forall ||
-          L.decls.count() != R.decls.count()) {
+          L.decls.size() != R.decls.size()) {
         return false;
       }
 
@@ -168,20 +164,23 @@ bool equalExpr(std::unordered_map<Variable const*, VariablePair *> &equiv,
       // variables have the same type
       bool ret;
       std::vector<Variable const*> addedEquiv;
-      ASTListIter<Declaration> outerL(L.decls);
-      ASTListIter<Declaration> outerR(R.decls);
-      for (; !outerL.isDone(); outerL.adv(), outerR.adv()) {
-        if (outerL.data()->decllist.count() !=
-            outerR.data()->decllist.count()) {
+
+      auto outerL = L.decls.begin();
+      auto endL = L.decls.end();
+      auto outerR = R.decls.begin();
+      for (; outerL != endL; ++outerL, ++outerR) {
+        if ((*outerL)->decllist.size() !=
+            (*outerR)->decllist.size()) {
           ret = false;
           goto cleanup;
         }
 
-        ASTListIter<Declarator> innerL(outerL.data()->decllist);
-        ASTListIter<Declarator> innerR(outerR.data()->decllist);
-        for (; !innerL.isDone(); innerL.adv(), innerR.adv()) {
-          Variable const *varL = innerL.data()->var;
-          Variable const *varR = innerR.data()->var;
+        auto innerL = (*outerL)->decllist.begin();
+        auto endL = (*outerL)->decllist.end();
+        auto innerR = (*outerR)->decllist.begin();
+        for (; innerL != endL; ++innerL, ++innerR) {
+          Variable const *varL = (*innerL)->var;
+          Variable const *varR = (*innerR)->var;
 
           if (!varL->type->equals(varR->type)) {
             ret = false;     // different types
