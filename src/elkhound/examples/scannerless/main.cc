@@ -11,6 +11,7 @@
 #include <stdio.h>     // getchar
 #include <iostream>    // std::cout
 #include <string>      // strcmp
+#include <fmt/core.h>  // fmt::format
 
 
 class Lexer : public LexerInterface {
@@ -46,7 +47,7 @@ string Lexer::tokenDesc() const
 string Lexer::tokenKindDesc(int kind) const
 {
   string k = quoted(stringc << (char)kind);
-  return stringf("%s (%d)", k.c_str(), kind);
+  return fmt::format("{} ({})", k.c_str(), kind);
 }
 
 

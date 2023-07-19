@@ -60,7 +60,7 @@ target_compile_options(elkhound PRIVATE -DGRAMANL_MAIN)
 
 # link against ast and smbase
 target_link_libraries(elkhound smbase ast)
-target_link_libraries(libelkhound smbase ast)
+target_link_libraries(libelkhound smbase ast fmt::fmt)
 
 # disable lib prefix for libelkhound
 SET_TARGET_PROPERTIES(libelkhound PROPERTIES PREFIX "")

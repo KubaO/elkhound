@@ -10,6 +10,7 @@
 #include "exc.h"         // XOpen
 #include "strutil.h"     // replace
 
+#include <fmt/core.h>    // fmt::format
 #include <vector>        // std::vector
 
 
@@ -662,23 +663,23 @@ void emitMLTable(EmitCode &out, EltType const *table, int size, int rowLength,
     }
   }
 
-  int rowNumWidth = stringf("%d", size / rowLength /*round down*/).length();
+  int rowNumWidth = fmt::formatted_size("{}", size / rowLength /*round down*/);
 
   out << "  " << tableName << " = [|           (* " << size << " elements *)";
   int row = 0;
   for (int i=0; i<size; i++) {
     if (i % rowLength == 0) {    // one row per state
-      out << stringf("\n    (*%*d*) ", rowNumWidth, row++);
+      out << fmt::format("\n    (*{:{}}*) ", row++, rowNumWidth);
     }
 
     #if 0
     if (needCast) {
-      out << "(" << typeName << ")";           // ML: not used
+      out << "(" << typeName << ")";             // ML: not used
     }
     #endif // 0
 
     if (printHex) {
-      out << stringf("0x%02X", table[i]);    // ML: not used
+      out << fmt::format("0x{:02X}", table[i]);  // ML: not used
     }
     else if (sizeof(table[i]) == 1) {
       // little bit of a hack to make sure 'unsigned char' gets
