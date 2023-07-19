@@ -88,11 +88,4 @@ string toString(char const *str);
 string toString(float f);
 
 
-// printf-like construction of a string; often very convenient, since
-// you can use any of the formatting characters (like %X) that your
-// libc's sprintf knows about
-string stringf(char const *format, ...);
-string vstringf(char const *format, va_list args);
-
-
 #endif // STR_H
