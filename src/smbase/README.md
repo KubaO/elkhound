@@ -26,19 +26,6 @@ Modules
 
 The following sections list all the smbase modules, grouped by functionality.
 
-Linked Lists
-------------
-
-Linked lists are sequences of objects with O(1) insertion at the front and iterators for traversal. Most also have _mutators_ for traversing and modifying.
-
-* [voidlist.h](voidlist.h), [voidlist.cc](voidlist.cc): The core of the linked list implementation used by [objlist.h](objlist.h).
-
-There are a couple of variants that support O(1) appending.
-
-* [vdtllist.h](vdtllist.h), [vdtllist.cc](vdtllist.cc): VoidTailList, the core of a linked list implementation which maintains a pointer to the last node for O(1) appends. Used by [astlist.h](astlist.h) and [taillist.h](taillist.h).
-* [astlist.h](astlist.h): ASTList, a list class for use in abstract syntax trees.
-
-
 Algorithms
 ----------
 
@@ -61,6 +48,8 @@ Container Adapters
   - `clear()` is available to remove all items from the stack
   - `pusher()` provides a push-iterator that pushes items on top of the stack, in the spirit of `std::back_inserter`
   - There's less verbosity in the template arguments: the container type is a free template; scalar value types get `std::vector` by default as the backing storage, whereas non-scalar types get `std::deque`. For safety it's presumed that the non-scalar values may be referenced outside of the stack through pointers, so a non-pointer-preserving container like vector can't be used.
+
+* [astlist.h](astlist.h): ASTList, a light wrapper around std::vector for use in abstract syntax trees.
 
 
 Arrays of Bits
@@ -177,7 +166,6 @@ Test Drivers
 
 Test drivers. Below are the modules that are purely test drivers for other modules. They're separated out from the list above to avoid the clutter.
 
-* [testarray.cc](testarray.cc): Test driver for [array.h](array.h).
 * [testcout.cc](testcout.cc): This is a little test program for use by [configure.pl](configure.pl).
 * [tobjpool.cc](tobjpool.cc) Test driver for [objpool.h](objpool.h).
 

@@ -141,7 +141,7 @@ nonterm[StringRef] AnyName {
 nonterm[TranslationUnit*] TranslationUnit {
   -> empty                                [ return new TranslationUnit(NULL); ]
 
-  -> t:TranslationUnit d:Declaration      [ t->topForms.append(d); return t; ]
+  -> t:TranslationUnit d:Declaration      [ t->topForms.push_back(d); return t; ]
 
   // allow assembly at toplevel for gnu compatibility
   -> t:TranslationUnit a:GNUAsmStatement  [ return t; ]    // drop 'asm' for now
@@ -265,9 +265,9 @@ nonterm[Expression*] PostfixExpression {
 
 nonterm[ASTList<Expression>*] ExpressionList {
   -> a:AssignmentExpression
-       [ return new ASTList<Expression>(a); ]
+       [ return new ASTList<Expression>(1, a); ]
   -> e:ExpressionList "," a:AssignmentExpression
-       [ e->append(a); return e; ]
+       [ e->push_back(a); return e; ]
 }
 
 nonterm[ASTList<Expression>*] ExpressionListOpt {
@@ -566,7 +566,7 @@ nonterm[ASTList<Statement>*] StatementSeqOpt {
   -> empty
        [ return new ASTList<Statement>(); ]
   -> seq:StatementSeqOpt s:Statement
-       [ seq->append(s); return seq; ]
+       [ seq->push_back(s); return seq; ]
 }
 
 // the guard of e.g. an 'if' statement
@@ -594,7 +594,7 @@ nonterm[Statement*] ForInitStatement {
 //  -> empty
 //       [ return new ASTList<Declaration>(); ]
 //  -> seq:DeclarationSeqOpt d:Declaration
-//       [ seq->append(d); return seq; ]
+//       [ seq->push_back(d); return seq; ]
 //}
 
 nonterm[TopForm*] Declaration {
@@ -617,12 +617,12 @@ nonterm[Declaration*] BlockDeclaration {
 nonterm[Declaration*] SimpleDeclaration {
   //e.g.: int                x                     ;
   -> spec:DeclSpecifier list:InitDeclaratorListOpt ";"
-       [ spec->decllist.steal(list); return spec; ]
+       [ astSteal(spec->decllist, list); return spec; ]
 
   -> "typedef" spec:DeclSpecifier list:TypedefDeclaratorList ";"
        [
          spec->dflags = (DeclFlags)(spec->dflags | DF_TYPEDEF);
-         spec->decllist.steal(list);
+         astSteal(spec->decllist, list);
          return spec;
        ]
 
@@ -821,9 +821,9 @@ nonterm[TS_enumSpec*] EnumSpecifier {
 
 nonterm[ASTList<Enumerator>*] EnumeratorList {
   -> def:EnumeratorDefinition
-       [ return new ASTList<Enumerator>(def); ]
+       [ return new ASTList<Enumerator>(1, def); ]
   -> list:EnumeratorList "," def:EnumeratorDefinition
-       [ list->append(def); return list; ]
+       [ list->push_back(def); return list; ]
 }
 
 nonterm[ASTList<Enumerator>*] EnumeratorListOpt {
@@ -856,9 +856,9 @@ nonterm[Enumerator*] EnumeratorDefinition {
 
 nonterm[ASTList<Declarator>*] InitDeclaratorList {
   -> d:InitDeclarator
-       [ return new ASTList<Declarator>(d); ]
+       [ return new ASTList<Declarator>(1, d); ]
   -> list:InitDeclaratorList "," d:InitDeclarator
-       [ list->append(d); return list; ]
+       [ list->push_back(d); return list; ]
 }
 
 nonterm[ASTList<Declarator>*] InitDeclaratorListOpt {
@@ -937,9 +937,9 @@ nonterm CommaOpt {
 
 nonterm[ASTList<Initializer>*] InitializerList {
   -> init:LabeledInitializerClause
-       [ return new ASTList<Initializer>(init); ]
+       [ return new ASTList<Initializer>(1, init); ]
   -> list:InitializerList "," init:LabeledInitializerClause
-       [ list->append(init); return list; ]
+       [ list->push_back(init); return list; ]
 }
 
 
@@ -952,7 +952,7 @@ nonterm[ASTList<Initializer>*] InitializerList {
 nonterm[IDeclarator*] Declarator {
   // (PtrOperator)* DirectDeclarator
   -> p:PtrOperator d:Declarator
-       [ d->stars.prepend(p); return d; ]
+       [ d->stars.insert(d->stars.begin(), p); return d; ]
 
   // I'm still looking for the right place to put GNUAttribute ...
   -> d:DirectDeclarator GNUAttribute         // GNU extension
@@ -1018,14 +1018,14 @@ nonterm[enum CVFlags] CVQualifier {
 // introduction of type names
 nonterm[ASTList<Declarator>*] TypedefDeclaratorList {
   -> d:TypedefDeclarator
-       [ return new ASTList<Declarator>(new Declarator(d, NULL)); ]
+       [ return new ASTList<Declarator>(1, new Declarator(d, NULL)); ]
   -> list:TypedefDeclaratorList "," d:TypedefDeclarator
-       [ list->append(new Declarator(d, NULL)); return list; ]
+       [ list->push_back(new Declarator(d, NULL)); return list; ]
 }
 
 nonterm[IDeclarator*] TypedefDeclarator {
   -> p:PtrOperator d:TypedefDeclarator
-       [ d->stars.append(p); return d; ]
+       [ d->stars.push_back(p); return d; ]
   -> d:DirectTypedefDeclarator
        [ return d; ]
 }
@@ -1071,7 +1071,7 @@ nonterm[IDeclarator*] AbstractDeclaratorOpt {
 // an abstract declarator (not opt) must have *some* ground syntax in it
 nonterm[IDeclarator*] AbstractDeclarator {
   -> p:PtrOperator d:AbstractDeclaratorOpt
-       [ d->stars.append(p); return d; ]
+       [ d->stars.push_back(p); return d; ]
 
   -> d:DirectAbstractDeclarator
        [ return d; ]
@@ -1123,18 +1123,18 @@ nonterm[ASTList<ASTTypeId>*] ParameterDeclarationClause {
   -> empty                                   // no args
        [ return new ASTList<ASTTypeId>(); ]
   -> "..."                                   // all args are optional
-       [ return new ASTList<ASTTypeId>(ellipsisTypeId()); ]
+       [ return new ASTList<ASTTypeId>(1, ellipsisTypeId()); ]
   -> p:ParameterDeclarationList "..."        // args plus optionally more
-       [ p->append(ellipsisTypeId()); return p; ]
+       [ p->push_back(ellipsisTypeId()); return p; ]
   -> p:ParameterDeclarationList "," "..."    // same; alternative syntax
-       [ p->append(ellipsisTypeId()); return p; ]
+       [ p->push_back(ellipsisTypeId()); return p; ]
 }
 
 nonterm[ASTList<ASTTypeId>*] ParameterDeclarationList {
   -> d:ParameterDeclaration
-       [ return new ASTList<ASTTypeId>(d); ]
+       [ return new ASTList<ASTTypeId>(1, d); ]
   -> list:ParameterDeclarationList "," d:ParameterDeclaration
-       [ list->append(d); return list; ]
+       [ list->push_back(d); return list; ]
 }
 
 nonterm[ASTTypeId*] ParameterDeclaration {
@@ -1218,7 +1218,7 @@ nonterm[ASTList<Declaration>*] MemberDeclarationSeqOpt {
        [ return new ASTList<Declaration>(); ]
 
   -> list:MemberDeclarationSeqOpt decl:MemberDeclaration
-       [ list->append(decl); return list; ]
+       [ list->push_back(decl); return list; ]
 
   //-> AccessSpecifier ":" MemberDeclarationSeqOpt ;
 }
@@ -1231,7 +1231,7 @@ nonterm[ASTList<Declaration>*] MemberDeclarationSeqOpt {
 
 nonterm[Declaration*] MemberDeclaration {
   -> spec:DeclSpecifier list:MemberDeclaratorList ";"      // member fn or data
-       [ spec->decllist.steal(list); return spec; ]
+       [ astSteal(spec->decllist, list); return spec; ]
 
   //-> FunctionDefinition ";" ;                    // inline fn
   //-> FunctionDefinition ;                        // syntactic tweak
@@ -1245,9 +1245,9 @@ nonterm[Declaration*] MemberDeclaration {
 // very similar to InitDeclaratorList
 nonterm[ASTList<Declarator>*] MemberDeclaratorList {
   -> d:MemberDeclarator
-       [ return new ASTList<Declarator>(new Declarator(d, NULL)); ]
+       [ return new ASTList<Declarator>(1, new Declarator(d, NULL)); ]
   -> list:MemberDeclaratorList "," d:MemberDeclarator
-       [ list->append(new Declarator(d, NULL)); return list; ]
+       [ list->push_back(new Declarator(d, NULL)); return list; ]
 }
 
 nonterm[IDeclarator*] MemberDeclarator {
@@ -1552,7 +1552,7 @@ nonterm[ASTList<FuncAnnotation>*] FuncAnnotationsOpt {
   -> empty
        [ return new ASTList<FuncAnnotation>(); ]
   -> list:FuncAnnotationsOpt ann:FuncAnnotation
-       [ list->append(ann); return list; ]
+       [ list->push_back(ann); return list; ]
 }
 
 nonterm[FuncAnnotation*] FuncAnnotation {
@@ -1579,9 +1579,9 @@ nonterm[ASTList<Declaration>*] FADeclList {
   fun del(list) [ delete list; ]
 
   -> /*"thmprv_bind"*/ d:SimpleDeclaration
-       [ return new ASTList<Declaration>(d); ]
+       [ return new ASTList<Declaration>(1, d); ]
   -> list:FADeclList /*"thmprv_bind"*/ d:SimpleDeclaration
-       [ list->append(d); return list; ]
+       [ list->push_back(d); return list; ]
 }
 
 nonterm[ThmprvAttr*] ThmprvAttr {
@@ -1593,9 +1593,9 @@ nonterm[ThmprvAttr*] ThmprvAttr {
 
 nonterm[ASTList<ThmprvAttr>*] ThmprvAttrList {
   -> o:OneThmprvAttr
-       [ return new ASTList<ThmprvAttr>(o); ]
+       [ return new ASTList<ThmprvAttr>(1, o); ]
   -> list:ThmprvAttrList "," o:OneThmprvAttr
-       [ list->append(o); return list; ]
+       [ list->push_back(o); return list; ]
 }
 
 nonterm[ThmprvAttr*] OneThmprvAttr {

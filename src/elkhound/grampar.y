@@ -167,7 +167,7 @@ StartSymbol: TopFormList
 
 /* yields: ASTList<TopForm> */
 TopFormList: /*empty*/              { $$ = new ASTList<TopForm>; }
-           | TopFormList TopForm    { ($$=$1)->append($2); }
+           | TopFormList TopForm    { ($$=$1)->push_back($2); }
            ;
 
 /* yields: TopForm */
@@ -208,7 +208,7 @@ Terminals: "terminals" "{" TermDecls TermTypes Precedence "}"
 
 /* yields: ASTList<TermDecl> */
 TermDecls: /* empty */                             { $$ = new ASTList<TermDecl>; }
-         | TermDecls TerminalDecl                  { ($$=$1)->append($2); }
+         | TermDecls TerminalDecl                  { ($$=$1)->push_back($2); }
          ;
 
 /* each terminal has an integer code which is the integer value the
@@ -229,7 +229,7 @@ Type: TOK_LIT_CODE                    { $$ = $1; }
 
 /* yields: ASTList<TermType> */
 TermTypes: /* empty */                { $$ = new ASTList<TermType>; }
-         | TermTypes TermType         { ($$=$1)->append($2); }
+         | TermTypes TermType         { ($$=$1)->push_back($2); }
          ;
 
 /* yields: TermType */
@@ -248,12 +248,12 @@ Precedence: /* empty */                      { $$ = new ASTList<PrecSpec>; }
 PrecSpecs: /* empty */
              { $$ = new ASTList<PrecSpec>; }
          | PrecSpecs TOK_NAME TOK_INTEGER NameOrStringList ";"
-             { ($$=$1)->append(new PrecSpec(whichKind($2), $3, $4)); }
+             { ($$=$1)->push_back(new PrecSpec(whichKind($2), $3, $4)); }
          ;
 
 /* yields: ASTList<LocString> */
 NameOrStringList: /* empty */                     { $$ = new ASTList<LocString>; }
-                | NameOrStringList NameOrString   { ($$=$1)->append($2); }
+                | NameOrStringList NameOrString   { ($$=$1)->push_back($2); }
                 ;
 
 /* yields: LocString */
@@ -265,7 +265,7 @@ NameOrString: TOK_NAME       { $$ = $1; }
 /* ------ specification functions ------ */
 /* yields: ASTList<SpecFunc> */
 SpecFuncs: /* empty */                { $$ = new ASTList<SpecFunc>; }
-         | SpecFuncs SpecFunc         { ($$=$1)->append($2); }
+         | SpecFuncs SpecFunc         { ($$=$1)->push_back($2); }
          ;
 
 /* yields: SpecFunc */
@@ -279,8 +279,8 @@ FormalsOpt: /* empty */               { $$ = new ASTList<LocString>; }
           ;
 
 /* yields: ASTList<LocString> */
-Formals: TOK_NAME                     { $$ = new ASTList<LocString>($1); }
-       | Formals "," TOK_NAME         { ($$=$1)->append($3); }
+Formals: TOK_NAME                     { $$ = new ASTList<LocString>(1, $1); }
+       | Formals "," TOK_NAME         { ($$=$1)->push_back($3); }
        ;
 
 
@@ -293,14 +293,14 @@ Formals: TOK_NAME                     { $$ = new ASTList<LocString>($1); }
 /* yields: TopForm (always TF_nonterm) */
 Nonterminal: "nonterm" Type TOK_NAME Production
                { $$ = new TF_nonterm($3, $2, new ASTList<SpecFunc>,
-                                     new ASTList<ProdDecl>($4), NULL); }
+                                     new ASTList<ProdDecl>(1, $4), NULL); }
            | "nonterm" Type TOK_NAME "{" SpecFuncs Productions Subsets "}"
                { $$ = new TF_nonterm($3, $2, $5, $6, $7); }
            ;
 
 /* yields: ASTList<ProdDecl> */
 Productions: /* empty */                   { $$ = new ASTList<ProdDecl>; }
-           | Productions Production        { ($$=$1)->append($2); }
+           | Productions Production        { ($$=$1)->push_back($2); }
            ;
 
 /* yields: ProdDecl */
@@ -316,7 +316,7 @@ Action: TOK_LIT_CODE                       { $$ = $1; }
 
 /* yields: ASTList<RHSElt> */
 RHS: /* empty */                           { $$ = new ASTList<RHSElt>; }
-   | RHS RHSElt                            { ($$=$1)->append($2); }
+   | RHS RHSElt                            { ($$=$1)->push_back($2); }
    ;
 
 /*

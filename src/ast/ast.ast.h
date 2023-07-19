@@ -134,7 +134,7 @@ public:      // funcs
 
   virtual TF_class *clone() const;
 
-  public:  bool hasChildren() const { return ctors.isNotEmpty(); };
+  public:  bool hasChildren() const { return !ctors.empty(); };
 };
 
 class TF_option : public ToplevelForm {

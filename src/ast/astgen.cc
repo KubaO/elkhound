@@ -80,6 +80,10 @@ std::vector<TF_class *> allClasses;
 // list of all ASTList "list classes"
 std::set<string> listClassesSet;
 ASTList<ListClass> listClasses;
+struct ListClassesCleaner {
+  // ASTList may end up being a simple non-owning container
+  ~ListClassesCleaner() { deleteAll(listClasses); }
+} listClassesCleaner;
 
 // true if the user wants the xmlPrint stuff
 bool wantXMLPrint = false;
@@ -201,7 +205,7 @@ TreeNodeKind getTreeNodeKind(rostring base)
 
     // check the subclasses
     FOREACH_ASTLIST(ASTClass, c->ctors, ctor) {
-      if (ctor.data()->name == base) {
+      if (ctor->name == base) {
         // found it in a subclass
         return TKN_SUBCLASS;
       }
@@ -218,7 +222,7 @@ string getSuperTypeOf(rostring sub)
 
     // look among the subclasses
     FOREACH_ASTLIST(ASTClass, c->ctors, ctor) {
-      if (ctor.data()->name == sub) {
+      if (ctor->name == sub) {
         // found it
         return c->super->name;
       }
@@ -349,8 +353,8 @@ void Gen::emitFiltered(ASTList<Annotation> const &decls, AccessCtl mode,
                        rostring indent)
 {
   FOREACH_ASTLIST(Annotation, decls, iter) {
-    if (iter.data()->kind() == Annotation::USERDECL) {
-      UserDecl const &decl = *( iter.data()->asUserDeclC() );
+    if (iter->kind() == Annotation::USERDECL) {
+      UserDecl const &decl = *( iter->asUserDeclC() );
       if (decl.access() == mode) {
         out << indent << decl.code << ";\n";
       }
@@ -413,12 +417,12 @@ void HGen::emitFile()
   // forward-declare all the classes
   out << "// fwd decls\n";
   FOREACH_ASTLIST(ToplevelForm, file.forms, form) {
-    TF_class const *c = form.data()->ifTF_classC();
+    TF_class const *c = form->ifTF_classC();
     if (c) {
       out << "class " << c->super->name << ";\n";
 
       FOREACH_ASTLIST(ASTClass, c->ctors, ctor) {
-        out << "class " << ctor.data()->name << ";\n";
+        out << "class " << ctor->name << ";\n";
       }
     }
   }
@@ -456,11 +460,11 @@ void HGen::emitFile()
   // was defined in the base module
   {
     FOREACH_ASTLIST(ToplevelForm, file.forms, form) {
-      if (form.data()->isTF_enum()) {
-        TF_enum const *e = form.data()->asTF_enumC();
+      if (form->isTF_enum()) {
+        TF_enum const *e = form->asTF_enumC();
         out << "enum " << e->name << " {\n";
         FOREACH_ASTLIST(string, e->enumerators, iter) {
-          out << "  " << *(iter.data()) << ",\n";
+          out << "  " << *iter << ",\n";
         }
         out << "};\n"
             << "\n"
@@ -474,9 +478,9 @@ void HGen::emitFile()
 
   // process each (non-enum) directive
   FOREACH_ASTLIST(ToplevelForm, file.forms, form) {
-    switch (form.data()->kind()) {
+    switch (form->kind()) {
       case ToplevelForm::TF_VERBATIM:
-        emitVerbatim(*( form.data()->asTF_verbatimC() ));
+        emitVerbatim(*( form->asTF_verbatimC() ));
         break;
 
       case ToplevelForm::TF_IMPL_VERBATIM:
@@ -484,7 +488,7 @@ void HGen::emitFile()
         break;
 
       case ToplevelForm::TF_CLASS:
-        emitTFClass(*( form.data()->asTF_classC() ));
+        emitTFClass(*( form->asTF_classC() ));
         break;
 
       default:
@@ -560,7 +564,7 @@ void HGen::emitTFClass(TF_class const &cls)
   if (cls.hasChildren()) {
     out << "  enum Kind { ";
     FOREACH_ASTLIST(ASTClass, cls.ctors, ctor) {
-      out << ctor.data()->classKindName() << ", ";
+      out << ctor->classKindName() << ", ";
     }
     out << "NUM_KINDS };\n";
 
@@ -580,10 +584,8 @@ void HGen::emitTFClass(TF_class const &cls)
 
   // declare checked downcast functions
   {
-    FOREACH_ASTLIST(ASTClass, cls.ctors, ctor) {
-      // declare the const downcast
-      ASTClass const &c = *(ctor.data());
-      out << "  DECL_AST_DOWNCASTS(" << c.name << ", " << c.classKindName() << ")\n";
+    FOREACH_ASTLIST(ASTClass, cls.ctors, c) {
+      out << "  DECL_AST_DOWNCASTS(" << c->name << ", " << c->classKindName() << ")\n";
     }
     out << "\n";
   }
@@ -621,7 +623,7 @@ void HGen::emitTFClass(TF_class const &cls)
   // print declarations for all child classes
   {
     FOREACH_ASTLIST(ASTClass, cls.ctors, ctor) {
-      emitCtor(*(ctor.data()), *(cls.super));
+      emitCtor(*ctor, *(cls.super));
     }
   }
 
@@ -633,8 +635,8 @@ void HGen::emitBaseClassDecls(ASTClass const &cls, int ct)
 {
   FOREACH_ASTLIST(BaseClass, cls.bases, iter) {
     out << ((ct++ > 0)? ", " : " : ")
-        << toString(iter.data()->access) << " "
-        << iter.data()->name
+        << toString(iter->access) << " "
+        << iter->name
         ;
   }
 }
@@ -656,12 +658,12 @@ void HGen::innerEmitCtorFields(ASTList<CtorArg> const &args)
   {
     FOREACH_ASTLIST(CtorArg, args, arg) {
       char const *star = "";
-      if (isTreeNode(arg.data()->type)) {
+      if (isTreeNode(arg->type)) {
         // make it a pointer in the concrete representation
         star = "*";
       }
 
-      out << "  " << arg.data()->type << " " << star << arg.data()->name << ";\n";
+      out << "  " << arg->type << " " << star << arg->name << ";\n";
     }
   }
 }
@@ -699,7 +701,7 @@ void HGen::emitCtorFormal(int &ct, CtorArg const *arg)
 void HGen::emitCtorFormals(int &ct, ASTList<CtorArg> const &args)
 {
   FOREACH_ASTLIST(CtorArg, args, arg) {
-    emitCtorFormal(ct, arg.data());
+    emitCtorFormal(ct, arg);
   }
 }
 
@@ -750,8 +752,8 @@ void HGen::emitCtorDefn(ASTClass const &cls, ASTClass const *parent)
 
       // initialize fields that have initializers
       FOREACH_ASTLIST(Annotation, cls.decls, ann) {
-        if (!ann.data()->isUserDecl()) continue;
-        UserDecl const *ud = ann.data()->asUserDeclC();
+        if (!ann->isUserDecl()) continue;
+        UserDecl const *ud = ann->asUserDeclC();
         if (ud->init.length() == 0) continue;
         if (isFuncDecl(ud)) continue;       // don't do this for functions!
 
@@ -780,7 +782,7 @@ void HGen::passParentCtorArgs(int &ct, ASTList<CtorArg> const &args)
       out << ", ";
     }
     // pass the formal arg to the parent ctor
-    out << "_" << parg.data()->name;
+    out << "_" << parg->name;
   }
 }
 
@@ -795,7 +797,7 @@ void HGen::initializeMyCtorArgs(int &ct, ASTList<CtorArg> const &args)
     }
 
     // initialize the field with the formal argument
-    out << arg.data()->name << "(_" << arg.data()->name << ")";
+    out << arg->name << "(_" << arg->name << ")";
   }
 }
 
@@ -821,8 +823,8 @@ void HGen::emitUserDecls(ASTList<Annotation> const &decls)
 {
   FOREACH_ASTLIST(Annotation, decls, iter) {
     // in the header, we only look at userdecl annotations
-    if (iter.data()->kind() == Annotation::USERDECL) {
-      UserDecl const &decl = *( iter.data()->asUserDeclC() );
+    if (iter->kind() == Annotation::USERDECL) {
+      UserDecl const &decl = *( iter->asUserDeclC() );
       if (decl.access() == AC_PUBLIC ||
           decl.access() == AC_PRIVATE ||
           decl.access() == AC_PROTECTED) {
@@ -839,10 +841,10 @@ void HGen::emitUserDecls(ASTList<Annotation> const &decls)
         out << ";";
 
         // emit field flags as comments, to help debug astgen
-        if (decl.amod->mods.count()) {
+        if (!decl.amod->mods.empty()) {
           out << "   //";
           FOREACH_ASTLIST(string, decl.amod->mods, mod) {
-            out << " " << *(mod.data());
+            out << " " << *mod;
           }
         }
         out << "\n";
@@ -894,7 +896,7 @@ void HGen::emitCtor(ASTClass const &ctor, ASTClass const &parent)
 
   // emit implementation declarations for parent's pure virtuals
   FOREACH_ASTLIST(Annotation, parent.decls, iter) {
-    UserDecl const *decl = iter.data()->ifUserDeclC();
+    UserDecl const *decl = iter->ifUserDeclC();
     if (!decl) continue;
 
     if (decl->access() == AC_PUREVIRT) {
@@ -1043,7 +1045,7 @@ void CGen::emitFile()
   out << "\n";
 
   FOREACH_ASTLIST(ToplevelForm, file.forms, form) {
-    ASTSWITCHC(ToplevelForm, form.data()) {
+    ASTSWITCHC(ToplevelForm, form) {
       //ASTCASEC(TF_verbatim, v) {
       //  // nop
       //}
@@ -1059,7 +1061,7 @@ void CGen::emitFile()
             << "{\n"
             << "  static char const * const map[] = {\n";
         FOREACH_ASTLIST(string, e->enumerators, iter) {
-          out << "    \"" << *(iter.data()) << "\",\n";
+          out << "    \"" << *iter << "\",\n";
         }
         out << "  };\n"
             << "  xassert((unsigned)x < TABLESIZE(map));\n"
@@ -1103,7 +1105,7 @@ void CGen::emitTFClass(TF_class const &cls)
     out << "char const * const " << cls.super->name << "::kindNames["
         <<   cls.super->name << "::NUM_KINDS] = {\n";
     FOREACH_ASTLIST(ASTClass, cls.ctors, ctor) {
-      out << "  \"" << ctor.data()->name << "\",\n";
+      out << "  \"" << ctor->name << "\",\n";
     }
     out << "};\n";
     out << "\n";
@@ -1128,7 +1130,7 @@ void CGen::emitTFClass(TF_class const &cls)
   // often much shorter (and more important) than the subtrees
   emitCustomCode(cls.super->decls, "debugPrint");
   emitPrintCtorArgs(cls.super->args);
-  if (cls.super->lastArgs.isNotEmpty()) {
+  if (!cls.super->lastArgs.empty()) {
     out << "  // (lastArgs are printed by subclasses)\n";
   }
   emitPrintFields(cls.super->decls);
@@ -1182,7 +1184,7 @@ void CGen::emitTFClass(TF_class const &cls)
 
   // constructors (class hierarchy children)
   FOREACH_ASTLIST(ASTClass, cls.ctors, ctoriter) {
-    ASTClass const &ctor = *(ctoriter.data());
+    ASTClass const &ctor = *ctoriter;
 
     // downcast function
     out << "DEFN_AST_DOWNCASTS(" << cls.super->name << ", "
@@ -1264,7 +1266,7 @@ bool CGen::emitCustomCode(ASTList<Annotation> const &list, rostring tag)
   bool emitted = false;
 
   FOREACH_ASTLIST(Annotation, list, iter) {
-    CustomCode const *cc = iter.data()->ifCustomCodeC();
+    CustomCode const *cc = iter->ifCustomCodeC();
     if (cc && cc->qualifier == tag) {
       out << "  " << cc->code << ";\n";
       emitted = true;
@@ -1287,15 +1289,14 @@ void CGen::emitDestructor(ASTClass const &cls)
   emitFiltered(cls.decls, AC_DTOR, "  ");
 
   // constructor arguments
-  FOREACH_ASTLIST(CtorArg, cls.args, argiter) {
-    CtorArg const &arg = *(argiter.data());
-    emitDestroyField(arg.isOwner, arg.type, arg.name);
+  FOREACH_ASTLIST(CtorArg, cls.args, arg) {
+    emitDestroyField(arg->isOwner, arg->type, arg->name);
   }
 
   // owner fields
   FOREACH_ASTLIST(Annotation, cls.decls, iter) {
-    if (!iter.data()->isUserDecl()) continue;
-    UserDecl const *ud = iter.data()->asUserDeclC();
+    if (!iter->isUserDecl()) continue;
+    UserDecl const *ud = iter->asUserDeclC();
     if (!ud->amod->hasMod("owner")) continue;
 
     emitDestroyField(true /*isOwner*/,
@@ -1313,12 +1314,12 @@ void CGen::emitDestroyField(bool isOwner, rostring type, rostring name)
     // explicitly destroy list elements, because it's easy to do, and
     // because if there is a problem, it's much easier to see its
     // role in a debugger backtrace
-    out << "  " << name << ".deleteAll();\n";
+    out << "  deleteAll(" << name << ");\n";
   }
   else if (isListType(type)) {
     if (extractListType(type) == "LocString") {
       // these are owned even though they aren't actually tree nodes
-      out << "  " << name << ".deleteAll();\n";
+      out << "  deleteAll(" << name << ");\n";
 
       // TODO: this analysis is duplicated below, during cloning;
       // the astgen tool should do a better job of encapsulating
@@ -1330,13 +1331,8 @@ void CGen::emitDestroyField(bool isOwner, rostring type, rostring name)
       // we don't own the list elements; it's *essential* to
       // explicitly remove the elements; this is a hack, since the
       // ideal solution is to make a variant of ASTList which is
-      // explicitly serf pointers.. the real ASTList doesn't have
-      // a removeAll method (since it's an owner list), and rather
-      // than corrupting that interface I'll emit the code each time..
-      out << "  while (" << name << ".isNotEmpty()) {\n"
-          << "    " << name << ".removeFirst();\n"
-          << "  }\n";
-      //out << "  " << name << ".removeAll();\n";
+      // explicitly serf pointers..
+      out << "  " << name << ".clear();\n";
     }
   }
   else if (isOwner || isTreeNode(type)) {
@@ -1347,18 +1343,16 @@ void CGen::emitDestroyField(bool isOwner, rostring type, rostring name)
 
 void CGen::emitPrintCtorArgs(ASTList<CtorArg> const &args)
 {
-  FOREACH_ASTLIST(CtorArg, args, argiter) {
-    CtorArg const &arg = *(argiter.data());
-
-    emitPrintField("PRINT", arg.isOwner, arg.type, arg.name);
+  FOREACH_ASTLIST(CtorArg, args, arg) {
+    emitPrintField("PRINT", arg->isOwner, arg->type, arg->name);
   }
 }
 
 void CGen::emitPrintFields(ASTList<Annotation> const &decls)
 {
   FOREACH_ASTLIST(Annotation, decls, iter) {
-    if (!iter.data()->isUserDecl()) continue;
-    UserDecl const *ud = iter.data()->asUserDeclC();
+    if (!iter->isUserDecl()) continue;
+    UserDecl const *ud = iter->asUserDeclC();
     if (!ud->amod->hasMod("field")) continue;
 
     emitPrintField("PRINT",
@@ -1405,10 +1399,8 @@ void CGen::emitPrintField(rostring print,
 
 void CGen::emitXmlPrintCtorArgs(ASTList<CtorArg> const &args)
 {
-  FOREACH_ASTLIST(CtorArg, args, argiter) {
-    CtorArg const &arg = *(argiter.data());
-
-    emitPrintField("XMLPRINT", arg.isOwner, arg.type, arg.name);
+  FOREACH_ASTLIST(CtorArg, args, arg) {
+    emitPrintField("XMLPRINT", arg->isOwner, arg->type, arg->name);
   }
 }
 
@@ -1466,7 +1458,7 @@ void CGen::emitCloneCtorArg(CtorArg const *arg, int &ct)
 void CGen::emitCloneCtorArgs(int &ct, ASTList<CtorArg> const &args)
 {
   FOREACH_ASTLIST(CtorArg, args, iter) {
-    emitCloneCtorArg(iter.data(), ct);
+    emitCloneCtorArg(iter, ct);
   }
 }
 
@@ -1522,8 +1514,8 @@ void CGen::emitCloneCode(ASTClass const *super, ASTClass const *sub)
 void emitTF_custom(std::ofstream &out, rostring qualifierName, bool addNewline)
 {
   FOREACH_ASTLIST_NC(ToplevelForm, wholeAST->forms, iter) {
-    if (iter.data()->isTF_custom()) {
-      CustomCode *cc = iter.data()->asTF_customC()->cust;
+    if (iter->isTF_custom()) {
+      CustomCode *cc = iter->asTF_customC()->cust;
       if (cc->qualifier == qualifierName) {
         out << cc->code;
         if (addNewline) {
@@ -1574,8 +1566,7 @@ void HGen::emitVisitorInterface()
   }
 
   out << "\n  // List 'classes'\n";
-  FOREACH_ASTLIST(ListClass, listClasses, iter) {
-    ListClass const *cls = iter.data();
+  FOREACH_ASTLIST(ListClass, listClasses, cls) {
     out << "  virtual bool visitList_" << cls->classAndMemberName
         << "(" << cls->kindName() << "<" << cls->elementClassName << ">*);\n";
     out << "  virtual void postvisitList_" << cls->classAndMemberName
@@ -1583,8 +1574,7 @@ void HGen::emitVisitorInterface()
   }
 
   std::set<string_view> listItemClassesSet; // set of list item classes printed so far
-  FOREACH_ASTLIST(ListClass, listClasses, iter) {
-    ListClass const *cls = iter.data();
+  FOREACH_ASTLIST(ListClass, listClasses, cls) {
     auto result = listItemClassesSet.insert(cls->classAndMemberName);
     xassert(result.second); // should not repeat
     out << "  virtual bool visitListItem_" << cls->classAndMemberName
@@ -1611,8 +1601,7 @@ void CGen::emitVisitorImplementation()
   }
 
   out << "\n// List 'classes'\n";
-  FOREACH_ASTLIST(ListClass, listClasses, iter) {
-    ListClass const *cls = iter.data();
+  FOREACH_ASTLIST(ListClass, listClasses, cls) {
     out << "bool " << visitorName << "::visitList_" << cls->classAndMemberName
         << "(" << cls->kindName() << "<" << cls->elementClassName << ">*) { return true; }\n";
     out << "void " << visitorName << "::postvisitList_" << cls->classAndMemberName
@@ -1620,8 +1609,7 @@ void CGen::emitVisitorImplementation()
   }
 
   std::set<string_view> listItemClassesSet; // set of list item classes printed so far
-  FOREACH_ASTLIST(ListClass, listClasses, iter) {
-    ListClass const *cls = iter.data();
+  FOREACH_ASTLIST(ListClass, listClasses, cls) {
     auto result = listItemClassesSet.insert(cls->classAndMemberName);
     xassert(result.second); // should not repeat
     out << "bool " << visitorName << "::visitListItem_" << cls->classAndMemberName
@@ -1639,9 +1627,7 @@ void CGen::emitVisitorImplementation()
     emitTraverse(c->super, NULL /*super*/, c->hasChildren());
 
     // subclass traversal
-    FOREACH_ASTLIST(ASTClass, c->ctors, iter) {
-      ASTClass const *sub = iter.data();
-
+    FOREACH_ASTLIST(ASTClass, c->ctors, sub) {
       emitTraverse(sub, c->super, false /*hasChildren*/);
     }
   }
@@ -1727,15 +1713,14 @@ void CGen::emitTraverse(ASTClass const *c, ASTClass const * /*nullable*/ super,
   }
 
   // traverse into the ctor arguments
-  FOREACH_ASTLIST(CtorArg, c->args, iter) {
-    CtorArg const *arg = iter.data();
+  FOREACH_ASTLIST(CtorArg, c->args, arg) {
     emitOneTraverseCall(c->name, arg->name, arg->type);
   }
 
   // dsw: I need a way to make fields traversable
   FOREACH_ASTLIST(Annotation, c->decls, iter) {
-    if (!iter.data()->isUserDecl()) continue;
-    UserDecl const *ud = iter.data()->asUserDeclC();
+    if (!iter->isUserDecl()) continue;
+    UserDecl const *ud = iter->asUserDeclC();
     if (!ud->amod->hasMod("traverse")) continue;
     emitOneTraverseCall(c->name, extractFieldName(ud->code), extractFieldType(ud->code));
   }
@@ -1744,8 +1729,7 @@ void CGen::emitTraverse(ASTClass const *c, ASTClass const * /*nullable*/ super,
   emitCustomCode(c->decls, "traverse");
 
   // traverse into the ctor last arguments
-  FOREACH_ASTLIST(CtorArg, c->lastArgs, iter) {
-    CtorArg const *arg = iter.data();
+  FOREACH_ASTLIST(CtorArg, c->lastArgs, arg) {
     emitOneTraverseCall(c->name, arg->name, arg->type);
   }
 
@@ -1802,8 +1786,7 @@ void HGen::emitDVisitorInterface()
   }
 
   out << "\n  // List 'classes'\n";
-  FOREACH_ASTLIST(ListClass, listClasses, iter) {
-    ListClass const *cls = iter.data();
+  FOREACH_ASTLIST(ListClass, listClasses, cls) {
     out << "  virtual bool visitList_" << cls->classAndMemberName
         << "(" << cls->kindName() << "<" << cls->elementClassName << ">*);\n";
     out << "  virtual void postvisitList_" << cls->classAndMemberName
@@ -1811,8 +1794,7 @@ void HGen::emitDVisitorInterface()
   }
 
   std::set<string_view> listItemClassesSet; // set of list item classes printed so far
-  FOREACH_ASTLIST(ListClass, listClasses, iter) {
-    ListClass const *cls = iter.data();
+  FOREACH_ASTLIST(ListClass, listClasses, cls) {
     auto result = listItemClassesSet.insert(cls->classAndMemberName);
     xassert(result.second); // should not repeat
     out << "  virtual bool visitListItem_" << cls->classAndMemberName
@@ -1872,8 +1854,7 @@ void CGen::emitDVisitorImplementation()
   }
 
   out << "\n// List 'classes'\n";
-  FOREACH_ASTLIST(ListClass, listClasses, iter) {
-    ListClass const *cls = iter.data();
+  FOREACH_ASTLIST(ListClass, listClasses, cls) {
     // visit
     out << "bool " << dvisitorName << "::visitList_" << cls->classAndMemberName
         << "(" << cls->kindName() << "<" << cls->elementClassName << ">* obj) {\n";
@@ -1891,8 +1872,7 @@ void CGen::emitDVisitorImplementation()
   }
 
   std::set<string_view> listItemClassesSet; // set of list item classes printed so far
-  FOREACH_ASTLIST(ListClass, listClasses, iter) {
-    ListClass const *cls = iter.data();
+  FOREACH_ASTLIST(ListClass, listClasses, cls) {
     auto result = listItemClassesSet.insert(cls->classAndMemberName);
     xassert(result.second); // should not repeat
 
@@ -1921,17 +1901,16 @@ void CGen::emitDVisitorImplementation()
 
 void CGen::emitXmlCtorArgs(ASTList<CtorArg> const &args, char const *baseName,
                            string const &className) {
-  FOREACH_ASTLIST(CtorArg, args, argiter) {
-    CtorArg const &arg = *(argiter.data());
-    emitXmlField(arg.type, arg.name, baseName, className, NULL);
+  FOREACH_ASTLIST(CtorArg, args, arg) {
+    emitXmlField(arg->type, arg->name, baseName, className, NULL);
   }
 }
 
 void CGen::emitXmlFields(ASTList<Annotation> const &decls, char const *baseName,
                          string const &className) {
   FOREACH_ASTLIST(Annotation, decls, iter) {
-    if (!iter.data()->isUserDecl()) continue;
-    UserDecl const *ud = iter.data()->asUserDeclC();
+    if (!iter->isUserDecl()) continue;
+    UserDecl const *ud = iter->asUserDeclC();
     if (!ud->amod->hasModPrefix("xml")) continue;
     emitXmlField(extractFieldType(ud->code),
                  extractFieldName(ud->code),
@@ -2122,8 +2101,7 @@ void HGen::emitXmlVisitorInterface()
   }
 
   out << "\n  // List 'classes'\n";
-  FOREACH_ASTLIST(ListClass, listClasses, iter) {
-    ListClass const *cls = iter.data();
+  FOREACH_ASTLIST(ListClass, listClasses, cls) {
     out << "  virtual bool visitList_" << cls->classAndMemberName
         << "(" << cls->kindName() << "<" << cls->elementClassName << ">*);\n";
     out << "  virtual void postvisitList_" << cls->classAndMemberName
@@ -2131,8 +2109,7 @@ void HGen::emitXmlVisitorInterface()
   }
 
   std::set<string_view> listItemClassesSet; // set of list item classes printed so far
-  FOREACH_ASTLIST(ListClass, listClasses, iter) {
-    ListClass const *cls = iter.data();
+  FOREACH_ASTLIST(ListClass, listClasses, cls) {
     auto result = listItemClassesSet.insert(cls->classAndMemberName);
     xassert(result.second); // should not repeat
     out << "  virtual bool visitListItem_" << cls->classAndMemberName
@@ -2207,8 +2184,7 @@ void CGen::emitXmlVisitorImplementation()
     if (c->hasChildren()) {
       out << "  switch(obj->kind()) {\n";
       out << "  default: xfailure(\"bad tag\"); break;\n";
-      FOREACH_ASTLIST(ASTClass, c->ctors, iter) {
-        ASTClass const *clazz = iter.data();
+      FOREACH_ASTLIST(ASTClass, c->ctors, clazz) {
         out << "  case " << c->super->name << "::" << clazz->classKindName() << ": {\n";
         // prevent unused variable warning when compiling client code;
         // FIX: turn on when take away the '= NULL' code below.
@@ -2253,8 +2229,7 @@ void CGen::emitXmlVisitorImplementation()
   }
 
   out << "\n// List 'classes'\n";
-  FOREACH_ASTLIST(ListClass, listClasses, iter) {
-    ListClass const *cls = iter.data();
+  FOREACH_ASTLIST(ListClass, listClasses, cls) {
     // visit
     out << "bool " << xmlVisitorName << "::visitList_" << cls->classAndMemberName
         << "(" << cls->kindName() << "<" << cls->elementClassName << ">* obj) {\n";
@@ -2376,8 +2351,7 @@ void CGen::emitMVisitorImplementation()
       out << "  switch (obj->kind()) {\n";
 
       // subclass traversal
-      FOREACH_ASTLIST(ASTClass, c->ctors, iter) {
-        ASTClass const *sub = iter.data();
+      FOREACH_ASTLIST(ASTClass, c->ctors, sub) {
 
         out << "    case " << c->super->name << "::" << sub->classKindName() << ": {\n"
             << "      " << sub->name << " *sub = (" << sub->name << "*)obj;\n"
@@ -2412,8 +2386,7 @@ void CGen::emitMVisitorImplementation()
 void CGen::emitMTraverse(ASTClass const *c, rostring obj, rostring i)
 {
   // traverse into the ctor arguments
-  FOREACH_ASTLIST(CtorArg, c->args, iter) {
-    CtorArg const *arg = iter.data();
+  FOREACH_ASTLIST(CtorArg, c->args, arg) {
     string argVar = stringc << obj << "->" << arg->name;
 
     if (isTreeNode(arg->type) || isTreeNodePtr(arg->type)) {
@@ -2488,17 +2461,16 @@ void CGen::emitMTraverseCall(rostring i, rostring eltType, rostring argVar)
 
 void XmlParserGen::collectXmlParserCtorArgs(ASTList<CtorArg> const &args, char const *baseName)
 {
-  FOREACH_ASTLIST(CtorArg, args, argiter) {
-    CtorArg const &arg = *(argiter.data());
-    collectXmlParserField(arg.type, arg.name, baseName, NULL);
+  FOREACH_ASTLIST(CtorArg, args, arg) {
+    collectXmlParserField(arg->type, arg->name, baseName, NULL);
   }
 }
 
 void XmlParserGen::collectXmlParserFields(ASTList<Annotation> const &decls, char const *baseName)
 {
   FOREACH_ASTLIST(Annotation, decls, iter) {
-    if (!iter.data()->isUserDecl()) continue;
-    UserDecl const *ud = iter.data()->asUserDeclC();
+    if (!iter->isUserDecl()) continue;
+    UserDecl const *ud = iter->asUserDeclC();
     if (!ud->amod->hasModPrefix("xml")) continue;
     collectXmlParserField(extractFieldType(ud->code),
                           extractFieldName(ud->code),
@@ -2546,9 +2518,8 @@ void XmlParserGen::collectXmlParserField
 void XmlParserGen::emitXmlCtorArgs_AttributeParseRule
   (ASTList<CtorArg> const &args, string &baseName)
 {
-  FOREACH_ASTLIST(CtorArg, args, argiter) {
-    CtorArg const &arg = *(argiter.data());
-    emitXmlField_AttributeParseRule(arg.type, arg.name, baseName, NULL);
+  FOREACH_ASTLIST(CtorArg, args, arg) {
+    emitXmlField_AttributeParseRule(arg->type, arg->name, baseName, NULL);
   }
 }
 
@@ -2556,8 +2527,8 @@ void XmlParserGen::emitXmlFields_AttributeParseRule
   (ASTList<Annotation> const &decls, string &baseName)
 {
   FOREACH_ASTLIST(Annotation, decls, iter) {
-    if (!iter.data()->isUserDecl()) continue;
-    UserDecl const *ud = iter.data()->asUserDeclC();
+    if (!iter->isUserDecl()) continue;
+    UserDecl const *ud = iter->asUserDeclC();
     if (!ud->amod->hasModPrefix("xml")) continue;
     emitXmlField_AttributeParseRule(extractFieldType(ud->code),
                                     extractFieldName(ud->code),
@@ -2666,20 +2637,19 @@ void XmlParserGen::emitXmlField_AttributeParseRule
 void XmlParserGen::emitXmlParser_objCtorArgs
   (ASTList<CtorArg> const &args, bool &firstTime)
 {
-  FOREACH_ASTLIST(CtorArg, args, argiter) {
-    CtorArg const &arg = *(argiter.data());
+  FOREACH_ASTLIST(CtorArg, args, arg) {
     if (firstTime) { firstTime = false; }
     else { parser2_ctorCalls << ", "; }
-    if (!arg.defaultValue.empty()) {
-      parser2_ctorCalls << arg.defaultValue;
+    if (!arg->defaultValue.empty()) {
+      parser2_ctorCalls << arg->defaultValue;
     } else {
       // dsw: this is Scott's idea of how to initialize a type that we
       // know nothing about with no information
-      string type = arg.type;
-      if (isListType(arg.type)) {
+      string type = arg->type;
+      if (isListType(arg->type)) {
         // need to put a pointer onto the end of ASTList types
         type = stringc << type << "*";
-      } else if (isTreeNode(arg.type)) {
+      } else if (isTreeNode(arg->type)) {
         // dsw: FIX: I should probably have something like this here
         // (isTreeNodePtr(type) && isOwner)
         //
@@ -2796,8 +2766,7 @@ void XmlParserGen::emitXmlParserImplementation()
     collectXmlParserCtorArgs(c->super->lastArgs, "obj");
 
     if (c->hasChildren()) {
-      FOREACH_ASTLIST(ASTClass, c->ctors, iter) {
-        ASTClass const *clazz = iter.data();
+      FOREACH_ASTLIST(ASTClass, c->ctors, clazz) {
 
         tokensOutH  << "    XTOK_" << clazz->name << ", // \"" << clazz->name << "\"\n";
         tokensOutCC << "    \"XTOK_" << clazz->name << "\",\n";
@@ -2818,8 +2787,7 @@ void XmlParserGen::emitXmlParserImplementation()
 
   tokensOutH  << "\n  // List 'classes'\n";
   tokensOutCC << "\n  // List 'classes'\n";
-  FOREACH_ASTLIST(ListClass, listClasses, iter) {
-    ListClass const *cls = iter.data();
+  FOREACH_ASTLIST(ListClass, listClasses, cls) {
     tokensOutH  << "  XTOK_List_" << cls->classAndMemberName
                 << ", // \"List_" << cls->classAndMemberName << "\"\n";
     tokensOutCC << "  \"XTOK_List_" << cls->classAndMemberName << "\",\n";
@@ -2842,8 +2810,7 @@ void XmlParserGen::emitXmlParserImplementation()
   for (TF_class const *c : allClasses) {
 
     if (c->hasChildren()) {
-      FOREACH_ASTLIST(ASTClass, c->ctors, iter) {
-        ASTClass const *clazz = iter.data();
+      FOREACH_ASTLIST(ASTClass, c->ctors, clazz) {
         emitXmlParser_Node_registerAttr
           (clazz,
            &c->super->args, &c->super->decls, &c->super->lastArgs,
@@ -2866,7 +2833,7 @@ void XmlParserGen::emitXmlParserImplementation()
 
     if (c->hasChildren()) {
       FOREACH_ASTLIST(ASTClass, c->ctors, iter) {
-        string name = iter.data()->name;
+        string name = iter->name;
         parser1_defs << "  case XTOK_" << name << ": answer = false; return true; break;\n";
       }
     } else {
@@ -2875,8 +2842,7 @@ void XmlParserGen::emitXmlParserImplementation()
     }
   }
 
-  FOREACH_ASTLIST(ListClass, listClasses, iter) {
-    ListClass const *cls = iter.data();
+  FOREACH_ASTLIST(ListClass, listClasses, cls) {
     parser1_defs << "  case XTOK_List_" << cls->classAndMemberName << ": answer = false; return true; break;\n";
   }
   parser1_defs << "  }\n";
@@ -2893,14 +2859,14 @@ void XmlParserGen::emitXmlParserImplementation()
 
     if (c->hasChildren()) {
       FOREACH_ASTLIST(ASTClass, c->ctors, iter) {
-        parser1_defs << "  case XTOK_" << iter.data()->name << ":\n";
+        parser1_defs << "  case XTOK_" << iter->name << ":\n";
       }
     } else {
       parser1_defs << "  case XTOK_" << c->super->name << ":\n";
     }
   }
   FOREACH_ASTLIST(ListClass, listClasses, iter) {
-    parser1_defs << "  case XTOK_List_" << iter.data()->classAndMemberName << ":\n";
+    parser1_defs << "  case XTOK_List_" << iter->classAndMemberName << ":\n";
   }
   parser1_defs << "    xfailure(\"should never be called\"); return true; break;\n";
   parser1_defs << "  }\n";
@@ -2917,14 +2883,14 @@ void XmlParserGen::emitXmlParserImplementation()
 
     if (c->hasChildren()) {
       FOREACH_ASTLIST(ASTClass, c->ctors, iter) {
-        parser1_defs << "  case XTOK_" << iter.data()->name << ":\n";
+        parser1_defs << "  case XTOK_" << iter->name << ":\n";
       }
     } else {
       parser1_defs << "  case XTOK_" << c->super->name << ":\n";
     }
   }
   FOREACH_ASTLIST(ListClass, listClasses, iter) {
-    parser1_defs << "  case XTOK_List_" << iter.data()->classAndMemberName << ":\n";
+    parser1_defs << "  case XTOK_List_" << iter->classAndMemberName << ":\n";
   }
   parser1_defs << "    xfailure(\"should never be called\"); return true; break;\n";
   parser1_defs << "  }\n";
@@ -2935,8 +2901,7 @@ void XmlParserGen::emitXmlParserImplementation()
   parser1_defs << "(ASTList<char> *list, int listKind, void **target) {\n";
   parser1_defs << "  switch(listKind) {\n";
   parser1_defs << "  default: return false; // we did not find a matching tag\n";
-  FOREACH_ASTLIST(ListClass, listClasses, iter) {
-    ListClass const *cls = iter.data();
+  FOREACH_ASTLIST(ListClass, listClasses, cls) {
     if (cls->lkind != LK_FakeList) continue;
     parser1_defs << "  case XTOK_List_" << cls->classAndMemberName << ": {\n";
     parser1_defs << "    xassert(list);\n";
@@ -3008,14 +2973,10 @@ void mergeClass(ASTClass *base, ASTClass *ext)
   trace("merge") << "merging class: " << ext->name << std::endl;
 
   // move all ctor args to the base
-  while (ext->args.isNotEmpty()) {
-    base->args.append(ext->args.removeFirst());
-  }
+  astConcat(base->args, ext->args);
 
   // and same for annotations
-  while (ext->decls.isNotEmpty()) {
-    base->decls.append(ext->decls.removeFirst());
-  }
+  astConcat(base->decls, ext->decls);
 }
 
 
@@ -3024,17 +2985,15 @@ void mergeEnum(TF_enum *base, TF_enum *ext)
   xassert(base->name == ext->name);
   trace("merge") << "merging enum: " << ext->name << std::endl;
 
-  while (ext->enumerators.isNotEmpty()) {
-    base->enumerators.append(ext->enumerators.removeFirst());
-  }
+  astConcat(base->enumerators, ext->enumerators);
 }
 
 
 ASTClass *findClass(TF_class *base, rostring name)
 {
   FOREACH_ASTLIST_NC(ASTClass, base->ctors, iter) {
-    if (iter.data()->name == name) {
-      return iter.data();
+    if (iter->name == name) {
+      return iter;
     }
   }
   return NULL;   // not found
@@ -3050,8 +3009,7 @@ void mergeSuperclass(TF_class *base, TF_class *ext)
   mergeClass(base->super, ext->super);
 
   // for each subclass, either add it or merge it
-  while (ext->ctors.isNotEmpty()) {
-    ASTClass * /*owner*/ c = ext->ctors.removeFirst();
+  for (ASTClass *c /*owner*/ : ext->ctors) {
 
     ASTClass *prev = findClass(base, c->name);
     if (prev) {
@@ -3061,9 +3019,10 @@ void mergeSuperclass(TF_class *base, TF_class *ext)
     else {
       // add it wholesale
       trace("merge") << "adding subclass: " << c->name << std::endl;
-      base->ctors.append(c);
+      base->ctors.push_back(c);
     }
   }
+  ext->ctors.clear();
 }
 
 
@@ -3071,8 +3030,7 @@ TF_class *findSuperclass(ASTSpecFile *base, rostring name)
 {
   // I can *not* simply iterate over 'allClasses', because that
   // list is created *after* merging!
-  FOREACH_ASTLIST_NC(ToplevelForm, base->forms, iter) {
-    ToplevelForm *tf = iter.data();
+  FOREACH_ASTLIST_NC(ToplevelForm, base->forms, tf) {
     if (tf->isTF_class() &&
         tf->asTF_class()->super->name == name) {
       return tf->asTF_class();
@@ -3083,8 +3041,7 @@ TF_class *findSuperclass(ASTSpecFile *base, rostring name)
 
 TF_enum *findEnum(ASTSpecFile *base, rostring name)
 {
-  FOREACH_ASTLIST_NC(ToplevelForm, base->forms, iter) {
-    ToplevelForm *tf = iter.data();
+  FOREACH_ASTLIST_NC(ToplevelForm, base->forms, tf) {
     if (tf->isTF_enum() &&
         tf->asTF_enum()->name == name) {
       return tf->asTF_enum();
@@ -3097,8 +3054,7 @@ void mergeExtension(ASTSpecFile *base, ASTSpecFile *ext)
 {
   // for each toplevel form, either add it or merge it
   int ct = 0;
-  while (ext->forms.isNotEmpty()) {
-    ToplevelForm * /*owner*/ tf = ext->forms.removeFirst();
+  for (ToplevelForm * /*owner*/ tf : ext->forms) {
 
     if (tf->isTF_class()) {
       TF_class *c = tf->asTF_class();
@@ -3113,7 +3069,7 @@ void mergeExtension(ASTSpecFile *base, ASTSpecFile *ext)
       else {
         // add the whole class
         trace("merge") << "adding new superclass: " << c->super->name << std::endl;
-        base->forms.append(c);
+        base->forms.push_back(c);
       }
     }
 
@@ -3129,7 +3085,7 @@ void mergeExtension(ASTSpecFile *base, ASTSpecFile *ext)
       else {
         // add the whole enum
         trace("merge") << "adding new enum: " << e->name << std::endl;
-        base->forms.append(e);
+        base->forms.push_back(e);
       }
     }
 
@@ -3139,9 +3095,9 @@ void mergeExtension(ASTSpecFile *base, ASTSpecFile *ext)
       if (ct == 0) {
         // *first* verbatim: goes into a special place in the
         // base, before any classes but after any base verbatims
-        int i;
-        for (i=0; i < base->forms.count(); i++) {
-          ToplevelForm *baseForm = base->forms.nth(i);
+        ASTList<ToplevelForm>::iterator it;
+        for (it = base->forms.begin(); it != base->forms.end(); ++it) {
+          ToplevelForm* baseForm = *it;
 
           if (baseForm->isTF_class()) {
             // ok, this is the first class, so stop here
@@ -3153,18 +3109,19 @@ void mergeExtension(ASTSpecFile *base, ASTSpecFile *ext)
 
         // insert the base so it becomes position 'i'
         trace("merge") << "inserting extension verbatim near top\n";
-        base->forms.insertAt(tf, i);
+        base->forms.insert(it, tf);
       }
 
       else {
         // normal processing: append everything
         trace("merge") << "appending extension verbatim/option section\n";
-        base->forms.append(tf);
+        base->forms.push_back(tf);
       }
     }
 
     ct++;
   }
+  ext->forms.clear();
 }
 
 // re-enable allClasses
@@ -3176,7 +3133,7 @@ void recordListClass(ListKind lkind, rostring className, CtorArg const *arg) {
     (lkind, stringc << className << "_" << argName, extractListType(arg->type));
   auto result = listClassesSet.insert(cls->classAndMemberName);
   if (result.second) {
-    listClasses.append(cls);
+    listClasses.push_back(cls);
   } else {
     delete cls;
   }
@@ -3197,10 +3154,10 @@ void getListClasses(rostring className, CtorArg const *arg) {
 void getListClasses(ASTClass const *c) {
   rostring className = c->name;
   FOREACH_ASTLIST(CtorArg, c->args, ctorIter) {
-    getListClasses(className, ctorIter.data());
+    getListClasses(className, ctorIter);
   }
   FOREACH_ASTLIST(CtorArg, c->lastArgs, ctorIter) {
-    getListClasses(className, ctorIter.data());
+    getListClasses(className, ctorIter);
   }
 }
 
@@ -3208,7 +3165,7 @@ void getListClasses() {
   for (TF_class const *cls : allClasses) {
     getListClasses(cls->super);
     FOREACH_ASTLIST(ASTClass, cls->ctors, ctorIter) {
-      getListClasses(ctorIter.data());
+      getListClasses(ctorIter);
     }
   }
 }
@@ -3217,11 +3174,10 @@ void getListClasses() {
 // --------------------- toplevel control ----------------------
 void checkUnusedCustoms(ASTClass const *c)
 {
-  FOREACH_ASTLIST(Annotation, c->decls, iter) {
-    Annotation const *a = iter.data();
+  FOREACH_ASTLIST(Annotation, c->decls, annot) {
 
-    if (a->isCustomCode()) {
-      CustomCode const *cc = a->asCustomCodeC();
+    if (annot->isCustomCode()) {
+      CustomCode const *cc = annot->asCustomCodeC();
       if (cc->used == false) {
         std::cout << "warning: unused custom code `" << cc->qualifier << "'\n";
       }
@@ -3232,7 +3188,7 @@ void checkUnusedCustoms(ASTClass const *c)
 
 void grabOptionName(rostring opname, string &oparg, TF_option const *op)
 {
-  if (op->args.count() != 1) {
+  if (op->args.size() != 1) {
     xfatal("'" << opname << "' option requires one argument");
   }
 
@@ -3248,7 +3204,7 @@ void grabOptionName(rostring opname, string &oparg, TF_option const *op)
   }
 
   // name of the visitor interface class
-  oparg = *( op->args.firstC() );
+  oparg = *( op->args.front() );
 }
 
 
@@ -3325,8 +3281,8 @@ void entry(int argc, char **argv)
   // scan options, and fill 'allClasses'
   {
     FOREACH_ASTLIST_NC(ToplevelForm, ast->forms, iter) {
-      if (iter.data()->isTF_option()) {
-        TF_option const *op = iter.data()->asTF_optionC();
+      if (iter->isTF_option()) {
+        TF_option const *op = iter->asTF_optionC();
 
         if (op->name == "visitor") {
           grabOptionName("visitor", visitorName, op);
@@ -3354,8 +3310,8 @@ void entry(int argc, char **argv)
         }
       }
 
-      else if (iter.data()->isTF_class()) {
-        allClasses.push_back(iter.data()->asTF_class());
+      else if (iter->isTF_class()) {
+        allClasses.push_back(iter->asTF_class());
       }
     }
   }
@@ -3397,13 +3353,13 @@ void entry(int argc, char **argv)
         checkUnusedCustoms(c->super);
 
         FOREACH_ASTLIST(ASTClass, c->ctors, subIter) {
-          checkUnusedCustoms(subIter.data());
+          checkUnusedCustoms(subIter);
         }
       }
 
       FOREACH_ASTLIST(ToplevelForm, ast->forms, iter2) {
-        if (iter2.data()->isTF_custom()) {
-          CustomCode const *cc = iter2.data()->asTF_customC()->cust;
+        if (iter2->isTF_custom()) {
+          CustomCode const *cc = iter2->asTF_customC()->cust;
           if (cc->used == false) {
             std::cout << "warning: unused custom code `" << cc->qualifier << "'\n";
           }

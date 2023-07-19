@@ -66,7 +66,7 @@ void findPathRoots(std::vector<Statement *>& list, Statement const* stmt)
     }
     ASTNEXTC(S_compound, c) {
       FOREACH_ASTLIST(Statement, c->stmts, iter) {
-        findPathRoots(list, iter.data());
+        findPathRoots(list, iter);
       }
     }
     ASTNEXTC(S_if, i) {
@@ -146,10 +146,10 @@ int countPathsFrom(Env &env, std::vector<Statement *> &path,
 
   else {
     // retrieve all successors of this node
-    VoidList successors;
+    NextPtrList successors;
     node->getSuccessors(successors, isContinue);
 
-    if (successors.isEmpty()) {
+    if (successors.empty()) {
       // this is a return statement (or otherwise end of function)
       ret = 1;
     }
@@ -158,8 +158,7 @@ int countPathsFrom(Env &env, std::vector<Statement *> &path,
       ret = 0;
 
       // consider each choice
-      for (VoidListIter iter(successors); !iter.isDone(); iter.adv()) {
-        void *np = iter.data();
+      for (NextPtr np : successors) {
         // unfortunately I can't easily parameterize a voidlist by whether
         // my interpretation of a field of its contents is 'const' ...
         Statement *s = const_cast<Statement*>(nextPtrStmt(np));
@@ -248,10 +247,10 @@ void printPathFrom(std::vector<Statement /*const*/ *> &path, int index,
   index = index / exprPaths;
 
   // retrieve all successors of this node
-  VoidList successors;
+  NextPtrList successors;
   node->getSuccessors(successors, isContinue);
 
-  if (successors.isEmpty()) {
+  if (successors.empty()) {
     // this is a return statement (or otherwise end of function)
     xassert(index == 0);
     PATHOUT << "path ends at a return\n";
@@ -259,8 +258,7 @@ void printPathFrom(std::vector<Statement /*const*/ *> &path, int index,
   else {
     // consider each choice
     // largely COPIED to vcgen.cc:Statement::vcgenPath
-    for (VoidListIter iter(successors); !iter.isDone(); iter.adv()) {
-      void *np = iter.data();
+    for (NextPtr np : successors) {
       Statement const *s = nextPtrStmt(np);
       int pathsFromS = numPathsThrough(s);
 
@@ -346,7 +344,7 @@ int countExprPaths(Statement const *stmt, bool isContinue)
       // declaration for paths through initializing expressions
       int ret = 1;
       FOREACH_ASTLIST(Declarator, d->decl->decllist, dcltr) {
-        Initializer const *init = dcltr.data()->init;
+        Initializer const *init = dcltr->init;
         if (init) {
           ret = mult(ret, countExprPaths(init));
         }
@@ -417,7 +415,7 @@ void printExprPath(int index, Statement const *stmt, bool isContinue)
       // declaration for paths through initializing expressions
       int paths = 1;
       FOREACH_ASTLIST(Declarator, d->decl->decllist, dcltr) {
-        Initializer const *init = dcltr.data()->init;
+        Initializer const *init = dcltr->init;
         if (init) {
           paths = countExprPaths(init);
           printExprPath(index % paths, init);
@@ -449,7 +447,7 @@ int countExprPaths(Initializer const *init)
     ASTNEXTC(IN_compound, ic) {
       int ret = 1;
       FOREACH_ASTLIST(Initializer, ic->inits, iter) {
-        ret = mult(ret, countExprPaths(iter.data()));
+        ret = mult(ret, countExprPaths(iter));
       }
       return ret;
     }
@@ -471,8 +469,7 @@ void printExprPath(int index, Initializer const *init)
     ASTNEXTC(IN_compound, ic) {
       // this loop is very similar to the one above for S_decl
       int paths = 1;
-      FOREACH_ASTLIST(Initializer, ic->inits, iter) {
-        Initializer const *i = iter.data();
+      FOREACH_ASTLIST(Initializer, ic->inits, i) {
         paths = countExprPaths(i);
         printExprPath(index % paths, i);
         index = index / paths;
@@ -505,7 +502,7 @@ int countPaths(Env &env, Expression *ths)
 
       FOREACH_ASTLIST_NC(Expression, ths->args, iter) {
         // compute # of paths
-        int argPaths = iter.data()->numPaths;
+        int argPaths = iter->numPaths;
         if (argPaths > 0) {
           if (numPaths > 0) {
             env.warn("more than one argument expression has side effects");
@@ -643,8 +640,8 @@ void printPath(int index, Expression const *ths)
 
       // args
       FOREACH_ASTLIST(Expression, ths->args, iter) {
-        subexpPaths = iter.data()->numPaths1();
-        printPath(index % subexpPaths, iter.data());
+        subexpPaths = iter->numPaths1();
+        printPath(index % subexpPaths, iter);
         index = index / subexpPaths;
       }
       xassert(index < subexpPaths);

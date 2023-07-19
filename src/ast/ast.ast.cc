@@ -9,7 +9,7 @@
 // *** DO NOT EDIT ***
 ASTSpecFile::~ASTSpecFile()
 {
-  forms.deleteAll();
+  deleteAll(forms);
 }
 
 void ASTSpecFile::debugPrint(std::ostream &os, int indent, char const *subtreeName) const
@@ -98,7 +98,7 @@ DEFN_AST_DOWNCASTS(ToplevelForm, TF_class, TF_CLASS)
 TF_class::~TF_class()
 {
   delete super;
-  ctors.deleteAll();
+  deleteAll(ctors);
 }
 
 void TF_class::debugPrint(std::ostream &os, int indent, char const *subtreeName) const
@@ -124,9 +124,7 @@ DEFN_AST_DOWNCASTS(ToplevelForm, TF_option, TF_OPTION)
 
 TF_option::~TF_option()
 {
-  while (args.isNotEmpty()) {
-    args.removeFirst();
-  }
+  args.clear();
 }
 
 void TF_option::debugPrint(std::ostream &os, int indent, char const *subtreeName) const
@@ -176,9 +174,7 @@ DEFN_AST_DOWNCASTS(ToplevelForm, TF_enum, TF_ENUM)
 
 TF_enum::~TF_enum()
 {
-  while (enumerators.isNotEmpty()) {
-    enumerators.removeFirst();
-  }
+  enumerators.clear();
 }
 
 void TF_enum::debugPrint(std::ostream &os, int indent, char const *subtreeName) const
@@ -205,10 +201,10 @@ TF_enum *TF_enum::clone() const
 // *** DO NOT EDIT ***
 ASTClass::~ASTClass()
 {
-  args.deleteAll();
-  lastArgs.deleteAll();
-  bases.deleteAll();
-  decls.deleteAll();
+  deleteAll(args);
+  deleteAll(lastArgs);
+  deleteAll(bases);
+  deleteAll(decls);
 }
 
 void ASTClass::debugPrint(std::ostream &os, int indent, char const *subtreeName) const
@@ -239,9 +235,7 @@ ASTClass *ASTClass::clone() const
 // *** DO NOT EDIT ***
 AccessMod::~AccessMod()
 {
-  while (mods.isNotEmpty()) {
-    mods.removeFirst();
-  }
+  mods.clear();
 }
 
 void AccessMod::debugPrint(std::ostream &os, int indent, char const *subtreeName) const
@@ -420,7 +414,7 @@ string ASTClass::classKindName() const
 bool AccessMod::hasMod(char const *mod) const
 {
   FOREACH_ASTLIST(string, mods, iter) {
-    if (*iter.data() == mod) {
+    if (*iter == mod) {
       return true;
     }
   }
@@ -431,7 +425,7 @@ bool AccessMod::hasModPrefix(char const *mod) const
 {
   string mod0(mod);
   FOREACH_ASTLIST(string, mods, iter) {
-    rostring i = *iter.data();
+    rostring i = *iter;
     if (prefixEquals(i, mod0)) {
       return true;
     }
@@ -445,7 +439,7 @@ string AccessMod::getModSuffixFromPrefix(char const *mod) const
   string ret;
   bool found = false;
   FOREACH_ASTLIST(string, mods, iter) {
-    rostring s = *iter.data();
+    rostring s = *iter;
     if (prefixEquals(s, mod0)) {
       if (found) {
         xfailure(stringc << "two modifiers with this prefix found " << mod << c_str);

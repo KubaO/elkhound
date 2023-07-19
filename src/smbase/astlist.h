@@ -1,162 +1,102 @@
 // astlist.h            see license.txt for copyright and terms of use
-// owner list wrapper around VoidTailList
+// thin owner list invariant checker around std::vector,
+// with a stealing constructor used by astgen-generated code
 // name 'AST' is because the first application is in ASTs
 
 #ifndef ASTLIST_H
 #define ASTLIST_H
 
-#include "vdtllist.h"     // VoidTailList
+#include <vector>         // std::vector
+#include "xassert.h"      // xassert
 
-template <class T> class ASTListIter;
-template <class T> class ASTListIterNC;
-
-// a list which owns the items in it (will deallocate them), and
-// has constant-time access to the last element
+// a list which is supposed to own the items in it -
+// it must never be destroyed while not-empty;
+// user code must ensure that owned items are deleted
+// or moved elsewhere before destruction;
+// this is so that potentially we can use a straight
+// std::vector later
 template <class T>
-class ASTList {
-private:
-  friend class ASTListIter<T>;
-  friend class ASTListIterNC<T>;
-
-protected:
-  VoidTailList list;                    // list itself
-
-private:
-  ASTList(ASTList const &obj);          // not allowed
-
+class ASTList : public std::vector<T*>
+{
 public:
-  ASTList()                             : list() {}
-  ~ASTList()                            { deleteAll(); }
+  using std::vector<T*>::vector;
 
-  // ctor to make singleton list; often quite useful
-  ASTList(T *elt)                       : list() { prepend(elt); }
+  ASTList(ASTList &&) = default;
+  ASTList &operator=(ASTList &&) = default;
 
-  // stealing ctor; among other things, since &src->list is assumed to
-  // point at 'src', this class can't have virtual functions;
-  // these ctors delete 'src'
-  ASTList(ASTList<T> *src)              : list(&src->list) {}
-  void steal(ASTList<T> *src)           { deleteAll(); list.steal(&src->list); }
+  ASTList(ASTList const&) = delete;
+  ASTList& operator=(ASTList const&) = delete;
 
-  // selectors
-  int count() const                     { return list.count(); }
-  bool isEmpty() const                  { return list.isEmpty(); }
-  bool isNotEmpty() const               { return list.isNotEmpty(); }
-  T *nth(int which)                     { return (T*)list.nth(which); }
-  T const *nthC(int which) const        { return (T const*)list.nth(which); }
-  T *first()                            { return (T*)list.first(); }
-  T const *firstC() const               { return (T const*)list.first(); }
-  T *last()                             { return (T*)list.last(); }
-  T const *lastC() const                { return (T const*)list.last(); }
+  ASTList() = default;
+  ~ASTList()                            { xassert(empty()); } // invariant
 
-  // insertion
-  void prepend(T *newitem)              { list.prepend(newitem); }
-  void append(T *newitem)               { list.append(newitem); }
-  void insertAt(T *newitem, int index)  { list.insertAt(newitem, index); }
-  void concat(ASTList<T> &tail)         { list.concat(tail.list); }
-
-  // removal
-  T *removeFirst()                      { return (T*)list.removeFirst(); }
-  T *removeLast()                       { return (T*)list.removeLast(); }
-  T *removeAt(int index)                { return (T*)list.removeAt(index); }
-  void removeItem(T *item)              { list.removeItem((void*)item); }
-
-  // this one is awkwardly named to remind the user that it's
-  // contrary to the usual intent of this class
-  void removeAll_dontDelete()           { return list.removeAll(); }
-
-  // deletion
-  void deleteFirst()                    { delete (T*)list.removeFirst(); }
-  void deleteAll();
-
-  // list-as-set: selectors
-  int indexOf(T const *item) const      { return list.indexOf((void*)item); }
-  int indexOfF(T const *item) const     { return list.indexOfF((void*)item); }
-  bool contains(T const *item) const    { return list.contains((void*)item); }
-
-  // list-as-set: mutators
-  bool prependUnique(T *newitem)        { return list.prependUnique(newitem); }
-  bool appendUnique(T *newitem)         { return list.appendUnique(newitem); }
-
-  // debugging: two additional invariants
-  void selfCheck() const                { list.selfCheck(); }
+  // stealing ctor
+  explicit ASTList(ASTList<T> *src);
 };
 
 
+// this stealing constructor is used by code generated
+// by astgen; it is the consequence of storing these
+// list by pointer, thus "construction from a pointer"
+// means "stealing";
+// TODO the lists should be held by value and be
+// move-constructed, avoiding the indirection and
+// the need for this constructor
 template <class T>
-void ASTList<T>::deleteAll()
+ASTList<T>::ASTList(ASTList<T>* src)
 {
-  while (!list.isEmpty()) {
-    deleteFirst();
+  if (src) {
+    *this = std::move(*src);
+    delete src;
   }
 }
 
 
+// disposes the owned contents of the 'to' list,
+// then moves the other list's contents in, and
+// deletes that list
 template <class T>
-class ASTListIter {
-protected:
-  VoidTailListIter iter;      // underlying iterator
+void astSteal(ASTList<T>& to, ASTList<T>* from)
+{
+  deleteAll(to);
+  if (from) {
+    to = std::move(*from);
+    delete from;
+  }
+}
 
-public:
-  ASTListIter(ASTList<T> const &list) : iter(list.list) {}
-  ~ASTListIter()                       {}
 
-  void reset(ASTList<T> const &list)   { iter.reset(list.list); }
+// transfers ownership of items from tail to head,
+// by appending them; tail is emptied
+template <class T>
+void astConcat(ASTList<T>& head, ASTList<T>& tail)
+{
+  head.reserve(head.size() + tail.size());
+  std::copy(tail.begin(), tail.end(), std::back_inserter(head));
+  tail.clear();
+}
 
-  // iterator copying; generally safe
-  ASTListIter(ASTListIter const &obj)             : iter(obj.iter) {}
-  ASTListIter& operator=(ASTListIter const &obj)  { iter = obj.iter;  return *this; }
 
-  // iterator actions
-  bool isDone() const                   { return iter.isDone(); }
-  void adv()                            { iter.adv(); }
-  T const *data() const                 { return (T const*)iter.data(); }
-};
+// disposes of all owned elements; ends up with
+// empty list
+template <class T>
+void deleteAll(ASTList<T>& list)
+{
+  for (T* item : list) {
+    delete item;
+  }
+  list.clear();
+}
+
+// these macros are used all over the place and can
+// be left in place for now to avoid too diff noise;
+// these will have to be removed eventually
 
 #define FOREACH_ASTLIST(T, list, iter) \
-  for(ASTListIter<T> iter(list); !iter.isDone(); iter.adv())
-
-
-// version of the above, but for non-const-element traversal
-template <class T>
-class ASTListIterNC {
-protected:
-  VoidTailListIter iter;      // underlying iterator
-
-public:
-  ASTListIterNC(ASTList<T> &list)      : iter(list.list) {}
-  ~ASTListIterNC()                     {}
-
-  void reset(ASTList<T> &list)         { iter.reset(list.list); }
-
-  // iterator copying; generally safe
-  ASTListIterNC(ASTListIterNC const &obj)             : iter(obj.iter) {}
-  ASTListIterNC& operator=(ASTListIterNC const &obj)  { iter = obj.iter;  return *this; }
-
-  // iterator actions
-  bool isDone() const                   { return iter.isDone(); }
-  void adv()                            { iter.adv(); }
-  T *data() const                       { return (T*)iter.data(); }
-  T *&dataRef()                         { return (T*&)iter.dataRef(); }
-
-  // iterator mutation; use with caution
-  void setDataLink(T *newData)          { iter.setDataLink((void*)newData); }
-};
+  for(T const *iter : list)
 
 #define FOREACH_ASTLIST_NC(T, list, iter) \
-  for(ASTListIterNC<T> iter(list); !iter.isDone(); iter.adv())
-
-
-// this function is somewhat at odds with the nominal purpose
-// of ASTLists, but I need it in a weird situation so ...
-template <class T>
-ASTList<T> *shallowCopy(ASTList<T> *src)
-{
-  ASTList<T> *ret = new ASTList<T>;
-  FOREACH_ASTLIST_NC(T, *src, iter) {
-    ret->append(iter.data());
-  }
-  return ret;
-}
+  for(T *iter : list)
 
 
 #endif // ASTLIST_H

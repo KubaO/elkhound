@@ -4,8 +4,6 @@
 
 # tests
 project(nonport)
-project(voidlist)
-project(vdtllist)
 project(bit2d)
 project(str)
 project(strutil)
@@ -23,16 +21,6 @@ project(autofile)
 add_executable(nonport
     ../gprintf.c
     ../nonport.cpp
-)
-
-# files for voidlist
-add_executable(voidlist
-    ../voidlist.cc
-)
-
-# files for vdtllist
-add_executable(vdtllist
-    ../vdtllist.cc
 )
 
 # files for bit2d
@@ -97,8 +85,6 @@ add_executable(autofile
 
 # extra compile options
 target_compile_options(nonport PRIVATE -DTEST_NONPORT)
-target_compile_options(voidlist PRIVATE -DTEST_VOIDLIST)
-target_compile_options(vdtllist PRIVATE -DTEST_VDTLLIST)
 target_compile_options(bit2d PRIVATE -DTEST_BIT2D)
 target_compile_options(str PRIVATE -DTEST_STR)
 target_compile_options(strutil PRIVATE -DTEST_STRUTIL)
@@ -112,8 +98,6 @@ target_compile_options(gprintf PRIVATE -DTEST_GPRINTF)
 target_compile_options(autofile PRIVATE -DTEST_AUTOFILE)
 
 # link options
-target_link_libraries(voidlist smbase)
-target_link_libraries(vdtllist smbase)
 target_link_libraries(bit2d smbase)
 target_link_libraries(str smbase)
 target_link_libraries(strutil smbase)
@@ -126,8 +110,6 @@ target_link_libraries(autofile smbase)
 
 # add the tests
 add_test(NAME nonport COMMAND ./nonport)
-add_test(NAME voidlist COMMAND ./voidlist)
-add_test(NAME vdtllist COMMAND ./vdtllist)
 add_test(NAME bit2d COMMAND ./bit2d)
 add_test(NAME str COMMAND ./str)
 add_test(NAME strutil COMMAND ./strutil)

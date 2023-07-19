@@ -217,7 +217,7 @@ void debugPrintList(ASTList<T> const &list, char const *name,
   int ct=0;
   {
     FOREACH_ASTLIST(T, list, iter) {
-      iter.data()->debugPrint(os, indent+2,
+      iter->debugPrint(os, indent+2,
         stringc << name << "[" << ct++ << "]" << c_str);
     }
   }
@@ -368,7 +368,7 @@ ASTList<T> * /*owner*/ cloneASTList(ASTList<T> const &src)
   ASTList<T> *ret = new ASTList<T>;
 
   FOREACH_ASTLIST(T, src, iter) {
-    ret->append(iter.data()->clone());
+    ret->push_back(iter->clone());
   }
 
   return ret;
@@ -385,7 +385,7 @@ ASTList<T> * /*owner*/ shallowCloneASTList(ASTList<T> const &src)
 
   FOREACH_ASTLIST(T, src, iter) {
     // list backbone is const, but nodes' constness leaks away..
-    ret->append(const_cast<T*>(iter.data()));
+    ret->push_back(const_cast<T*>(iter));
   }
 
   return ret;

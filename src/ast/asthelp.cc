@@ -53,7 +53,7 @@ void debugPrintStringList(ASTList<STR> const &list, char const *name,
       if (ct++ > 0) {
         os << ", ";
       }
-      os << quoted(string(*( iter.data() )));
+      os << quoted(string(*iter));
     }
   }
   os << "\n";
@@ -93,7 +93,7 @@ void xmlPrintStringList(ASTList<STR> const &list, char const *name,
     FOREACH_ASTLIST(STR, list, iter) {
       // dsw: quoted might add another layer of quotes.
       ind(os, indent+2) << "<object type=string val=\""
-                        << quoted(string(*( iter.data() ))) << "\" />\n";
+                        << quoted(string(*iter)) << "\" />\n";
     }
   }
   ind(os, indent) << "</member>\n";

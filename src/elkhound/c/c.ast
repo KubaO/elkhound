@@ -262,9 +262,7 @@ verbatim {
 
   // after working with this system a while, I think it's good, so I
   // want more support for manipulating lists of NextPtrs
-  typedef VoidList NextPtrList;
-  #define FOREACH_NEXTPTR(list, itervar) \
-    for (VoidListIter itervar(list); !itervar.isDone(); itervar.adv())
+  using NextPtrList = std::vector<NextPtr>;
 
   // given a function node, return a list of all the CFG nodes,
   // in reverse postorder w.r.t. some spanning tree
@@ -329,23 +327,23 @@ class Statement (SourceLoc loc) {
   -> S_expr(Expression expr);      // expression evaluated for side effect
   -> S_compound(ASTList<Statement> stmts);
   -> S_if(Expression cond, Statement thenBranch, Statement elseBranch) {
-       public virtual void getSuccessors(VoidList &dest, bool isContinue) const;
+       public virtual void getSuccessors(NextPtrList &dest, bool isContinue) const;
      }
   -> S_switch(Expression expr, Statement branches) {
        // pointers to all of the cases (& default) in this switch
        public std::vector<Statement *> cases;
-       public virtual void getSuccessors(VoidList &dest, bool isContinue) const;
+       public virtual void getSuccessors(NextPtrList &dest, bool isContinue) const;
      }
   -> S_while(Expression cond, Statement body) {
-       public virtual void getSuccessors(VoidList &dest, bool isContinue) const;
+       public virtual void getSuccessors(NextPtrList &dest, bool isContinue) const;
      }
   -> S_doWhile(Statement body, Expression cond) {
-       public virtual void getSuccessors(VoidList &dest, bool isContinue) const;
+       public virtual void getSuccessors(NextPtrList &dest, bool isContinue) const;
      }
   -> S_for(Statement init, Expression cond,
            Expression after, Statement body) {
        public virtual void tcheck(Env &env);      // special handling of 'init'
-       public virtual void getSuccessors(VoidList &dest, bool isContinue) const;
+       public virtual void getSuccessors(NextPtrList &dest, bool isContinue) const;
      }
   -> S_break();
   -> S_continue();
