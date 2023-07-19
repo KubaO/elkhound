@@ -146,10 +146,10 @@ int countPathsFrom(Env &env, std::vector<Statement *> &path,
 
   else {
     // retrieve all successors of this node
-    VoidList successors;
+    NextPtrList successors;
     node->getSuccessors(successors, isContinue);
 
-    if (successors.isEmpty()) {
+    if (successors.empty()) {
       // this is a return statement (or otherwise end of function)
       ret = 1;
     }
@@ -158,8 +158,7 @@ int countPathsFrom(Env &env, std::vector<Statement *> &path,
       ret = 0;
 
       // consider each choice
-      for (VoidListIter iter(successors); !iter.isDone(); iter.adv()) {
-        void *np = iter.data();
+      for (NextPtr np : successors) {
         // unfortunately I can't easily parameterize a voidlist by whether
         // my interpretation of a field of its contents is 'const' ...
         Statement *s = const_cast<Statement*>(nextPtrStmt(np));
@@ -248,10 +247,10 @@ void printPathFrom(std::vector<Statement /*const*/ *> &path, int index,
   index = index / exprPaths;
 
   // retrieve all successors of this node
-  VoidList successors;
+  NextPtrList successors;
   node->getSuccessors(successors, isContinue);
 
-  if (successors.isEmpty()) {
+  if (successors.empty()) {
     // this is a return statement (or otherwise end of function)
     xassert(index == 0);
     PATHOUT << "path ends at a return\n";
@@ -259,8 +258,7 @@ void printPathFrom(std::vector<Statement /*const*/ *> &path, int index,
   else {
     // consider each choice
     // largely COPIED to vcgen.cc:Statement::vcgenPath
-    for (VoidListIter iter(successors); !iter.isDone(); iter.adv()) {
-      void *np = iter.data();
+    for (NextPtr np : successors) {
       Statement const *s = nextPtrStmt(np);
       int pathsFromS = numPathsThrough(s);
 

@@ -4,12 +4,12 @@
 #include "c.ast.gen.h"      // C ast
 #include "c_type.h"         // Type, AtomicType, etc.
 #include "c_env.h"          // Env
+#include "algo.h"           // sm::contains
 #include "restorer.h"       // Restorer
 #include "strutil.h"        // quoted
 #include "trace.h"          // trace
 #include "paths.h"          // printPaths
 #include "cc_lang.h"        // CCLang
-#include "voidlist.h"       // VoidList
 
 #define IN_PREDICATE(env) Restorer<bool> restorer(env.inPredicate, true)
 
@@ -867,42 +867,41 @@ void S_thmprv::itcheck(Env &env)
 
 
 // ------------------ Statement::getSuccessors ----------------
-void Statement::getSuccessors(VoidList &dest, bool /*isContinue*/) const
+void Statement::getSuccessors(NextPtrList &dest, bool /*isContinue*/) const
 {
   if (nextPtrStmt(next)) {
-    dest.append(next);
+    dest.push_back(next);
   }
 }
 
 
-void S_if::getSuccessors(VoidList &dest, bool /*isContinue*/) const
+void S_if::getSuccessors(NextPtrList &dest, bool /*isContinue*/) const
 {
   // the 'next' field is ignored since it always points at
   // the 'then' branch anyway
 
-  dest.append(makeNextPtr(thenBranch, false));
-  dest.append(makeNextPtr(elseBranch, false));
+  dest.push_back(makeNextPtr(thenBranch, false));
+  dest.push_back(makeNextPtr(elseBranch, false));
 }
 
 
-void S_switch::getSuccessors(VoidList &dest, bool /*isContinue*/) const
+void S_switch::getSuccessors(NextPtrList &dest, bool /*isContinue*/) const
 {
-  xassert(dest.isEmpty());
+  xassert(dest.empty());
   for (Statement const *stmt : cases) {
-    dest.prepend(makeNextPtr(stmt, false));
+    dest.push_back(makeNextPtr(stmt, false));
   }
-  dest.reverse();
 }
 
 
-void S_while::getSuccessors(VoidList &dest, bool isContinue) const
+void S_while::getSuccessors(NextPtrList &dest, bool isContinue) const
 {
   Statement::getSuccessors(dest, isContinue);
-  dest.append(makeNextPtr(body, false));
+  dest.push_back(makeNextPtr(body, false));
 }
 
 
-void S_doWhile::getSuccessors(VoidList &dest, bool isContinue) const
+void S_doWhile::getSuccessors(NextPtrList &dest, bool isContinue) const
 {
   if (isContinue) {
     // continue jumps to conditional, and can either go back
@@ -911,40 +910,39 @@ void S_doWhile::getSuccessors(VoidList &dest, bool isContinue) const
   }
 
   // either way, doing the body is an option
-  dest.append(makeNextPtr(body, false));
+  dest.push_back(makeNextPtr(body, false));
 }
 
 
-void S_for::getSuccessors(VoidList &dest, bool isContinue) const
+void S_for::getSuccessors(NextPtrList &dest, bool isContinue) const
 {
   // though the semantics of which expressions get evaluated
   // are different depending on 'isContinue', the statement-level
   // control flow options are the same
   Statement::getSuccessors(dest, isContinue);
-  dest.append(makeNextPtr(body, false));
+  dest.push_back(makeNextPtr(body, false));
 }
 
 
 string Statement::successorsToString() const
 {
-  VoidList succNoCont;
+  NextPtrList succNoCont;
   getSuccessors(succNoCont, false);
 
-  VoidList succYesCont;
+  NextPtrList succYesCont;
   getSuccessors(succYesCont, true);
 
   stringBuilder sb;
   sb << "{";
 
-  for (VoidListIter iter(succYesCont); !iter.isDone(); iter.adv()) {
-    NextPtr np = iter.data();
+  for (NextPtr np : succYesCont) {
 
     // a leading "(c)" means the successor edge is only present when
     // this node is reached via continue; a trailing "(c)" means that
     // successor is itself a continue edge; the algorithm assumes
     // that 'succYesCont' is a superset of 'succNoCont'
     Statement const *next = nextPtrStmt(np);
-    sb << (succNoCont.contains(np)? " " : " (c)")
+    sb << (sm::contains(succNoCont, np)? " " : " (c)")
        << stmtLoc(next)
        << (nextPtrContinue(np)? "(c)" : "");
   }

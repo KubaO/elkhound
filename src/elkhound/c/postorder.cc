@@ -14,8 +14,8 @@ using StatementSet = std::unordered_set<Statement const *>;
 // considered somewhere in the call chain ("gray"), or else finished
 // entirely ("black"), and 'seenCont' is the same thing but for the
 // continue==true halves of the nodes
-void rp_dfs(NextPtrList &order, Statement const *node, bool isContinue,
-            StatementSet &seen, StatementSet &seenCont)
+static void p_dfs(NextPtrList &order, Statement const *node, bool isContinue,
+                  StatementSet &seen, StatementSet &seenCont)
 {
   // we're now considering 'node'
   (isContinue? seenCont : seen).insert(node);
@@ -24,9 +24,9 @@ void rp_dfs(NextPtrList &order, Statement const *node, bool isContinue,
   NextPtrList successors;
   node->getSuccessors(successors, isContinue);
 
-  for (VoidListIter iter(successors); !iter.isDone(); iter.adv()) {
-    Statement const *succ = nextPtrStmt(iter.data());
-    bool succCont = nextPtrContinue(iter.data());
+  for (NextPtr np : successors) {
+    Statement const *succ = nextPtrStmt(np);
+    bool succCont = nextPtrContinue(np);
 
     if (sm::contains((succCont? seenCont : seen), succ)) {
       // we're already considering, or have already considered, this node;
@@ -34,22 +34,24 @@ void rp_dfs(NextPtrList &order, Statement const *node, bool isContinue,
     }
     else {
       // visit this new child
-      rp_dfs(order, succ, succCont, seen, seenCont);
+      p_dfs(order, succ, succCont, seen, seenCont);
     }
   }
 
-  // since we're finished with this node, we would append it to compute
-  // the postorder; since we actually want reverse postorder, prepend
-  order.prepend(makeNextPtr(node, isContinue));
+  // add the node in postorder
+  order.push_back(makeNextPtr(node, isContinue));
 }
 
 
 void reversePostorder(NextPtrList &order, TF_func const &func)
 {
-  xassert(order.isEmpty());
+  xassert(order.empty());
 
   // DFS from the function start, computing the spanning tree implicitly,
-  // and the reverse postorder explicitly
+  // and the postorder explicitly
   StatementSet seen, seenCont;
-  rp_dfs(order, func.body, false /*isContinue*/, seen, seenCont);
+  // first, we get postorder
+  p_dfs(order, func.body, false /*isContinue*/, seen, seenCont);
+  // then we reverse it to get reverse postorder
+  std::reverse(order.begin(), order.end());
 }
