@@ -8,6 +8,7 @@
 #include "emitcode.h"       // EmitCode
 #include "bit2d.h"          // Bit2d
 
+#include <fmt/core.h>       // fmt::format
 #include <string.h>         // memset
 
 
@@ -1045,6 +1046,15 @@ int ParseTables::colorTheGraph(int *color, Bit2d &graph)
 }
 
 
+template <typename T>
+static std::enable_if_t<std::is_scalar_v<T>, uintptr_t> to_uintptr_t(T val)
+  { return (uintptr_t)val; }
+
+template <typename T>
+static std::enable_if_t<!std::is_scalar_v<T>, uintptr_t> to_uintptr_t(const T &val)
+  { return (uintptr_t)&val; }
+
+
 // --------------------- table emission -------------------
 // create literal tables
 template <class EltType>
@@ -1068,7 +1078,7 @@ void emitTable(EmitCode &out, EltType const *table, int size, int rowLength,
     }
   }
 
-  int rowNumWidth = stringf("%d", size / rowLength /*round down*/).length();
+  int rowNumWidth = fmt::formatted_size("{}", size / rowLength /*round down*/);
 
   // I make tables 'const' because that way the OS loader might be
   // smart enough to share them (on a read-only basis) across multiple
@@ -1081,7 +1091,7 @@ void emitTable(EmitCode &out, EltType const *table, int size, int rowLength,
   int row = 0;
   for (int i=0; i<size; i++) {
     if (i % rowLength == 0) {    // one row per state
-      out << stringf("\n    /""*%*d*""/ ", rowNumWidth, row++);
+      out << fmt::format("\n    /""*{:{}}*""/ ", row++, rowNumWidth);
     }
 
     if (needCast) {
@@ -1089,7 +1099,7 @@ void emitTable(EmitCode &out, EltType const *table, int size, int rowLength,
     }
 
     if (printHex) {
-      out << stringf("0x%02X, ", table[i]);
+      out << fmt::format("0x{:02X}, ", to_uintptr_t(table[i]));
     }
     else if (sizeof(table[i]) == 1) {
       // little bit of a hack to make sure 'unsigned char' gets

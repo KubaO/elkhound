@@ -2,10 +2,10 @@
 // parser for guarded command example language
 
 verbatim {
-  #include "str.h"        // stringf
   #include <stdlib.h>     // getenv, atoi, putenv
   #include <stdio.h>      // printf
   #include <string.h>     // strdup
+  #include <fmt/core.h>   // fmt::format
 }
 
 // the parser context class is useful in large examples;
@@ -92,7 +92,7 @@ nonterm Stmt {
 
   -> x:TOK_IDENTIFIER ":=" a:AExp {
        // like above, use the environment variables
-       putenv(strdup(stringf("%s=%d", x, a).c_str()));
+       putenv(strdup(fmt::format("{}={}", x, a).c_str()));
      }
 
   -> Stmt ";" Stmt {
