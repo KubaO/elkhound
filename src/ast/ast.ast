@@ -22,7 +22,7 @@ class ToplevelForm {
   // a superclass, and a list of subclasses ("constructors")
   -> TF_class(ASTClass super,
               ASTList<ASTClass> ctors) {
-       public bool hasChildren() const { return ctors.isNotEmpty(); };
+       public bool hasChildren() const { return !ctors.empty(); };
      }
 
   // a generic option: first word specifies the kind of option, and
@@ -119,7 +119,7 @@ string toString(AccessCtl acc)
     "pure_virtual"
   };
   static_assert(TABLESIZE(arr) == NUM_ACCESSCTLS,
-                "arr has wrong size relative to the AccessCtl enum");
+                "arr has wrong size relative to AccessCtl enum");
   xassert((unsigned)acc < NUM_ACCESSCTLS);
   return string(arr[acc]);
 }
@@ -132,7 +132,7 @@ string ASTClass::classKindName() const
     // it even avoids collisions with other classes, since if they would
     // collide with this, they'd collide with themselves too, and hence
     // get an extra "KIND_" prepended..
-    ret &= "KIND_";
+    ret.append("KIND_");
   }
   return ret;
 }
@@ -140,7 +140,7 @@ string ASTClass::classKindName() const
 bool AccessMod::hasMod(char const *mod) const
 {
   FOREACH_ASTLIST(string, mods, iter) {
-    if (iter.data()->equals(mod)) {
+    if (*iter == mod) {
       return true;
     }
   }
@@ -151,7 +151,7 @@ bool AccessMod::hasModPrefix(char const *mod) const
 {
   string mod0(mod);
   FOREACH_ASTLIST(string, mods, iter) {
-    rostring i = *iter.data();
+    rostring i = *iter;
     if (prefixEquals(i, mod0)) {
       return true;
     }
@@ -165,18 +165,18 @@ string AccessMod::getModSuffixFromPrefix(char const *mod) const
   string ret;
   bool found = false;
   FOREACH_ASTLIST(string, mods, iter) {
-    rostring s = *iter.data();
+    rostring s = *iter;
     if (prefixEquals(s, mod0)) {
       if (found) {
-        xfailure(stringc << "two modifiers with this prefix found " << mod);
+        xfailure(stringc << "two modifiers with this prefix found " << mod << c_str);
       }
       int len = strlen(mod);
-      ret = s.substring(len, s.length()-len);
+      ret = s.substr(len, s.length()-len);
       found = true;
     }
   }
   if (!found) {
-    xfailure(stringc << "no such prefix found " << mod);
+    xfailure(stringc << "no such prefix found " << mod << c_str);
   }
   return ret;
 }
