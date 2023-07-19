@@ -1,76 +1,86 @@
 // astlist.h            see license.txt for copyright and terms of use
-// owner list wrapper around std::vector
+// thin owner list invariant checker around std::vector,
+// with a stealing constructor used by astgen-generated code
 // name 'AST' is because the first application is in ASTs
 
 #ifndef ASTLIST_H
 #define ASTLIST_H
 
 #include <vector>         // std::vector
+#include "xassert.h"      // xassert
 
-// a list which owns the items in it (will deallocate them), and
-// has constant-time access to all elements
+// a list which is supposed to own the items in it -
+// it must never be destroyed while not-empty;
+// user code must ensure that owned items are deleted
+// or moved elsewhere before destruction;
+// this is so that potentially we can use a straight
+// std::vector later
 template <class T>
-class ASTList {
-protected:
-  std::vector<T*> list;                 // list itself
-
-  ASTList(ASTList const &) = delete;    // not allowed
-
+class ASTList : public std::vector<T*>
+{
 public:
-  using iterator = typename std::vector<T*>::iterator;
+  using std::vector<T*>::vector;
+
+  ASTList(ASTList &&) = default;
+  ASTList &operator=(ASTList &&) = default;
+
+  ASTList(ASTList const&) = delete;
+  ASTList& operator=(ASTList const&) = delete;
 
   ASTList() = default;
-  ~ASTList()                            { deleteAll(); }
+  ~ASTList()                            { xassert(empty()); } // invariant
 
-  // ctor to make singleton list; often quite useful
-  explicit ASTList(T *elt)              { list.push_back(elt); }
-
-  // stealing ctor; among other things, since &src->list is assumed to
-  // point at 'src', this class can't have virtual functions;
-  // these ctors delete 'src'
-  explicit ASTList(ASTList<T> *src)     { if (src) list = std::move(src->list); delete src; }
-  void steal(ASTList<T> *src)           { deleteAll(); if (src) list = std::move(src->list); delete src; }
-
-  // iterators
-  auto begin() const { return list.begin(); }
-  auto end() const { return list.end(); }
-  auto begin() { return list.begin(); }
-  auto end() { return list.end(); }
-
-  // selectors
-  int size() const                      { return list.size(); }
-  bool empty() const                    { return list.empty(); }
-  T const *front() const                { return list.front(); }
-  T const *second() const               { return *std::next(list.begin()); }
-
-  // insertion
-  void prepend(T *newitem)              { list.insert(list.begin(), newitem); }
-  void append(T *newitem)               { list.push_back(newitem); }
-
-  void insert(iterator it, T* newitem)  { list.insert(it, newitem); }
-  void concat(ASTList<T>& tail);
-
-  // removal
-  void removeItem(T *item)              { std::remove(list.begin(), list.end(), item); }
-  void clear()                          { list.clear(); }
-                                        // remove all items, no deallocation
-                                        // in the SM API, this would be called removeAll
-  // deletion
-  void deleteAll();
+  // stealing ctor
+  explicit ASTList(ASTList<T> *src);
 };
 
 
+// this stealing constructor is used by code generated
+// by astgen; it is the consequence of storing these
+// list by pointer, thus "construction from a pointer"
+// means "stealing";
+// TODO the lists should be held by value and be
+// move-constructed, avoiding the indirection and
+// the need for this constructor
 template <class T>
-void ASTList<T>::concat(ASTList<T>& tail)
+ASTList<T>::ASTList(ASTList<T>* src)
 {
-  list.reserve(list.size() + tail.list.size());
-  std::copy(tail.list.begin(), tail.list.end(), std::back_inserter(list));
+  if (src) {
+    *this = std::move(*src);
+    delete src;
+  }
+}
+
+
+// disposes the owned contents of the 'to' list,
+// then moves the other list's contents in, and
+// deletes that list
+template <class T>
+void astSteal(ASTList<T>& to, ASTList<T>* from)
+{
+  deleteAll(to);
+  if (from) {
+    to = std::move(*from);
+    delete from;
+  }
+}
+
+
+// transfers ownership of items from tail to head,
+// by appending them; tail is emptied
+template <class T>
+void astConcat(ASTList<T>& head, ASTList<T>& tail)
+{
+  head.reserve(head.size() + tail.size());
+  std::copy(tail.begin(), tail.end(), std::back_inserter(head));
   tail.clear();
 }
 
 
+// disposes of all owned elements; ends up with
+// empty list
 template <class T>
-void ASTList<T>::deleteAll()
+void deleteAll(ASTList<T>& list)
 {
   for (T* item : list) {
     delete item;
@@ -78,6 +88,9 @@ void ASTList<T>::deleteAll()
   list.clear();
 }
 
+// these macros are used all over the place and can
+// be left in place for now to avoid too diff noise;
+// these will have to be removed eventually
 
 #define FOREACH_ASTLIST(T, list, iter) \
   for(T const *iter : list)

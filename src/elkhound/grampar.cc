@@ -144,9 +144,9 @@ void setAnnotations(GrammarAST *ast)
           // 12/07/04: Allow more than one 'terminals' section,
           // by simply concatenating them.  This is useful when
           // I want to merge two grammars together textually.
-          ast->terms->decls.concat(t->decls);
-          ast->terms->types.concat(t->types);
-          ast->terms->prec.concat(t->prec);
+          astConcat(ast->terms->decls, t->decls);
+          astConcat(ast->terms->types, t->types);
+          astConcat(ast->terms->prec, t->prec);
         }
       }
 
@@ -662,8 +662,8 @@ void synthesizeStartRule(Grammar &g, GrammarAST *ast)
   RHSElt *rhs1 = new RH_name(LIT_STR("top").clone(), firstNT->name.clone());
   RHSElt *rhs2 = new RH_name(LIT_STR("").clone(), eof->name.clone());
   ASTList<RHSElt> *rhs = new ASTList<RHSElt>();
-  rhs->append(rhs1);
-  rhs->append(rhs2);
+  rhs->push_back(rhs1);
+  rhs->push_back(rhs2);
   char const *action = g.targetLang == "OCaml"?      " top " :
                        firstNT->type.equals("void")? " return; " :
                                                      " return top; ";
@@ -675,12 +675,12 @@ void synthesizeStartRule(Grammar &g, GrammarAST *ast)
         LIT_STR("__EarlyStartSymbol").clone(),   // name
         firstNT->type.clone(),                   // type
         NULL,                                    // empty list of functions
-        new ASTList<ProdDecl>(startProd),        // productions
+        new ASTList<ProdDecl>(1, startProd),     // productions
         NULL                                     // subsets
       );
 
   // put it into the AST; it must be prepended, append would be incorrect
-  ast->forms.prepend(earlyStartNT);
+  ast->forms.insert(ast->forms.begin(), earlyStartNT);
 }
 
 
@@ -914,7 +914,7 @@ void mergeContext(GrammarAST *base, TF_context * /*owner*/ ext)
 {
   // do simple append, since the grammar parser above knows how
   // to handle multiple context classes
-  base->forms.append(ext);
+  base->forms.push_back(ext);
 
   #if 0
   // find 'base' context
@@ -964,7 +964,7 @@ void mergeOption(GrammarAST *base, TF_option * /*owner*/ ext)
   }
 
   // otherwise, just add the new option
-  base->forms.append(ext);
+  base->forms.push_back(ext);
 }
 
 
@@ -977,13 +977,13 @@ void mergeTerminals(GrammarAST *base, TF_terminals * /*owner*/ ext)
       // there's no point to changing codes, so all the
       // TermDecls just get added (collisions are detected
       // later, during AST parsing)
-      t->decls.concat(ext->decls);
+      astConcat(t->decls, ext->decls);
 
       // in fact, I'll do the same for the others, even though
       // it might make sense to do some replacement; my immediate
       // needs don't include replacement at this level
-      t->types.concat(ext->types);
-      t->prec.concat(ext->prec);
+      astConcat(t->types, ext->types);
+      astConcat(t->prec, ext->prec);
 
       delete ext;
       return;
@@ -991,24 +991,25 @@ void mergeTerminals(GrammarAST *base, TF_terminals * /*owner*/ ext)
   }
 
   // no TF_terminals in 'base'.. unusual, but easy to handle
-  base->forms.append(ext);
+  base->forms.push_back(ext);
 }
 
 
 void mergeSpecFunc(TF_nonterm *base, SpecFunc * /*owner*/ ext)
 {
   // find an existing spec func with the same name
-  FOREACH_ASTLIST_NC(SpecFunc, base->funcs, f) {
+  for (auto it = base->funcs.begin(); it != base->funcs.end(); it++) {
+    SpecFunc const* f = *it;
     if (f->name.str == ext->name) {
       // replace the old code with the extension code
-      base->funcs.removeItem(f);
+      it = base->funcs.erase(it);
       delete f;
       break;
     }
   }
 
   // just add it
-  base->funcs.append(ext);
+  base->funcs.push_back(ext);
 }
 
 
@@ -1053,7 +1054,8 @@ void mergeProduction(TF_nonterm *base, ProdDecl *ext)
   bool found = false;
 
   // look for a production with an identical RHS
-  FOREACH_ASTLIST_NC(ProdDecl, base->productions, prod) {
+  for (auto it = base->productions.begin(); it != base->productions.end(); ++it) {
+    ProdDecl const *prod = *it;
 
     // check RHSs for equality
     if (equalRHS(prod, ext)) {
@@ -1067,7 +1069,7 @@ void mergeProduction(TF_nonterm *base, ProdDecl *ext)
       }
 
       // delete old
-      base->productions.removeItem(prod);
+      it = base->productions.erase(it);
       delete prod;
 
       if (ext->kind == PDK_DELETE) {
@@ -1088,7 +1090,7 @@ void mergeProduction(TF_nonterm *base, ProdDecl *ext)
   }
 
   // add the production
-  base->productions.append(ext);
+  base->productions.push_back(ext);
 }
 
 
@@ -1105,7 +1107,7 @@ void mergeNonterminal(GrammarAST *base, TF_nonterm * /*owner*/ ext)
 
   if (!exist) {
     // no pre-existing, just append it
-    base->forms.append(ext);
+    base->forms.push_back(ext);
     return;
   }
 
@@ -1144,7 +1146,7 @@ void mergeGrammar(GrammarAST *base, GrammarAST *ext)
 
       ASTNEXT(TF_verbatim, v) {
         // verbatims simply accumulate
-        base->forms.append(v);
+        base->forms.push_back(v);
       }
 
       ASTNEXT(TF_option, op) {

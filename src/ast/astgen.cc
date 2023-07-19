@@ -80,6 +80,10 @@ std::vector<TF_class *> allClasses;
 // list of all ASTList "list classes"
 std::set<string> listClassesSet;
 ASTList<ListClass> listClasses;
+struct ListClassesCleaner {
+  // ASTList may end up being a simple non-owning container
+  ~ListClassesCleaner() { deleteAll(listClasses); }
+} listClassesCleaner;
 
 // true if the user wants the xmlPrint stuff
 bool wantXMLPrint = false;
@@ -1310,12 +1314,12 @@ void CGen::emitDestroyField(bool isOwner, rostring type, rostring name)
     // explicitly destroy list elements, because it's easy to do, and
     // because if there is a problem, it's much easier to see its
     // role in a debugger backtrace
-    out << "  " << name << ".deleteAll();\n";
+    out << "  deleteAll(" << name << ");\n";
   }
   else if (isListType(type)) {
     if (extractListType(type) == "LocString") {
       // these are owned even though they aren't actually tree nodes
-      out << "  " << name << ".deleteAll();\n";
+      out << "  deleteAll(" << name << ");\n";
 
       // TODO: this analysis is duplicated below, during cloning;
       // the astgen tool should do a better job of encapsulating
@@ -2969,10 +2973,10 @@ void mergeClass(ASTClass *base, ASTClass *ext)
   trace("merge") << "merging class: " << ext->name << std::endl;
 
   // move all ctor args to the base
-  base->args.concat(ext->args);
+  astConcat(base->args, ext->args);
 
   // and same for annotations
-  base->decls.concat(ext->decls);
+  astConcat(base->decls, ext->decls);
 }
 
 
@@ -2981,7 +2985,7 @@ void mergeEnum(TF_enum *base, TF_enum *ext)
   xassert(base->name == ext->name);
   trace("merge") << "merging enum: " << ext->name << std::endl;
 
-  base->enumerators.concat(ext->enumerators);
+  astConcat(base->enumerators, ext->enumerators);
 }
 
 
@@ -3015,7 +3019,7 @@ void mergeSuperclass(TF_class *base, TF_class *ext)
     else {
       // add it wholesale
       trace("merge") << "adding subclass: " << c->name << std::endl;
-      base->ctors.append(c);
+      base->ctors.push_back(c);
     }
   }
   ext->ctors.clear();
@@ -3065,7 +3069,7 @@ void mergeExtension(ASTSpecFile *base, ASTSpecFile *ext)
       else {
         // add the whole class
         trace("merge") << "adding new superclass: " << c->super->name << std::endl;
-        base->forms.append(c);
+        base->forms.push_back(c);
       }
     }
 
@@ -3081,7 +3085,7 @@ void mergeExtension(ASTSpecFile *base, ASTSpecFile *ext)
       else {
         // add the whole enum
         trace("merge") << "adding new enum: " << e->name << std::endl;
-        base->forms.append(e);
+        base->forms.push_back(e);
       }
     }
 
@@ -3111,7 +3115,7 @@ void mergeExtension(ASTSpecFile *base, ASTSpecFile *ext)
       else {
         // normal processing: append everything
         trace("merge") << "appending extension verbatim/option section\n";
-        base->forms.append(tf);
+        base->forms.push_back(tf);
       }
     }
 
@@ -3129,7 +3133,7 @@ void recordListClass(ListKind lkind, rostring className, CtorArg const *arg) {
     (lkind, stringc << className << "_" << argName, extractListType(arg->type));
   auto result = listClassesSet.insert(cls->classAndMemberName);
   if (result.second) {
-    listClasses.append(cls);
+    listClasses.push_back(cls);
   } else {
     delete cls;
   }

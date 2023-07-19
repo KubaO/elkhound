@@ -121,11 +121,11 @@ StartSymbol: Input
 /* sequence of toplevel forms */
 /* yields ASTList<ToplevelForm> */
 Input: /* empty */           { $$ = new ASTList<ToplevelForm>; }
-     | Input Class           { ($$=$1)->append($2); }
-     | Input Verbatim        { ($$=$1)->append($2); }
-     | Input Option          { ($$=$1)->append($2); }
-     | Input Enum            { ($$=$1)->append($2); }
-     | Input CustomCode      { ($$=$1)->append(new TF_custom($2)); }
+     | Input Class           { ($$=$1)->push_back($2); }
+     | Input Verbatim        { ($$=$1)->push_back($2); }
+     | Input Option          { ($$=$1)->push_back($2); }
+     | Input Enum            { ($$=$1)->push_back($2); }
+     | Input CustomCode      { ($$=$1)->push_back(new TF_custom($2)); }
      | Input ";"             { $$=$1; }     /* ignore extraneous semis */
      ;
 
@@ -133,13 +133,13 @@ Input: /* empty */           { $$ = new ASTList<ToplevelForm>; }
 /* yields TF_class */
 Class: NewOpt "class" TOK_NAME CtorArgsOpt BaseClassesOpt ClassBody
          { ($$=$6)->super->name = unbox($3);
-           $$->super->args.steal($4);
-           $$->super->bases.steal($5); }
+           astSteal($$->super->args, $4);
+           astSteal($$->super->bases, $5); }
      | NewOpt "class" TOK_NAME CtorArgs CtorArgs BaseClassesOpt ClassBody
          { ($$=$7)->super->name = unbox($3);
-           $$->super->args.steal($4);
-           $$->super->lastArgs.steal($5);
-           $$->super->bases.steal($6); }
+           astSteal($$->super->args, $4);
+           astSteal($$->super->lastArgs, $5);
+           astSteal($$->super->bases, $6); }
      ;
 
 /* for now, just allow "new" but don't interpret it */
@@ -168,11 +168,11 @@ ClassMembersOpt
   : /* empty */
       { $$ = new TF_class(new ASTClass("(placeholder)", NULL, NULL, NULL, NULL), NULL); }
   | ClassMembersOpt "->" TOK_NAME CtorArgsOpt BaseClassesOpt ";"
-      { ($$=$1)->ctors.append(new ASTClass(unbox($3), $4, NULL, $5, NULL)); }
+      { ($$=$1)->ctors.push_back(new ASTClass(unbox($3), $4, NULL, $5, NULL)); }
   | ClassMembersOpt "->" TOK_NAME CtorArgsOpt BaseClassesOpt "{" CtorMembersOpt "}"
-      { ($$=$1)->ctors.append(new ASTClass(unbox($3), $4, NULL, $5, $7)); }
+      { ($$=$1)->ctors.push_back(new ASTClass(unbox($3), $4, NULL, $5, $7)); }
   | ClassMembersOpt Annotation
-      { ($$=$1)->super->decls.append($2); }
+      { ($$=$1)->super->decls.push_back($2); }
   ;
 
 /* empty ctor args can have parens or not, at user's discretion */
@@ -197,11 +197,11 @@ CtorArgList: Arg
                { $$ = new ASTList<CtorArg>;
                  {
                    string tmp = unbox($1);
-                   $$->append(parseCtorArg(tmp));
+                   $$->push_back(parseCtorArg(tmp));
                  }
                }
            | CtorArgList "," Arg
-               { ($$=$1)->append(parseCtorArg(unbox($3))); }
+               { ($$=$1)->push_back(parseCtorArg(unbox($3))); }
            ;
 
 /* yields string */
@@ -234,7 +234,7 @@ CtorMembersOpt
   : /* empty */
       { $$ = new ASTList<Annotation>; }
   | CtorMembersOpt Annotation
-      { ($$=$1)->append($2); }
+      { ($$=$1)->push_back($2); }
   ;
 
 /* yields Annotation */
@@ -280,9 +280,9 @@ AccessMod: Public
 
 /* yield ASTList<string> */
 StringList: TOK_NAME
-              { $$ = new ASTList<string>($1); }
+              { $$ = new ASTList<string>(1, $1); }
           | StringList "," TOK_NAME
-              { ($$=$1)->append($3); }
+              { ($$=$1)->push_back($3); }
           ;
 
 /* yields TF_verbatim */
@@ -301,7 +301,7 @@ Option: "option" TOK_NAME OptionArgs ";"
 OptionArgs: /*empty*/
               { $$ = new ASTList<string>; }
           | OptionArgs TOK_NAME
-              { ($$=$1)->append($2); }
+              { ($$=$1)->push_back($2); }
           ;
 
 /* yields TF_enum */
@@ -313,9 +313,9 @@ Enum: "enum" TOK_NAME "{" EnumeratorSeq "}"
 
 /* yields ASTList<string> */
 EnumeratorSeq: Enumerator
-                 { $$ = new ASTList<string>($1); }
+                 { $$ = new ASTList<string>(1, $1); }
              | EnumeratorSeq "," Enumerator
-                 { ($$=$1)->append($3); }
+                 { ($$=$1)->push_back($3); }
              ;
 
 /* yields string */
@@ -332,9 +332,9 @@ BaseClassesOpt: /* empty */
 
 /* yields ASTList<BaseClass> */
 BaseClassSeq: BaseClass
-                { $$ = new ASTList<BaseClass>($1); }
+                { $$ = new ASTList<BaseClass>(1, $1); }
             | BaseClassSeq "," BaseClass
-                { ($$=$1)->append($3); }
+                { ($$=$1)->push_back($3); }
             ;
 
 /* yields AccessCtl */

@@ -83,7 +83,7 @@ void TF_func::itcheck(Env &env)
 
   // as a hack for my path-counting logic, make sure the
   // function doesn't end with a looping construct
-  body->stmts.append(new S_skip(SL_UNKNOWN));
+  body->stmts.push_back(new S_skip(SL_UNKNOWN));
 
   // put parameters into the environment
   env.enterScope();

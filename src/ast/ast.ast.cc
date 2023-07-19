@@ -9,7 +9,7 @@
 // *** DO NOT EDIT ***
 ASTSpecFile::~ASTSpecFile()
 {
-  forms.deleteAll();
+  deleteAll(forms);
 }
 
 void ASTSpecFile::debugPrint(std::ostream &os, int indent, char const *subtreeName) const
@@ -98,7 +98,7 @@ DEFN_AST_DOWNCASTS(ToplevelForm, TF_class, TF_CLASS)
 TF_class::~TF_class()
 {
   delete super;
-  ctors.deleteAll();
+  deleteAll(ctors);
 }
 
 void TF_class::debugPrint(std::ostream &os, int indent, char const *subtreeName) const
@@ -201,10 +201,10 @@ TF_enum *TF_enum::clone() const
 // *** DO NOT EDIT ***
 ASTClass::~ASTClass()
 {
-  args.deleteAll();
-  lastArgs.deleteAll();
-  bases.deleteAll();
-  decls.deleteAll();
+  deleteAll(args);
+  deleteAll(lastArgs);
+  deleteAll(bases);
+  deleteAll(decls);
 }
 
 void ASTClass::debugPrint(std::ostream &os, int indent, char const *subtreeName) const
