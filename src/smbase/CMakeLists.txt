@@ -24,6 +24,4 @@ add_library(smbase STATIC
     syserr.cpp
     trace.cc
     trdelete.cc
-    vdtllist.cc
-    voidlist.cc
 )
