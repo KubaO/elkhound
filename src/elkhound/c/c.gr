@@ -144,7 +144,7 @@ nonterm[TranslationUnit*] TranslationUnit {
   -> t:TranslationUnit d:Declaration      [ t->topForms.push_back(d); return t; ]
 
   // allow assembly at toplevel for gnu compatibility
-  -> t:TranslationUnit a:GNUAsmStatement  [ return t; ]    // drop 'asm' for now
+  -> t:TranslationUnit a:GNUAsmStatement  [ (void)a; return t; ]    // drop 'asm' for now
 
   // gnu extension: allow random semicolons at toplevel
   -> t:TranslationUnit ";"                [ return t; ]

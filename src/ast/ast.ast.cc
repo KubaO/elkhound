@@ -17,6 +17,7 @@ void ASTSpecFile::debugPrint(std::ostream &os, int indent, char const *subtreeNa
   PRINT_HEADER(subtreeName, ASTSpecFile);
 
   PRINT_LIST(ToplevelForm, forms);
+  (void)os, (void)indent;
 }
 
 ASTSpecFile *ASTSpecFile::clone() const
@@ -45,6 +46,7 @@ char const * const ToplevelForm::kindNames[ToplevelForm::NUM_KINDS] = {
 
 void ToplevelForm::debugPrint(std::ostream &os, int indent, char const *subtreeName) const
 {
+  (void)os, (void)indent, (void)subtreeName;
 }
 
 DEFN_AST_DOWNCASTS(ToplevelForm, TF_verbatim, TF_VERBATIM)
@@ -216,6 +218,7 @@ void ASTClass::debugPrint(std::ostream &os, int indent, char const *subtreeName)
   PRINT_LIST(CtorArg, lastArgs);
   PRINT_LIST(BaseClass, bases);
   PRINT_LIST(Annotation, decls);
+  (void)os, (void)indent;
 }
 
 ASTClass *ASTClass::clone() const
@@ -244,6 +247,7 @@ void AccessMod::debugPrint(std::ostream &os, int indent, char const *subtreeName
 
   PRINT_GENERIC(acc);
   PRINT_LIST(string, mods);
+  (void)os, (void)indent;
 }
 
 AccessMod *AccessMod::clone() const
@@ -269,6 +273,7 @@ char const * const Annotation::kindNames[Annotation::NUM_KINDS] = {
 
 void Annotation::debugPrint(std::ostream &os, int indent, char const *subtreeName) const
 {
+  (void)os, (void)indent, (void)subtreeName;
 }
 
 DEFN_AST_DOWNCASTS(Annotation, UserDecl, USERDECL)
@@ -339,6 +344,7 @@ void CtorArg::debugPrint(std::ostream &os, int indent, char const *subtreeName) 
   PRINT_STRING(type);
   PRINT_STRING(name);
   PRINT_STRING(defaultValue);
+  (void)os, (void)indent;
 }
 
 CtorArg *CtorArg::clone() const
@@ -365,6 +371,7 @@ void BaseClass::debugPrint(std::ostream &os, int indent, char const *subtreeName
 
   PRINT_GENERIC(access);
   PRINT_STRING(name);
+  (void)os, (void)indent;
 }
 
 BaseClass *BaseClass::clone() const

@@ -644,11 +644,11 @@ string locToStr(SourceLoc sl)
 }
 
 // this code simply defeats the xml serialization of SourceLoc-s
-string toXml(SourceLoc index) {
+string toXml(SourceLoc /*index*/) {
   return "0";
 }
 
-void fromXml(SourceLoc &out, string str) {
+void fromXml(SourceLoc &out, string) {
   out = SL_UNKNOWN;
 }
 

@@ -36,6 +36,9 @@ public:    // funcs
   // string with location info
   string locString() const { return toString(loc); }
 
+  // are we non-empty?
+  explicit operator bool() const { return str && length() > 0; }
+
   // (read-only) string-like behavior
   friend std::ostream& operator<< (std::ostream &os, LocString const &loc)
     { return os << loc.str; }

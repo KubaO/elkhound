@@ -53,7 +53,7 @@ using StringHash = std::unordered_set<string_view>;
 ParseTables *tables;
 
 class CCLang;
-UserActions *makeUserActions(StringTable &table, CCLang &lang)
+UserActions *makeUserActions(StringTable &table, CCLang &/*lang*/)
 {
   ParseEnv *ret = new ParseEnv(table);
   tables = ret->makeTables();

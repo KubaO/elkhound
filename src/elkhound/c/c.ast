@@ -314,6 +314,7 @@ class Statement (SourceLoc loc) {
   ctor numPaths=0;
 
   custom debugPrint {
+    (void)subtreeName;
     ind(os, indent) << "numPaths=" << numPaths
                     << ", succ=" << successorsToString()
                     << std::endl;
@@ -390,6 +391,7 @@ class Expression {
   // print numPaths and type
   public string extrasToString() const;
   custom debugPrint {
+    (void)subtreeName;
     ind(os, indent) << extrasToString() << "\n";
   }
 

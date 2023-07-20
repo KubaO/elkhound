@@ -263,7 +263,7 @@ void Nonterminal::xfer(Flatten &flat)
   keepCode.xfer(flat);
 }
 
-void Nonterminal::xferSerfs(Flatten &flat, Grammar &g)
+void Nonterminal::xferSerfs(Flatten &flat, Grammar &)
 {
   // annotation
   flat.xferInt(ntIndex);
@@ -480,7 +480,7 @@ void Production::RHSElt::xfer(Flatten &flat)
   tag.xfer(flat);
 }
 
-void Production::RHSElt::xferSerfs(Flatten &flat, Grammar &g)
+void Production::RHSElt::xferSerfs(Flatten &flat, Grammar &)
 {
   xferSerfPtr(flat, sym);
 }
@@ -495,7 +495,9 @@ Production::Production(Nonterminal *L, char const *Ltag)
     rhsLen(-1),
     prodIndex(-1),
     firstSet(0)       // don't allocate bitmap yet
-{}
+{
+  (void)Ltag;
+}
 
 Production::~Production()
 {}

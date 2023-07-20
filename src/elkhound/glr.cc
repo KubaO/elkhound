@@ -1180,6 +1180,7 @@ STATICDEF bool GLR
 // ambiguity, just show one...
 string stackTraceString(StackNode *parser)
 {
+  (void)parser;
   // hmm.. what to do about cyclic stacks?
   return string("need to think about this some more..");
 }

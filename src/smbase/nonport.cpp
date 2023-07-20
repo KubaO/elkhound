@@ -73,6 +73,7 @@ void setRawMode(bool raw)
 {
 # if defined(__WIN32__) || defined(_MSC_VER)
     // nothing necessary; getConsoleChar handles it
+    (void)raw;
 
 # else
     int res;
@@ -558,6 +559,7 @@ int getProcessId()
 
   static int counting_output_function(void *extra, int ch)
   {
+    (void)ch;
     // 'extra' is a pointer to the count
     int *ct = (int*)extra;
     (*ct)++;

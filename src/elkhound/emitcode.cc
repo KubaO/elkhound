@@ -113,3 +113,11 @@ void EmitCode::restoreLine()
   *this << hashLine() << line
         << " \"" << getFname() << "\"\n";
 }
+
+
+STATICDEF bool EmitCode::isParamUsed(string_view name, string_view body)
+{
+  // This is a very simple heuristic. C lexer1 should be used instead
+  // to see if a token equal to the name is exists in the body
+  return body.find(name) != string_view::npos;
+}

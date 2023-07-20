@@ -45,7 +45,7 @@ private:
   }
 
 public:
-  RCPtr(std::nullptr_t p = nullptr) noexcept { RCPTR_DBG("cnull"); }
+  RCPtr(std::nullptr_t p = nullptr) noexcept { (void)p; RCPTR_DBG("cnull"); }
 
   explicit RCPtr(T* p, RCPtrAcquire) noexcept : ptr(p) { RCPTR_DBG("acq"); inc(); }
 

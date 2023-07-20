@@ -451,6 +451,7 @@ static string quotedUnescape(string_view src, char delim, bool allowNewlines)
 //  - preprocessor actions are performed: inclusion and macro expansion
 void lexer2_lex(Lexer2 &dest, Lexer1 const &src, char const *fname)
 {
+  (void)fname;
   // keep track of previous L2 token emitted so we can do token
   // collapsing for string juxtaposition
   Lexer2Token *prevToken = NULL;

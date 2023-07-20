@@ -10,6 +10,7 @@
 
 void grammarExplorer(GrammarAnalysis &g)
 {
+  (void)g;
   std::cout << "exploring the grammar:\n";
 
   #if 0

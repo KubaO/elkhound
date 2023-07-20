@@ -248,6 +248,7 @@ ActionEntry ParseTables::encodeShift(StateId destState, int shiftedTermId)
     int delta = destState - firstWithTerminal[shiftedTermId];
     return makeAE(AE_SHIFT, delta);
   #else
+    (void)shiftedTermId;
     return validateAction(+destState+1);
   #endif
 }
@@ -284,6 +285,7 @@ ActionEntry ParseTables::encodeReduce(int prodId, StateId inWhatState)
     }
 
   #else
+    (void)inWhatState;
     return validateAction(-prodId-1);
   #endif
 }
@@ -326,6 +328,7 @@ ActionEntry ParseTables::encodeAmbig
     }
 
   #else
+    (void)inWhatState;
     int end = temp->ambigTable.size();
     appendAmbig(set);
     return validateAction(numStates+end+1);
@@ -375,6 +378,7 @@ GotoEntry ParseTables::encodeGoto(StateId destState, int shiftedNontermId) const
     int delta = destState - firstWithNonterminal[shiftedNontermId];
     return validateGoto(delta);
   #else
+    (void)shiftedNontermId;
     return validateGoto(destState);
   #endif
 }
@@ -1194,7 +1198,7 @@ void emitOffsetTable(EmitCode &out, EltType **table, EltType *base, int size,
 // for debugging
 template <class EltType>
 void printTable(EltType const *table, int size, int rowLength,
-                rostring typeName, rostring tableName)
+                rostring typeName, rostring shiftedNontermId)
 {
   // disabled for now since I don't need it anymore, and it adds
   // a link dependency on emitcode.cc ...
@@ -1205,6 +1209,9 @@ void printTable(EltType const *table, int size, int rowLength,
   }
 
   system("cat printTable.tmp; rm printTable.tmp");
+  #else
+    (void)table, (void)size, (void)rowLength, (void)typeName;
+    (void)shiftedNontermId;
   #endif // 0
 }
 

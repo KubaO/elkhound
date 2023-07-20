@@ -53,7 +53,7 @@ void Env::set(char const *x, int val)
 
 
 // -------------------- AExp -------------------
-int A_lit::eval(Env &env)
+int A_lit::eval(Env &)
 {
   return n;
 }
@@ -75,7 +75,7 @@ int A_bin::eval(Env &env)
 
 
 // -------------------- BExp -------------------
-bool B_lit::eval(Env &env)
+bool B_lit::eval(Env &)
 {
   return b;
 }
@@ -105,10 +105,10 @@ bool B_bin::eval(Env &env)
 
 
 // -------------------- Stmt -------------------
-void S_skip::eval(Env &env)
+void S_skip::eval(Env &)
 {}
 
-void S_abort::eval(Env &env)
+void S_abort::eval(Env &)
 {
   printf("abort command executed\n");
   exit(0);

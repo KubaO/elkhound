@@ -1113,12 +1113,14 @@ void CGen::emitTFClass(TF_class const &cls)
 
 
   // debugPrint
+  bool debugPrintHasCode = false;
   out << "void " << cls.super->name << "::debugPrint(std::ostream &os, int indent, char const *subtreeName) const\n";
   out << "{\n";
   if (!cls.hasChildren()) {
     // childless superclasses get the preempt in the superclass;
     // otherwise it goes into the child classes
-    emitCustomCode(cls.super->decls, "preemptDebugPrint");
+    debugPrintHasCode = debugPrintHasCode ||
+                        emitCustomCode(cls.super->decls, "preemptDebugPrint");
 
     // childless superclasses print headers; otherwise the subclass
     // prints the header
@@ -1128,15 +1130,24 @@ void CGen::emitTFClass(TF_class const &cls)
 
   // 10/31/01: decided I wanted custom debug print first, since it's
   // often much shorter (and more important) than the subtrees
-  emitCustomCode(cls.super->decls, "debugPrint");
+  debugPrintHasCode = debugPrintHasCode ||
+                      emitCustomCode(cls.super->decls, "debugPrint");
   emitPrintCtorArgs(cls.super->args);
   if (!cls.super->lastArgs.empty()) {
     out << "  // (lastArgs are printed by subclasses)\n";
   }
   emitPrintFields(cls.super->decls);
 
-  out << "}\n";
-  out << "\n";
+  if (!debugPrintHasCode) {
+
+    out << "  (void)os, (void)indent";
+    if (cls.hasChildren()) {
+      out << ", (void)subtreeName";
+    }
+    out << ";\n";
+  }
+  out << "}\n"
+         "\n";
 
   // gdb()
   if (wantGDB) {
@@ -1921,7 +1932,7 @@ void CGen::emitXmlFields(ASTList<Annotation> const &decls, char const *baseName,
 }
 
 void CGen::emitXmlField(rostring type, rostring name, char const *baseName,
-                        string const &className, AccessMod *amod) {
+                        string const &/*className*/, AccessMod* amod) {
   if (name == "arraySize") {
     breaker();
   }
@@ -2482,7 +2493,7 @@ void XmlParserGen::collectXmlParserFields(ASTList<Annotation> const &decls, char
 // FIX: this is now very redundant, but we can still change it to
 // exclude some fields of some types, so lets keep it for now.
 void XmlParserGen::collectXmlParserField
-  (rostring type, rostring name, char const *baseName, AccessMod*)
+  (rostring type, rostring name, char const */*baseName*/, AccessMod*)
 {
   if (type == "string") {
     attributeNames.insert(name);
@@ -2665,13 +2676,13 @@ void XmlParserGen::emitXmlParser_Node
   (ASTClass const *clazz,
 
    ASTList<CtorArg> const *args,
-   ASTList<Annotation> const *decls,
+   ASTList<Annotation> const */*decls*/,
    ASTList<CtorArg> const *lastArgs,
 
    // these two default to NULL, which is used in the case of a top
    // level class with no subclasses
    ASTList<CtorArg> const *childArgs,
-   ASTList<Annotation> const *childDecls)
+   ASTList<Annotation> const */*childDecls*/)
 {
   string name = clazz->name;
 

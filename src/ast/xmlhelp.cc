@@ -64,6 +64,6 @@ string toXml_SourceLoc(SourceLoc loc) {
   return SourceLocManager::instance()->getString(loc);
 }
 
-void fromXml_SourceLoc(SourceLoc &loc, rostring str) {
+void fromXml_SourceLoc(SourceLoc &, rostring) {
   xfailure("not implemented");
 }

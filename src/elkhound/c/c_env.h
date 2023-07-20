@@ -156,8 +156,8 @@ public:     // data
   CCLang &lang;
 
 private:    // funcs
-  void grab(Type const *t) {}
-  void grabAtomic(AtomicType const *t) {}
+  void grab(Type const *) {}
+  void grabAtomic(AtomicType const *) {}
 
   Env(Env&);               // not allowed
 
