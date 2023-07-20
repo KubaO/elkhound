@@ -1,5 +1,6 @@
 // emitcode.h            see license.txt for copyright and terms of use
 // track state of emitted code so I can emit #line too
+// check if line numbers
 
 #ifndef EMITCODE_H
 #define EMITCODE_H
@@ -28,6 +29,10 @@ public:      // funcs
 
   // emit a #line directive to restore reporting to the
   void restoreLine();
+
+  // is a parameter used in a given body of a function
+  // a heuristic that can be improved
+  static bool isParamUsed(string_view name, string_view body);
 };
 
 
