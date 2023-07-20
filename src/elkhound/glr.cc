@@ -1556,12 +1556,8 @@ ReductionPathQueue::Path::Path()
     startColumn(-1),
     leftEdgeNode(NULL),
     sibLinks(INITIAL_RHSLEN_SIZE),
-    symbols(INITIAL_RHSLEN_SIZE)
-{
-  next = NULL;
-}
-
-ReductionPathQueue::Path::~Path()
+    symbols(INITIAL_RHSLEN_SIZE),
+    next(NULL)
 {}
 
 

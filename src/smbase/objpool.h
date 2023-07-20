@@ -10,11 +10,8 @@
 #include <vector>     // std::vector
 
 // the class T should have:
-//   // a link in the free list; it is ok for T to re-use this
-//   // member while the object is not free in the pool
-//   T *nextInFreeList;
 //
-//   // object is done being used for now
+//   // object is done being used for now - a cheaper destructor
 //   void deinit();
 //
 //   // needed so we can make arrays
@@ -22,6 +19,12 @@
 
 template <class T>
 class ObjectPool {
+private:     // types
+  struct Block {
+    T value;
+    Block* nextInFreeList = nullptr;
+  };
+
 private:     // data
   // when the pool needs to expand, it expands by allocating an
   // additional 'rackSize' objects; I use a linear (instead of
@@ -31,10 +34,10 @@ private:     // data
   int const rackSize;
 
   // growable array of pointers to arrays of 'rackSize' T objects
-  std::vector<T*> racks;
+  std::vector<Block *> racks;
 
   // head of the free list; NULL when empty
-  T *head = nullptr;
+  Block *head = nullptr;
 
   // whether we're destroying the pool
   bool inDestructor = false;
@@ -76,7 +79,7 @@ ObjectPool<T>::~ObjectPool()
   inDestructor = true;
 
   // deallocate all the racks
-  for (T* rack : racks) {
+  for (Block *rack : racks) {
     delete[] rack;
   }
 }
@@ -92,14 +95,14 @@ inline T *ObjectPool<T>::alloc()
     expandPool();
   }
 
-  T *ret = head;                     // prepare to return this one
-  head = ret->nextInFreeList;        // move to next free node
+  Block *ret = head;               // prepare to return this one
+  head = head->nextInFreeList;     // move to next free node
 
-  #ifndef NDEBUG
-    ret->nextInFreeList = NULL;        // paranoia
-  #endif
+#ifndef NDEBUG
+  ret->nextInFreeList = NULL;      // helps with debugging
+#endif
 
-  return ret;
+  return &ret->value;
 }
 
 
@@ -110,7 +113,7 @@ void ObjectPool<T>::expandPool()
 {
   xassert(!inDestructor);
 
-  T *rack = new T[rackSize];
+  Block *rack = new Block[rackSize];
   racks.push_back(rack);
 
   // thread new nodes into a free list
@@ -136,8 +139,9 @@ inline void ObjectPool<T>::dealloc(T *obj)
     // field that gets used while the node is allocated
 
     // prepend the object to the free list; will be next yielded
-    obj->nextInFreeList = head;
-    head = obj;
+    Block *blk = reinterpret_cast<Block *>(obj);
+    blk->nextInFreeList = head;
+    head = blk;
   }
 }
 
@@ -145,7 +149,7 @@ inline void ObjectPool<T>::dealloc(T *obj)
 template <class T>
 int ObjectPool<T>::freeObjectsInPool() const
 {
-  T *p = head;
+  Block *p = head;
   int ct = 0;
 
   while (p) {
