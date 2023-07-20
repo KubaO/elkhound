@@ -25,3 +25,5 @@ add_library(smbase STATIC
     trace.cc
     trdelete.cc
 )
+
+target_link_libraries(smbase PUBLIC fmt::fmt)
