@@ -8,6 +8,7 @@
 #include "trace.h"     // traceAddSys
 
 #include <assert.h>    // assert
+#include <fmt/core.h>  // fmt::format
 
 
 // ------------------ ArithLexer ------------------
@@ -43,7 +44,7 @@ char const *toString(ArithTokenCodes code)
 string ArithLexer::tokenDesc() const
 {
   if (type == TOK_NUMBER) {
-    return stringc << "number(" << (int)sval << ")";
+    return fmt::format("number({})", (int)sval);
   }
   else {
     return toString((ArithTokenCodes)type);

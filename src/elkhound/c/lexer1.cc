@@ -72,14 +72,21 @@ Lexer1::~Lexer1()
 }
 
 
-// eventually I want this to store the errors in a list of objects...
-void Lexer1::error(char const *msg)
+void Lexer1::printErrorLoc()
 {
-  char const *fname;
+  char const* fname;
   int line, col;
   SourceLocManager::instance()->decodeLineCol(loc, fname, line, col);
 
-  printf("[L1] Error at line %d, col %d: %s\n", line, col, msg);
+  printf("[L1] Error at line %d, col %d: ", line, col);
+}
+
+
+// eventually I want this to store the errors in a list of objects...
+void Lexer1::error(char const *msg)
+{
+  printErrorLoc();
+  printf("%s\n", msg);
   errors++;
 }
 
@@ -97,7 +104,8 @@ void Lexer1::emit(Lexer1TokenType toktype, char const *tokenText, int length)
 
   // illegal tokens should be noted
   if (toktype == L1_ILLEGAL) {
-    error(stringc << "illegal token: `" << tokenText << "'" << c_str);
+    printErrorLoc();
+    printf("illegal token: `%s'\n", tokenText);
   }
 
   // update line and column counters

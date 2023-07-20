@@ -220,7 +220,8 @@ public:
 };
 
 void throw_XFatal(rostring msg) NORETURN;
-#define xfatal(msg) throw_XFatal(stringc << msg)
+#define xfatal(msg) \
+  do { std::string str;  str << msg;  throw_XFatal(str.c_str()); } while (0)
 
 
 #endif // EXC_H

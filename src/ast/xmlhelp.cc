@@ -12,7 +12,7 @@ void fromXml_bool(bool &b, rostring str) {
 
 
 string toXml_int(int i) {
-  return stringc << i;
+  return std::to_string(i);
 }
 
 void fromXml_int(int &i, rostring str) {
@@ -22,7 +22,7 @@ void fromXml_int(int &i, rostring str) {
 
 
 string toXml_long(long i) {
-  return stringc << i;
+  return std::to_string(i);
 }
 
 void fromXml_long(long &i, rostring str) {
@@ -32,7 +32,7 @@ void fromXml_long(long &i, rostring str) {
 
 
 string toXml_unsigned_int(unsigned int i) {
-  return stringc << i;
+  return std::to_string(i);
 }
 
 void fromXml_unsigned_int(unsigned int &i, rostring str) {
@@ -42,7 +42,7 @@ void fromXml_unsigned_int(unsigned int &i, rostring str) {
 
 
 string toXml_unsigned_long(unsigned long i) {
-  return stringc << i;
+  return std::to_string(i);
 }
 
 void fromXml_unsigned_long(unsigned long &i, rostring str) {
@@ -52,7 +52,7 @@ void fromXml_unsigned_long(unsigned long &i, rostring str) {
 
 
 string toXml_double(double x) {
-  return stringc << x;
+  return std::to_string(x);
 }
 
 void fromXml_double(double &x, rostring str) {
