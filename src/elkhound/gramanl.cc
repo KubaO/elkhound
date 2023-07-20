@@ -4675,7 +4675,7 @@ void emitDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
   if (sym.dupCode) {
     emitFuncDecl(g, out, dcl, symType,
       stringc << "dup_" << sym.name
-              << "(" << symType << " " << sym.dupParam << ") ");
+              << "(" << symType << " " << sym.dupParam << ")");
     emitUserCode(out, sym.dupCode);
   }
 
@@ -4683,7 +4683,7 @@ void emitDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
     emitFuncDecl(g, out, dcl, "void",
       stringc << "del_" << sym.name
               << "(" << symType << " "
-              << (sym.delParam? sym.delParam : "") << ") ");
+              << (sym.delParam? sym.delParam : "") << ")");
     emitUserCode(out, sym.delCode);
   }
 
@@ -4691,7 +4691,7 @@ void emitDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
     emitFuncDecl(g, out, dcl, symType,
       stringc << "merge_" << sym.name
               << "(" << symType << " " << nonterm->mergeParam1
-              << ", " << symType << " " << nonterm->mergeParam2 << ") ");
+              << ", " << symType << " " << nonterm->mergeParam2 << ")");
     emitUserCode(out, nonterm->mergeCode);
   }
 
