@@ -1113,12 +1113,14 @@ void CGen::emitTFClass(TF_class const &cls)
 
 
   // debugPrint
+  bool debugPrintHasCode = false;
   out << "void " << cls.super->name << "::debugPrint(std::ostream &os, int indent, char const *subtreeName) const\n";
   out << "{\n";
   if (!cls.hasChildren()) {
     // childless superclasses get the preempt in the superclass;
     // otherwise it goes into the child classes
-    emitCustomCode(cls.super->decls, "preemptDebugPrint");
+    debugPrintHasCode = debugPrintHasCode ||
+                        emitCustomCode(cls.super->decls, "preemptDebugPrint");
 
     // childless superclasses print headers; otherwise the subclass
     // prints the header
@@ -1128,15 +1130,24 @@ void CGen::emitTFClass(TF_class const &cls)
 
   // 10/31/01: decided I wanted custom debug print first, since it's
   // often much shorter (and more important) than the subtrees
-  emitCustomCode(cls.super->decls, "debugPrint");
+  debugPrintHasCode = debugPrintHasCode ||
+                      emitCustomCode(cls.super->decls, "debugPrint");
   emitPrintCtorArgs(cls.super->args);
   if (!cls.super->lastArgs.empty()) {
     out << "  // (lastArgs are printed by subclasses)\n";
   }
   emitPrintFields(cls.super->decls);
 
-  out << "}\n";
-  out << "\n";
+  if (!debugPrintHasCode) {
+
+    out << "  (void)os, (void)indent";
+    if (cls.hasChildren()) {
+      out << ", (void)subtreeName";
+    }
+    out << ";\n";
+  }
+  out << "}\n"
+         "\n";
 
   // gdb()
   if (wantGDB) {

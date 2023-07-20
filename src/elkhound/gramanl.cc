@@ -4466,6 +4466,7 @@ void emitActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
     SOURCELOC( ct++ );    // if we printed the 'loc' param, count it
 
     // iterate over RHS elements, emitting formals for each with a tag
+    string_view actionCode = prod.action.str;
     for (auto const& elt : prod.right) {
       if (elt.tag.length() == 0) continue;
 
@@ -4478,7 +4479,10 @@ void emitActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
       dcl << typeString(elt.sym->type, elt.tag);
 
       // the tag becomes the formal parameter's name
-      out << " " << elt.tag;
+      if (EmitCode::isParamUsed(elt.tag.str, actionCode)) {
+        // emit a parameter name only if the action code seems to refer to it
+        out << " " << elt.tag;
+      }
       dcl << " " << elt.tag;
     }
 
@@ -4765,7 +4769,8 @@ void emitSwitchCode(Grammar const &g, EmitCode &out,
     case 0:    // unspecified dup
       if (!g.useGCDefaults) {
         // not using GC, return NULL so silent sharing doesn't happen
-        out << "      return (SemanticValue)0;\n";
+        out << "      (void)sval;\n" // otherwise sval may be unreferenced
+               "      return (SemanticValue)0;\n";
       }
       else {
         // using GC, sharing is fine
@@ -4778,7 +4783,8 @@ void emitSwitchCode(Grammar const &g, EmitCode &out,
         // warn about unspec'd del, since it's probably a memory leak
         if (syms.front().isNonterminal()) {
           // use the nonterminal map
-          out << "      std::cout << \"WARNING: there is no action to deallocate nonterm \"\n"
+          out << "      (void)sval;\n" // otherwise sval may be unreferenced
+                 "      std::cout << \"WARNING: there is no action to deallocate nonterm \"\n"
                  "           << nontermNames[" << switchVar << "] << std::endl;\n";
         }
         else {
@@ -4790,6 +4796,7 @@ void emitSwitchCode(Grammar const &g, EmitCode &out,
           // fixed by reducing the syms list to its least index and
           // emitting that instead. /FL
           out <<
+            "      (void)sval;\n"
             "      int arrayMin = 0;\n"
             "      int arrayMax = " << syms.size() << ";\n"
             "      xassert(" << switchVar << " >= arrayMin &&"
@@ -4800,7 +4807,7 @@ void emitSwitchCode(Grammar const &g, EmitCode &out,
       }
       else {
         // in gc mode, just ignore del
-        out << "      break;\n";
+        out << "      (void)sval; break;\n";
       }
       break;
 
@@ -4808,9 +4815,10 @@ void emitSwitchCode(Grammar const &g, EmitCode &out,
       char const *w = g.defaultMergeAborts? "error: " : "WARNING: ";
       out << "      std::cout << toString(loc) \n"
           << "           << \": " << w << "there is no action to merge nonterm \"\n"
-          << "           << nontermNames[" << switchVar << "] << std::endl;\n";
+          << "           << nontermNames[" << switchVar << "] << std::endl;\n"
+      "      (void)right;";
       if (g.defaultMergeAborts) {
-        out << "      abort();\n";
+        out << "      (void)left; abort();\n";
       }
       else {
         out << "      return left;\n";
@@ -4819,11 +4827,11 @@ void emitSwitchCode(Grammar const &g, EmitCode &out,
     }
 
     case 3:    // unspecified keep: keep it
-      out << "      return true;\n";
+      out << "      (void)sval; return true;\n";
       break;
 
     case 4:    // unspecified classifier: identity map
-      out << "      return oldTokenType;\n";
+      out << "      (void)ths, (void)sval; return oldTokenType;\n";
       break;
   }
 
