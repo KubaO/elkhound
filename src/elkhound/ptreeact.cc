@@ -60,6 +60,7 @@ STATICDEF SemanticValue ParseTreeActions::reduce(
   SemanticValue const *svals
   SOURCELOCARG( SourceLoc loc ) )
 {
+  SOURCELOC( (void)loc; )
   ParseTreeActions *ths = static_cast<ParseTreeActions*>(context);
 
   // get info about this production
@@ -83,6 +84,7 @@ SemanticValue ParseTreeActions::mergeAlternativeParses(
   int ntIndex, SemanticValue left, SemanticValue right
   SOURCELOCARG( SourceLoc loc ) )
 {
+  SOURCELOC((void)loc; )
   trace("ptreeactMerge") << underlying->nonterminalName(ntIndex) << "\n";
 
   // link the ambiguities together in the usual way

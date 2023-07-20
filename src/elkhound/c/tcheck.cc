@@ -575,8 +575,8 @@ void /*Type const * */D_array::itcheck(Env &env, Type const *elttype,
 }
 
 
-void /*Type const * */D_bitfield::itcheck(Env &env, Type const *base,
-                                          DeclFlags dflags, Declarator *declarator)
+void /*Type const * */D_bitfield::itcheck(Env &, Type const */*base*/,
+                                          DeclFlags, Declarator *)
 {
   trace("tcheck")
     << "found bitfield declarator name: "
@@ -622,7 +622,7 @@ void Statement::tcheck(Env &env)
 }
 
 
-void S_skip::itcheck(Env &env)
+void S_skip::itcheck(Env &)
 {}
 
 void S_label::itcheck(Env &env)
@@ -773,7 +773,7 @@ void S_for::tcheck(Env &env)
 }
 
 
-void S_for::itcheck(Env &env)
+void S_for::itcheck(Env &)
 {
   xfailure("should not be called");
 
@@ -979,13 +979,13 @@ Type const *Expression::tcheck(Env &env)
 }
 
 
-Type const *E_intLit::itcheck(Env &env)
+Type const *E_intLit::itcheck(Env &)
 {
   return fixed(ST_INT);
 }
 
 
-Type const *E_floatLit::itcheck(Env &env)
+Type const *E_floatLit::itcheck(Env &)
 {
   return fixed(ST_FLOAT);
 }
@@ -997,7 +997,7 @@ Type const *E_stringLit::itcheck(Env &env)
 }
 
 
-Type const *E_charLit::itcheck(Env &env)
+Type const *E_charLit::itcheck(Env &)
 {
   return fixed(ST_CHAR);
 }
@@ -1485,18 +1485,18 @@ int Expression::xnonconst() const
 }
 
 
-int E_intLit::constEval(Env &env) const
+int E_intLit::constEval(Env &) const
 {
   return i;
 }
 
-int E_charLit::constEval(Env &env) const
+int E_charLit::constEval(Env &) const
 {
   return c;
 }
 
 
-int E_sizeof::constEval(Env &env) const
+int E_sizeof::constEval(Env &) const
 {
   return size;
 }
@@ -1513,7 +1513,7 @@ int E_unary::constEval(Env &env) const
   }
 }
 
-int E_effect::constEval(Env &env) const
+int E_effect::constEval(Env &) const
 {
   return xnonconst();
 }
@@ -1556,26 +1556,26 @@ int E_cast::constEval(Env &env) const
 }
 
 
-int E_sizeofType::constEval(Env &env) const
+int E_sizeofType::constEval(Env &) const
 {
   return size;
 }
 
 
-int E_floatLit::constEval(Env &env) const { return xnonconst(); }
-int E_stringLit::constEval(Env &env) const { return xnonconst(); }
-//int E_structLit::constEval(Env &env) const { return xnonconst(); }
-int E_variable::constEval(Env &env) const { return xnonconst(); }
-int E_funCall::constEval(Env &env) const { return xnonconst(); }
-int E_fieldAcc::constEval(Env &env) const { return xnonconst(); }
-int E_addrOf::constEval(Env &env) const { return xnonconst(); }
-int E_deref::constEval(Env &env) const { return xnonconst(); }
-int E_cond::constEval(Env &env) const { return xnonconst(); }
-//int E_gnuCond::constEval(Env &env) const { return xnonconst(); }
-int E_comma::constEval(Env &env) const { return xnonconst(); }
-int E_assign::constEval(Env &env) const { return xnonconst(); }
-int E_new::constEval(Env &env) const { return xnonconst(); }
-int E_quantifier::constEval(Env &env) const { return xnonconst(); }
+int E_floatLit::constEval(Env &) const { return xnonconst(); }
+int E_stringLit::constEval(Env &) const { return xnonconst(); }
+//int E_structLit::constEval(Env &) const { return xnonconst(); }
+int E_variable::constEval(Env &) const { return xnonconst(); }
+int E_funCall::constEval(Env &) const { return xnonconst(); }
+int E_fieldAcc::constEval(Env &) const { return xnonconst(); }
+int E_addrOf::constEval(Env &) const { return xnonconst(); }
+int E_deref::constEval(Env &) const { return xnonconst(); }
+int E_cond::constEval(Env &) const { return xnonconst(); }
+//int E_gnuCond::constEval(Env &) const { return xnonconst(); }
+int E_comma::constEval(Env &) const { return xnonconst(); }
+int E_assign::constEval(Env &) const { return xnonconst(); }
+int E_new::constEval(Env &) const { return xnonconst(); }
+int E_quantifier::constEval(Env &) const { return xnonconst(); }
 
 
 // -------------------- Expression::toString --------------------

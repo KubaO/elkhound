@@ -471,7 +471,7 @@ void astParseTerminals(Environment &env, TF_terminals const &terms)
 }
 
 
-void astParseDDM(Environment &env, Symbol *sym,
+void astParseDDM(Environment &, Symbol *sym,
                  ASTList<SpecFunc> const &funcs)
 {
   Terminal *term = sym->ifTerminal();

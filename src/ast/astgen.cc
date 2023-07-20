@@ -1921,7 +1921,7 @@ void CGen::emitXmlFields(ASTList<Annotation> const &decls, char const *baseName,
 }
 
 void CGen::emitXmlField(rostring type, rostring name, char const *baseName,
-                        string const &className, AccessMod *amod) {
+                        string const &/*className*/, AccessMod* amod) {
   if (name == "arraySize") {
     breaker();
   }
@@ -2482,7 +2482,7 @@ void XmlParserGen::collectXmlParserFields(ASTList<Annotation> const &decls, char
 // FIX: this is now very redundant, but we can still change it to
 // exclude some fields of some types, so lets keep it for now.
 void XmlParserGen::collectXmlParserField
-  (rostring type, rostring name, char const *baseName, AccessMod*)
+  (rostring type, rostring name, char const */*baseName*/, AccessMod*)
 {
   if (type == "string") {
     attributeNames.insert(name);
@@ -2665,13 +2665,13 @@ void XmlParserGen::emitXmlParser_Node
   (ASTClass const *clazz,
 
    ASTList<CtorArg> const *args,
-   ASTList<Annotation> const *decls,
+   ASTList<Annotation> const */*decls*/,
    ASTList<CtorArg> const *lastArgs,
 
    // these two default to NULL, which is used in the case of a top
    // level class with no subclasses
    ASTList<CtorArg> const *childArgs,
-   ASTList<Annotation> const *childDecls)
+   ASTList<Annotation> const */*childDecls*/)
 {
   string name = clazz->name;
 

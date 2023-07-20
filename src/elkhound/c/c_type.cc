@@ -309,6 +309,7 @@ string CompoundType::toStringWithFields() const
 
 string CompoundType::toCilString(int depth) const
 {
+  (void)depth;
   return "(todo)";
 
   #if 0
@@ -439,6 +440,7 @@ string EnumType::toCString() const
 
 string EnumType::toCilString(int depth) const
 {
+  (void)depth;
   // TODO2: get fields
   return toCString();
 }
@@ -556,6 +558,7 @@ string Type::rightString() const
 
 string Type::toString(int depth) const
 {
+  (void)depth;
   return toCString();
   //return stringc << recurseCilString(this, depth+1)
   //               << " /""* " << toCString() << " */";

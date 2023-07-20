@@ -331,7 +331,7 @@ ItemSet::~ItemSet()
 }
 
 
-ItemSet::ItemSet(Flatten &flat)
+ItemSet::ItemSet(Flatten &)
   : termTransition(NULL),
     nontermTransition(NULL),
     dotsAtEnd(NULL),
@@ -4727,7 +4727,7 @@ bool noDeclaredType(char const *type)
 void emitSwitchCode(Grammar const &g, EmitCode &out,
                     char const *signature, char const *switchVar,
                     std::list<Symbol> const &syms, int whichFunc,
-                    char const *templateCode, char const *actUpon)
+                    char const *templateCode, char const */*actUpon*/)
 {
   out << replace(signature, "$acn", string(g.actionClassName)) << "\n"
          "{\n"

@@ -12,12 +12,12 @@ SilentReportError::SilentReportError()
     warnings(0)
 {}
 
-void SilentReportError::reportError(rostring str)
+void SilentReportError::reportError(rostring)
 {
   errors++;
 }
 
-void SilentReportError::reportWarning(rostring str)
+void SilentReportError::reportWarning(rostring)
 {
   warnings++;
 }

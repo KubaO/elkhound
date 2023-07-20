@@ -481,6 +481,7 @@ public:     // funcs
     #if ENABLE_CRS_COMPRESSION
       return (StateId)(firstWithNonterminal[shiftedNonterminal] + code);
     #else
+      (void)shiftedNonterminal;
       return (StateId)code;
     #endif
   }

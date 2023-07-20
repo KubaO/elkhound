@@ -354,7 +354,7 @@ void emitMLDescriptions(GrammarAnalysis const &g, EmitCode &out)
 }
 
 
-void emitMLActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
+void emitMLActions(Grammar const &g, EmitCode &out, EmitCode &/*dcl*/)
 {
   out << "(* ------------------- actions ------------------ *)\n"
       << "let reductionActionArray : (tSemanticValue array -> tSemanticValue) array = [|\n"
@@ -513,7 +513,7 @@ void emitMLDupDelMerge(GrammarAnalysis const &g, EmitCode &out, EmitCode &dcl)
 
 // emit both the function decl for the .h file, and the beginning of
 // the function definition for the .cc file
-void emitMLFuncDecl(Grammar const &g, EmitCode &out, EmitCode &dcl,
+void emitMLFuncDecl(Grammar const &, EmitCode &out, EmitCode &/*dcl*/,
                     char const *rettype, rostring params)
 {
   out << "(*inline*) let " << params << ": " << rettype << " =";
@@ -572,7 +572,7 @@ void emitMLDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
 void emitMLSwitchCode(Grammar const &g, EmitCode &out,
                       rostring signature, char const *switchVar,
                       std::list<Symbol> const &syms, int whichFunc,
-                      char const *templateCode, char const *actUpon)
+                      char const *templateCode, char const */*actUpon*/)
 {
   out << replace(signature, "$acn", string(g.actionClassName)) << " =\n"
          "begin\n"
@@ -801,7 +801,7 @@ void printMLTable(EltType const *table, int size, int rowLength,
 // construct this same table (except the constructed table won't own
 // the table data, since it will point to static program data)
 void ParseTables::emitMLConstructionCode
-  (EmitCode &out, rostring className, rostring funcName)
+  (EmitCode &out, rostring className, rostring /*funcName*/)
 {
   // must have already called 'finishTables'
   xassert(!temp);

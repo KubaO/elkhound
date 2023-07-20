@@ -61,6 +61,8 @@ ArithLexer lexer;
 
 int main(int argc, char *argv[])
 {
+  (void)argv;
+
   // initialize lexer by grabbing first token
   lexer.nextToken(&lexer);
 
