@@ -4436,6 +4436,10 @@ void emitActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
 {
   out << "// ------------------- actions ------------------\n";
 
+  // The tree building actions never reference the loc
+  // parameter
+  bool const emitLocName = !tracingSys("treebuild");
+
   // iterate over productions, emitting inline action functions
   for (auto const& prod : g.productions) {
 
@@ -4449,7 +4453,7 @@ void emitActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
     out << "inline " << prod.left->type << " "
         << g.actionClassName << "::" << actionFuncName(prod)
         << "("
-        SOURCELOC( << "SourceLoc loc" )
+        SOURCELOC( << (emitLocName ? "SourceLoc loc" : "SourceLoc") )
         ;
 
     dcl << "  " << prod.left->type << " " << actionFuncName(prod) << "("
