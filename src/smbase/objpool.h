@@ -5,6 +5,8 @@
 #ifndef OBJPOOL_H
 #define OBJPOOL_H
 
+#include "xassert.h"  // xassert
+
 #include <vector>     // std::vector
 
 // the class T should have:
@@ -33,6 +35,9 @@ private:     // data
 
   // head of the free list; NULL when empty
   T *head = nullptr;
+
+  // whether we're destroying the pool
+  bool inDestructor = false;
 
 private:     // funcs
   void expandPool();
@@ -66,7 +71,11 @@ ObjectPool<T>::ObjectPool(int rs)
 template <class T>
 ObjectPool<T>::~ObjectPool()
 {
-  // deallocate all the objects in the racks
+  // if the objects held links to other objects in the pool,
+  // we don't want the deallocations to have any effect anymore
+  inDestructor = true;
+
+  // deallocate all the racks
   for (T* rack : racks) {
     delete[] rack;
   }
@@ -76,6 +85,8 @@ ObjectPool<T>::~ObjectPool()
 template <class T>
 inline T *ObjectPool<T>::alloc()
 {
+  xassert(!inDestructor);
+
   if (!head) {
     // need to expand the pool
     expandPool();
@@ -97,6 +108,8 @@ inline T *ObjectPool<T>::alloc()
 template <class T>
 void ObjectPool<T>::expandPool()
 {
+  xassert(!inDestructor);
+
   T *rack = new T[rackSize];
   racks.push_back(rack);
 
@@ -111,19 +124,21 @@ void ObjectPool<T>::expandPool()
 template <class T>
 inline void ObjectPool<T>::dealloc(T *obj)
 {
-  // call obj's pseudo-dtor (the decision to have dealloc do this is
-  // motivated by not wanting to have to remember to call deinit
-  // before dealloc)
-  obj->deinit();
+  if (!inDestructor) {
+    // call obj's pseudo-dtor (the decision to have dealloc do this is
+    // motivated by not wanting to have to remember to call deinit
+    // before dealloc)
+    obj->deinit();
 
-  // I don't check that nextInFreeList == NULL, despite having set it
-  // that way in alloc(), because I want to allow for users to make
-  // nextInFreeList share storage (e.g. with a union) with some other
-  // field that gets used while the node is allocated
+    // I don't check that nextInFreeList == NULL, despite having set it
+    // that way in alloc(), because I want to allow for users to make
+    // nextInFreeList share storage (e.g. with a union) with some other
+    // field that gets used while the node is allocated
 
-  // prepend the object to the free list; will be next yielded
-  obj->nextInFreeList = head;
-  head = obj;
+    // prepend the object to the free list; will be next yielded
+    obj->nextInFreeList = head;
+    head = obj;
+  }
 }
 
 
