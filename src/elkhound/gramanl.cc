@@ -4728,40 +4728,67 @@ bool noDeclaredType(char const *type)
   return !type || (0==strcmp(type, "void"));
 }
 
-void emitSwitchCode(Grammar const &g, EmitCode &out,
-                    char const *signature, char const *switchVar,
-                    std::list<Symbol> const &syms, int whichFunc,
-                    char const *templateCode, char const */*actUpon*/)
-{
-  out << replace(signature, "$acn", string(g.actionClassName)) << "\n"
-         "{\n"
-         "  switch (" << switchVar << ") {\n";
 
+static bool emitSwitchCases(EmitCode &out, std::list<Symbol> const &syms,
+                            int whichFunc, char const *templateCode,
+                            bool dryRun = false)
+{
   for (auto const& sym : syms) {
 
     if ((whichFunc==0 && sym.dupCode) ||
-        (whichFunc==1 && sym.delCode) ||
-        (whichFunc==2 && sym.asNonterminalC().mergeCode) ||
-        (whichFunc==3 && sym.asNonterminalC().keepCode) ||
-        (whichFunc==4 && sym.asTerminalC().classifyCode)) {
+      (whichFunc==1 && sym.delCode) ||
+      (whichFunc==2 && sym.asNonterminalC().mergeCode) ||
+      (whichFunc==3 && sym.asNonterminalC().keepCode) ||
+      (whichFunc==4 && sym.asTerminalC().classifyCode)) {
+      if (dryRun) {
+        return true;
+      }
       out << "    case " << sym.getTermOrNontermIndex() << ":\n";
       out << replace(replace(templateCode,
-               "$symName", string(sym.name)),
-               "$symType", notVoid(sym.type));
+        "$symName", string(sym.name)),
+        "$symType", notVoid(sym.type));
     }
     else if (whichFunc==0 && noDeclaredType(sym.type)) {
+      if (dryRun) {
+        return true;
+      }
       // dup for symbol with no declared type: don't complain
       out << "    case " << sym.getTermOrNontermIndex() << ":\n";
       out << "      return sval;\n";
     }
     else if (whichFunc==1 && noDeclaredType(sym.type)) {
+      if (dryRun) {
+        return true;
+      }
       // del for no declared type
       out << "    case " << sym.getTermOrNontermIndex() << ":\n";
       out << "      break;\n";
     }
   }
+  return false;
+}
 
-  out << "    default:\n";
+
+void emitSwitchCode(Grammar const &g, EmitCode &out,
+                    char const *signature, char const *switchVar,
+                    std::list<Symbol> const &syms, int whichFunc,
+                    char const *templateCode, char const */*actUpon*/)
+{
+  bool const needsSwitch =
+    emitSwitchCases(out, syms, whichFunc, templateCode, /*dryRun*/ true);
+  string_view const idt = needsSwitch ? "    " : "";
+
+  out << replace(signature, "$acn", string(g.actionClassName)) << "\n"
+         "{\n";
+  if (needsSwitch) {
+    out << "  switch (" << switchVar << ") {\n";
+  }
+
+  emitSwitchCases(out, syms, whichFunc, templateCode);
+
+  if (needsSwitch) {
+    out << "    default:\n";
+  }
   switch (whichFunc) {
     default:
       xfailure("bad func code");
@@ -4769,12 +4796,12 @@ void emitSwitchCode(Grammar const &g, EmitCode &out,
     case 0:    // unspecified dup
       if (!g.useGCDefaults) {
         // not using GC, return NULL so silent sharing doesn't happen
-        out << "      (void)sval;\n" // otherwise sval may be unreferenced
-               "      return (SemanticValue)0;\n";
+        out << idt << "  (void)sval;\n" // otherwise sval may be unreferenced
+            << idt << "  return (SemanticValue)0;\n";
       }
       else {
         // using GC, sharing is fine
-        out << "      return sval;\n";
+        out << idt << "  return sval;\n";
       }
       break;
 
@@ -4783,9 +4810,9 @@ void emitSwitchCode(Grammar const &g, EmitCode &out,
         // warn about unspec'd del, since it's probably a memory leak
         if (syms.front().isNonterminal()) {
           // use the nonterminal map
-          out << "      (void)sval;\n" // otherwise sval may be unreferenced
-                 "      std::cout << \"WARNING: there is no action to deallocate nonterm \"\n"
-                 "           << nontermNames[" << switchVar << "] << std::endl;\n";
+          out << idt << "  (void)sval;\n" // otherwise sval may be unreferenced
+              << idt << "  std::cout << \"WARNING: there is no action to deallocate nonterm \"\n"
+              << idt << "            << nontermNames[" << switchVar << "] << std::endl;\n";
         }
         else {
           // use the terminal map
@@ -4795,48 +4822,57 @@ void emitSwitchCode(Grammar const &g, EmitCode &out,
           // than 0. But if it turns out to be a bad choice, it can be
           // fixed by reducing the syms list to its least index and
           // emitting that instead. /FL
-          out <<
-            "      (void)sval;\n"
-            "      int arrayMin = 0;\n"
-            "      int arrayMax = " << syms.size() << ";\n"
-            "      xassert(" << switchVar << " >= arrayMin &&"
+          out
+            << idt << "  (void)sval;\n"
+            << idt << "  int arrayMin = 0;\n"
+            << idt << "  int arrayMax = " << syms.size() << ";\n"
+            << idt << "  xassert(" << switchVar << " >= arrayMin &&"
             " " << switchVar << " < arrayMax);\n"
-            "      std::cout << \"WARNING: there is no action to deallocate terminal \"\n"
-            "        << termNames[" << switchVar << "] << std::endl;\n";
+            << idt << "  std::cout << \"WARNING: there is no action to deallocate terminal \"\n"
+            << idt << "            << termNames[" << switchVar << "] << std::endl;\n";
         }
       }
       else {
         // in gc mode, just ignore del
-        out << "      (void)sval; break;\n";
+        out << idt << "  (void)sval; ";
+        if (needsSwitch) {
+          out << "break; ";
+        }
+        out << "\n";
       }
       break;
 
     case 2: {  // unspecified merge: warn, but then use left (arbitrarily)
       char const *w = g.defaultMergeAborts? "error: " : "WARNING: ";
-      out << "      std::cout << toString(loc) \n"
-          << "           << \": " << w << "there is no action to merge nonterm \"\n"
-          << "           << nontermNames[" << switchVar << "] << std::endl;\n"
-      "      (void)right;";
+      out << idt << "  std::cout << toString(loc) \n"
+          << idt << "            << \": " << w << "there is no action to merge nonterm \"\n"
+          << idt << "            << nontermNames[" << switchVar << "] << std::endl;\n"
+          << idt << "  (void)right;";
       if (g.defaultMergeAborts) {
-        out << "      (void)left; abort();\n";
+        out << idt << "  (void)left; abort();\n";
       }
       else {
-        out << "      return left;\n";
+        out << idt << "  return left;\n";
       }
       break;
     }
 
     case 3:    // unspecified keep: keep it
-      out << "      (void)sval; return true;\n";
+      out << idt << "  (void)sval; return true;\n";
       break;
 
     case 4:    // unspecified classifier: identity map
-      out << "      (void)ths, (void)sval; return oldTokenType;\n";
+      out << idt << "  (void)ths, (void)sval; return oldTokenType;\n";
       break;
   }
 
-  out << "  }\n"
-         "}\n"
+  if (needsSwitch) {
+    out << "  }\n";
+  }
+  else {
+    out << "  (void)" << switchVar << ";";
+  }
+  out << "}\n"
          "\n";
 }
 
