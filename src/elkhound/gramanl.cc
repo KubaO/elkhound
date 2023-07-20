@@ -4438,10 +4438,12 @@ void emitActions(Grammar const &g, EmitCode &out, EmitCode &dcl)
 
   // The tree building actions never reference the loc
   // parameter
-  bool const emitLocName = !tracingSys("treebuild");
+  SOURCELOC( bool const globalEmitLocName = !tracingSys("treebuild"); )
 
   // iterate over productions, emitting inline action functions
   for (auto const& prod : g.productions) {
+    SOURCELOC( bool const emitLocName = globalEmitLocName && \
+      EmitCode::isParamUsed("loc", prod.action.str); )
 
     // there's no syntax for a typeless nonterminal, so this shouldn't
     // be triggerable by the user
