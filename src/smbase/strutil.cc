@@ -10,6 +10,7 @@
 #include <stdio.h>       // sprintf, FILE
 #include <stdlib.h>      // strtoul
 #include <time.h>        // time, asctime, localtime
+#include <fmt/core.h>    // fmt::format
 
 
 // replace all instances of oldstr in src with newstr, return result
@@ -216,9 +217,10 @@ string encodeWithEscapes(string_view src)
 
 string quoted(string_view src)
 {
-  return stringc << "\""
-                 << encodeWithEscapes(src)
-                 << "\"";
+  string ret = encodeWithEscapes(src);
+  ret.insert(0, 1, '"');
+  ret.push_back('"');
+  return ret;
 }
 
 
@@ -233,7 +235,7 @@ string decodeEscapes(string_view origSrc, char delim, bool allowNewlines)
       xformat("unescaped newline (unterminated string)");
     }
     if (*src == delim) {
-      xformat(stringc << "unescaped delimiter (" << delim << ")");
+      xformat("unescaped delimiter ({})", delim);
     }
 
     if (*src != '\\') {
@@ -325,7 +327,7 @@ string decodeEscapes(string_view origSrc, char delim, bool allowNewlines)
 string parseQuotedString(string_view text)
 {
   if (!text.starts_with('"') || !text.ends_with('"')) {
-    xformat(stringc << "quoted string is missing quotes: " << text);
+    xformat("quoted string is missing quotes: {}", text);
   }
 
   // strip the quotes
@@ -407,16 +409,16 @@ string plural(int n, string_view prefix)
   }
   if (prefix.ends_with('y')) {
     prefix.remove_suffix(1);
-    return stringc << prefix << "ies";
+    return fmt::format("{}ies", prefix);
   }
   else {
-    return stringc << prefix << "s";
+    return fmt::format("{}s", prefix);
   }
 }
 
 string pluraln(int n, string_view prefix)
 {
-  return stringc << n << " " << plural(n, prefix);
+  return fmt::format("{} {}", n, plural(n, prefix));
 }
 
 
@@ -430,10 +432,10 @@ string a_or_an(string_view noun)
   }
 
   if (use_an) {
-    return stringc << "an " << noun;
+    return fmt::format("an {}", noun);
   }
   else {
-    return stringc << "a " << noun;
+    return fmt::format("a {}", noun);
   }
 }
 
