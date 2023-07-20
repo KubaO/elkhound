@@ -44,6 +44,8 @@ enum { SMALL=30, BIG=100, ITERS=10000 };
 int main()
 {
   ObjectPool<Foo> pool(SMALL);
+  xassert(pool.checkFreeList());
+
   int i;
   int numAllocated=0;
 
@@ -72,10 +74,11 @@ int main()
       f->establishInvariant(index);
       numAllocated++;
     }
+    xassert(pool.checkFreeList());
   }
 
   // query pool size before cleaning up
-  int startSize = pool.freeObjectsInPool();
+  int startSize = pool.unusedCapacity();
   int finalNumAllocd = numAllocated;
 
   // deallocate all that remain
@@ -92,9 +95,9 @@ int main()
   xassert(numAllocated==0);
 
   // verify that the # of objects freed is the # that became available
-  xassert(finalNumAllocd == (pool.freeObjectsInPool() - startSize));
+  xassert(finalNumAllocd == (pool.unusedCapacity() - startSize));
 
-  std::cout << "pool capacity at end: " << pool.freeObjectsInPool() << std::endl;
+  std::cout << "pool capacity at end: " << pool.unusedCapacity() << std::endl;
   std::cout << "tobjpool works!\n";
 
   return 0;

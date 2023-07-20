@@ -113,8 +113,7 @@ private:
   // we only let RCPtr manipulate the reference count
   friend class RCPtr<StackNode>;
   // number of sibling links pointing at 'this', plus the number
-  // of worklists on which 'this' appears (some liberty is taken
-  // in the mini-LR parser, but it is carefully documented there)
+  // of worklists on which 'this' appears
   int referenceCount;
 
 public:
@@ -144,18 +143,12 @@ public:
   // determinDepth==1
   int determinDepth;
 
-  union {
-    // somewhat nonideal: I need access to the 'userActions' to
-    // deallocate semantic values when refCt hits zero, and I need
-    // to map states to state-symbols for the same reason.
-    // update: now I'm also using this to support pool-based
-    // deallocation in decRefCt()
-    GLR *glr;
-
-    // this is used by the ObjectPool which handles allocation of
-    // StackNodes
-    StackNode *nextInFreeList;
-  };
+  // somewhat nonideal: I need access to the 'userActions' to
+  // deallocate semantic values when refCt hits zero, and I need
+  // to map states to state-symbols for the same reason.
+  // update: now I'm also using this to support pool-based
+  // deallocation in decRefCt()
+  GLR *glr;
 
   // ordinal position of the token that was being processed
   // when this stack node was created; this information is useful
@@ -264,18 +257,12 @@ public:       // types
     // the semantic values in the links
     std::vector<SymbolId> symbols;
 
-    union {
-      // link between nodes for construction of a linked list,
-      // kept in sorted order
-      Path *next;
-
-      // link for free list in the object pool
-      Path *nextInFreeList;
-    };
+    // link between nodes for construction of a linked list,
+    // kept in sorted order
+    Path *next;
 
   public:     // funcs
     Path();
-    ~Path();
 
     void init(StateId startStateId, int prodIndex, int rhsLen);
     void deinit() {}

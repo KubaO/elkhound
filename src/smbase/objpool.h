@@ -5,14 +5,12 @@
 #ifndef OBJPOOL_H
 #define OBJPOOL_H
 
+#include <cassert>    // assert (instead of xassert that throws)
 #include <vector>     // std::vector
 
 // the class T should have:
-//   // a link in the free list; it is ok for T to re-use this
-//   // member while the object is not free in the pool
-//   T *nextInFreeList;
 //
-//   // object is done being used for now
+//   // object is done being used for now - a cheaper destructor
 //   void deinit();
 //
 //   // needed so we can make arrays
@@ -20,7 +18,19 @@
 
 template <class T>
 class ObjectPool {
+private:     // types
+  struct Block {
+    T value = {};
+    Block* nextInFreeList = nullptr;
+  };
+
 private:     // data
+  // growable array of pointers to arrays of 'rackSize' T objects
+  std::vector<Block *> racks;
+
+  // head of the free list; NULL when empty
+  Block *head = nullptr;
+
   // when the pool needs to expand, it expands by allocating an
   // additional 'rackSize' objects; I use a linear (instead of
   // exponential) expansion strategy because these are supposed
@@ -28,17 +38,22 @@ private:     // data
   // things allocated for long-term storage
   int const rackSize;
 
-  // growable array of pointers to arrays of 'rackSize' T objects
-  std::vector<T*> racks;
+  // total capacity, in blocks
+  int numBlocks = 0;
 
-  // head of the free list; NULL when empty
-  T *head = nullptr;
+  // number of blocks in use
+  int numUsed = 0;
+
+  // whether we're destroying the pool
+  bool inDestructor = false;
 
 private:     // funcs
   void expandPool();
 
 public:      // funcs
   explicit ObjectPool(int rackSize);
+  ObjectPool(ObjectPool &&) = default;
+  ObjectPool &operator=(ObjectPool &&) = default;
   ~ObjectPool();
 
   // yields a pointer to an object ready to be used; typically,
@@ -52,7 +67,13 @@ public:      // funcs
   inline void dealloc(T *obj);
 
   // available for diagnostic purposes
-  int freeObjectsInPool() const;
+  int capacity() const { return numBlocks; }
+  int size() const { return numUsed; }
+  int unusedCapacity() const { return capacity() - size(); }
+
+  // diagnostics
+  bool checkFreeList() const;
+  bool isPoolBlock(Block const *blk) const;
 };
 
 
@@ -66,8 +87,12 @@ ObjectPool<T>::ObjectPool(int rs)
 template <class T>
 ObjectPool<T>::~ObjectPool()
 {
-  // deallocate all the objects in the racks
-  for (T* rack : racks) {
+  // if the objects held links to other objects in the pool,
+  // we don't want the deallocations to have any effect anymore
+  inDestructor = true;
+
+  // deallocate all the racks
+  for (Block *rack : racks) {
     delete[] rack;
   }
 }
@@ -76,19 +101,19 @@ ObjectPool<T>::~ObjectPool()
 template <class T>
 inline T *ObjectPool<T>::alloc()
 {
+  assert(!inDestructor);
+
   if (!head) {
     // need to expand the pool
     expandPool();
   }
 
-  T *ret = head;                     // prepare to return this one
-  head = ret->nextInFreeList;        // move to next free node
+  Block *ret = head;               // prepare to return this one
+  head = head->nextInFreeList;     // move to next free node
+  ++numUsed;
 
-  #ifndef NDEBUG
-    ret->nextInFreeList = NULL;        // paranoia
-  #endif
-
-  return ret;
+  ret->nextInFreeList = nullptr;   // helps catch memory corruption
+  return &ret->value;
 }
 
 
@@ -97,8 +122,11 @@ inline T *ObjectPool<T>::alloc()
 template <class T>
 void ObjectPool<T>::expandPool()
 {
-  T *rack = new T[rackSize];
+  assert(!inDestructor);
+
+  Block *rack = new Block[rackSize];
   racks.push_back(rack);
+  numBlocks += rackSize;
 
   // thread new nodes into a free list
   for (int i=rackSize-1; i>=0; i--) {
@@ -111,34 +139,64 @@ void ObjectPool<T>::expandPool()
 template <class T>
 inline void ObjectPool<T>::dealloc(T *obj)
 {
-  // call obj's pseudo-dtor (the decision to have dealloc do this is
-  // motivated by not wanting to have to remember to call deinit
-  // before dealloc)
-  obj->deinit();
+  if (!inDestructor) {
+    Block* const blk = reinterpret_cast<Block*>(obj);
+    assert(isPoolBlock(blk));
 
-  // I don't check that nextInFreeList == NULL, despite having set it
-  // that way in alloc(), because I want to allow for users to make
-  // nextInFreeList share storage (e.g. with a union) with some other
-  // field that gets used while the node is allocated
+    // call obj's pseudo-dtor (the decision to have dealloc do this is
+    // motivated by not wanting to have to remember to call deinit
+    // before dealloc)
+    obj->deinit();
 
-  // prepend the object to the free list; will be next yielded
-  obj->nextInFreeList = head;
-  head = obj;
+    // I don't check that nextInFreeList == NULL, despite having set it
+    // that way in alloc(), because I want to allow for users to make
+    // nextInFreeList share storage (e.g. with a union) with some other
+    // field that gets used while the node is allocated
+
+    // prepend the object to the free list; will be next yielded
+    blk->nextInFreeList = head;
+    head = blk;
+    --numUsed;
+  }
 }
 
 
 template <class T>
-int ObjectPool<T>::freeObjectsInPool() const
+bool ObjectPool<T>::isPoolBlock(Block const* blk) const
 {
-  T *p = head;
-  int ct = 0;
+  for (Block const* rack : racks) {
+    if (std::less_equal<void const *>{}(rack, blk)
+        && std::less<void const *>{}(blk, rack + rackSize)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+
+template <class T>
+bool ObjectPool<T>::checkFreeList() const
+{
+  assert(capacity() >= 0);
+  assert(size() >= 0);
+  assert(size() <= capacity());
+
+  int const maxFree = capacity() - size();
+  int numFree = 0;
+  Block* p = head;
 
   while (p) {
-    ct++;
+    if (!isPoolBlock(p)) {
+      return false; // free list corruption
+    }
+    ++numFree;
+    if (numFree > maxFree) {
+      return false; // free list corruption
+    }
     p = p->nextInFreeList;
   }
 
-  return ct;
+  return numFree == maxFree;
 }
 
 
