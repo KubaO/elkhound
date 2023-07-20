@@ -12,8 +12,7 @@
 #define STR_H
 
 #include <iosfwd>                  // istream forward declaration
-#include <stdarg.h>                // va_list
-#include <type_traits>
+#include <type_traits>             // std::conditional_t etc.
 #include <string>                  // std::string
 #include "nonstd/string_view.hpp"  // nonstd::string_view
 
@@ -65,12 +64,6 @@ static constexpr C_Str c_str;
 inline const char* operator << (string& str, C_Str) { return str.c_str(); }
 
 string readdelim(std::istream &is, char const *delim);
-
-struct SBHex {
-  uintptr_t value;
-  SBHex(uintptr_t v) : value(v) {}
-};
-string& operator<< (string& str, SBHex);
 
 
 // ---------------------- misc utils ------------------------

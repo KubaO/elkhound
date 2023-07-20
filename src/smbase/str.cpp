@@ -10,36 +10,14 @@
 #include <inttypes.h>       // string printf formats
 
 #include <assert.h>         // assert
-#include "xassert.h"        // xassert
-#include "ckheap.h"         // checkHeapNode
-#include "flatten.h"        // Flatten
-#include "nonport.h"        // vnprintf
 
-
-// ----------------------- string ---------------------
-
-std::string operator& (const std::string& head, const std::string& tail)
-{
-  std::string ret;
-  ret.reserve(head.length() + tail.length() + 1);
-  ret.append(head);
-  ret.append(tail);
-  return ret;
-}
 
 // --------------------- stringBuilder ------------------
 
-
-string& operator<< (string& str, void* ptr)
-{
-  return str << SBHex(intptr_t(ptr));
-}
-
-
-string& operator<< (string& str, SBHex h)
+string& operator<< (string& str, void *ptr)
 {
   char buf[32];        // should only need 19 for 64-bit word..
-  size_t len = sprintf(buf, "0x%" PRIXPTR, h.value);
+  size_t len = sprintf(buf, "0x%" PRIXPTR, ptr);
   assert(len <= sizeof(buf));
   return str << buf;
 }
