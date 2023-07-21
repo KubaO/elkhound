@@ -208,7 +208,7 @@ string Terminal::toString(bool quoteAliases) const
 {
   if (alias.length() > 0) {
     if (quoteAliases) {
-      return stringc << "\"" << ::toString(alias) << "\"";
+      return fmt::format("\"{}\"", ::toString(alias));
     }
     else {
       return ::toString(alias);
@@ -647,10 +647,10 @@ int Production::findTag(StringRef tag) const
 string taggedName(rostring name, char const *tag)
 {
   if (tag == NULL || tag[0] == 0) {
-    return string(name);
+    return name;
   }
   else {
-    return stringc << tag << ":" << name;
+    return fmt::format("{}:{}", tag, name);
   }
 }
 
