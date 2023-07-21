@@ -68,10 +68,6 @@ string readdelim(std::istream &is, char const *delim);
 
 // ---------------------- misc utils ------------------------
 
-// The "c" can be interpreted as "constructor".
-#define stringc string()
-
-
 // experimenting with using toString as a general method for datatypes
 string toString(int i);
 string toString(unsigned i);
