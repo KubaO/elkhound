@@ -21,6 +21,7 @@
 #include "grampar.tab.h"
 
 #include <string.h>     // strchr, strrchr
+#include <fmt/core.h>   // fmt::format
 
 // for maintaining column count
 #define TOKEN_START  tokenStartLoc = fileState.loc /* user ; */
@@ -288,8 +289,8 @@ HWHITE    [ \t\f\v\r]
   }
 
   <<EOF>> {
-    err(stringc << "hit end of file while looking for final `"
-                << embedFinish << "'");
+    err(fmt::format("hit end of file while looking for final `{}'",
+                    embedFinish));
     yyterminate();
   }
 }

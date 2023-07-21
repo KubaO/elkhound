@@ -71,7 +71,7 @@ CtorArg *parseCtorArg(rostring origStr)
     p--;
   }
   if (p == start) {
-    xformat(stringc << "missing type specifier in \"" << origStr << "\"");
+    xformat("missing type specifier in \"{}\"", origStr);
   }
   p++;
 

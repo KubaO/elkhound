@@ -49,9 +49,9 @@ void CCSubstrate::handle(char const *str, int len, char finalDelim)
           case ')':
           case ']':
             if (nesting == 0) {
-              err->reportError(stringc
-                << "unexpected closing delimiter `" << *str
-                << "' -- probably due to missing `" << finalDelim << "'");
+              err->reportError(fmt::format(
+                "unexpected closing delimiter `{}' -- probably due to missing `{}'",
+                *str, finalDelim));
             }
             else {
               nesting--;
@@ -148,7 +148,7 @@ string CCSubstrate::getFuncBody() const
     return text;
   }
   else if (exprOnly) {
-    return stringc << "return " << text << ";";
+    return fmt::format("return {};", text);
   }
   else {
     return text;
@@ -238,7 +238,7 @@ void Test::test(rostring src, CC::State state, int nesting, bool flag)
          cc.nesting == nesting &&
          (state==CC::ST_C_COMMENT? cc.star==flag :
                                    cc.backslash==flag) )) {
-    xfailure(stringc << "failed on src: " << src << c_str);
+    xfailure("failed on src: {}", src);
   }
 }
 
