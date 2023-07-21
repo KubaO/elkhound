@@ -4380,8 +4380,8 @@ void emitDescriptions(GrammarAnalysis const &g, EmitCode &out)
   out << "string " << g.actionClassName
       << "::terminalDescription(int termId, SemanticValue sval)\n"
       << "{\n"
-      << "  return stringc << termNames[termId]\n"
-      << "                 << \"(\" << (sval % 100000) << \")\";\n"
+      << "  return formatStrParenStr(termNames[termId],\n"
+      << "                           (sval % 100000));\n"
       << "}\n"
       << "\n"
       << "\n"
@@ -4408,8 +4408,8 @@ void emitDescriptions(GrammarAnalysis const &g, EmitCode &out)
   out << "string " << g.actionClassName
       << "::nonterminalDescription(int nontermId, SemanticValue sval)\n"
       << "{\n"
-      << "  return stringc << nontermNames[nontermId]\n"
-      << "                 << \"(\" << (sval % 100000) << \")\";\n"
+      << "  return formatStrParenStr(nontermNames[nontermId],\n"
+      << "                           (sval % 100000));\n"
       << "}\n"
       << "\n"
       << "\n"

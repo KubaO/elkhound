@@ -2,8 +2,10 @@
 // simple expression AST
 
 verbatim {
+  // uses str.h:toString(void *)
+
   inline string toString(Exp const *e) {
-    return stringc << (void*)e;
+    return toString((void const*)e);
   }
 }
 
