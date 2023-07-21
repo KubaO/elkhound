@@ -1257,7 +1257,7 @@ void GrammarAnalysis::computeIndexedTerms()
   for (auto& sym : terminals) {
     int index = sym.termIndex;   // map: symbol to index
     if (indexedTerms[index] != NULL) {
-      xfailure(stringc << "terminal index collision at index " << index << c_str);
+      xfailure("terminal index collision at index {}", index);
     }
     indexedTerms[index] = &sym;    // map: index to symbol
   }
@@ -1552,7 +1552,7 @@ void GrammarAnalysis::computeSupersets()
 
       // for now, only handle 'super' as a partial function
       if (sub->superset != NULL) {
-        xfailure(stringc << sub->name << " has more than one superset" << c_str);
+        xfailure("{} has more than one superset", sub->name.str);
       }
       sub->superset = &super;
     }
@@ -3852,7 +3852,7 @@ void GrammarAnalysis::addTreebuildingActions()
       // connect nonterminal subtrees; drop lexemes on the floor
       if (elt.sym->isNonterminal()) {
         // use a generic tag
-        string tag = stringc << "t" << ct++;
+        string tag = fmt::format("t{}", ct++);
         elt.tag = STR(tag.c_str());
 
         code << ", " << tag;
@@ -4148,8 +4148,7 @@ void emitSwitchCode(Grammar const &g, EmitCode &out,
 // design motivated by desire to make debugging easier
 string actionFuncName(Production const &prod)
 {
-  return stringc << "action" << prod.prodIndex
-                 << "_" << prod.left->name;
+  return fmt::format("action{}_{}", prod.prodIndex, prod.left->name.str);
 }
 
 
@@ -4335,8 +4334,8 @@ char const *notVoid(char const *type)
 char const *typeString(char const *type, LocString const &tag)
 {
   if (!type) {
-    xbase(stringc << tag.locString() << ": Production tag \"" << tag
-                  << "\" on a symbol with no type.\n");
+    xbase("{}: Production tag \"{}\" on a symbol with no type.\n",
+          tag.locString(), tag.str);
     return NULL;     // silence warning
   }
   else {
@@ -4683,39 +4682,36 @@ void emitDDMInlines(Grammar const &g, EmitCode &out, EmitCode &dcl,
   char const *symType = notVoid(sym.type);
 
   if (sym.dupCode) {
-    emitFuncDecl(g, out, dcl, symType,
-      stringc << "dup_" << sym.name
-              << "(" << symType << " " << sym.dupParam << ")");
+    emitFuncDecl(g, out, dcl, symType, fmt::format("dup_{}({} {})",
+                 sym.name.str, symType, sym.dupParam));
     emitUserCode(out, sym.dupCode);
   }
 
   if (sym.delCode) {
-    emitFuncDecl(g, out, dcl, "void",
-      stringc << "del_" << sym.name
-              << "(" << symType << " "
-              << (sym.delParam? sym.delParam : "") << ")");
+    emitFuncDecl(g, out, dcl, "void", fmt::format("del_{}({} {})",
+                 sym.name.str, symType, (sym.delParam? sym.delParam : "")));
     emitUserCode(out, sym.delCode);
   }
 
   if (nonterm && nonterm->mergeCode) {
     emitFuncDecl(g, out, dcl, symType,
-      stringc << "merge_" << sym.name
-              << "(" << symType << " " << nonterm->mergeParam1
-              << ", " << symType << " " << nonterm->mergeParam2 << ")");
+      fmt::format("merge_{}({} {}, {} {})", sym.name.str,
+                  symType, nonterm->mergeParam1,
+                  symType, nonterm->mergeParam2));
     emitUserCode(out, nonterm->mergeCode);
   }
 
   if (nonterm && nonterm->keepCode) {
     emitFuncDecl(g, out, dcl, "bool",
-      stringc << "keep_" << sym.name
-              << "(" << symType << " " << nonterm->keepParam << ") ");
+      fmt::format("keep_{}({} {}) ", sym.name.str,
+                  symType, nonterm->keepParam));
     emitUserCode(out, nonterm->keepCode);
   }
 
   if (term && term->classifyCode) {
     emitFuncDecl(g, out, dcl, "int",
-      stringc << "classify_" << sym.name
-              << "(" << symType << " " << term->classifyParam << ") ");
+      fmt::format("classify_{}({} {}) ", sym.name.str,
+                  symType, term->classifyParam));
     emitUserCode(out, term->classifyCode);
   }
 }
@@ -5002,7 +4998,7 @@ int inner_entry(int argc, char **argv)
   }
   g.printProductions(trace("grammar") << std::endl);
 
-  string setsFname = stringc << prefix << ".out";
+  string setsFname = fmt::format("{}.out", prefix);
   g.runAnalyses(tracingSys("lrtable")? setsFname.c_str() : NULL);
   if (g.errors) {
     return 2;
@@ -5010,8 +5006,8 @@ int inner_entry(int argc, char **argv)
 
   if (!useML) {
     // emit some C++ code
-    string hFname = stringc << prefix << ".h";
-    string ccFname = stringc << prefix << ".cc";
+    string hFname = fmt::format("{}.h", prefix);
+    string ccFname = fmt::format("{}.cc", prefix);
     traceProgress() << "emitting C++ code to " << ccFname
                     << " and " << hFname << " ...\n";
 
@@ -5032,8 +5028,8 @@ int inner_entry(int argc, char **argv)
   }
   else {
     // emit some ML code
-    string mliFname = stringc << prefix << ".mli";
-    string mlFname = stringc << prefix << ".ml";
+    string mliFname = fmt::format("{}.mli", prefix);
+    string mlFname = fmt::format("{}.ml", prefix);
     traceProgress() << "emitting OCaml code to " << mlFname
                     << " and " << mliFname << " ...\n" << std::flush;
 
@@ -5058,7 +5054,7 @@ int inner_entry(int argc, char **argv)
 
   // write it in a bison-compatible format as well
   if (tracingSys("bison")) {
-    string bisonFname = stringc << prefix << ".y";
+    string bisonFname = fmt::format("{}.y", prefix);
     traceProgress() << "writing bison-compatible grammar to " << bisonFname << std::endl;
     std::ofstream out(bisonFname);
     g.printAsBison(out);

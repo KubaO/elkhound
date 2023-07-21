@@ -986,14 +986,14 @@ class XmlParserGen {
 
   public:
   XmlParserGen(string &xmlParserName)
-    : tokensOutH(stringc << xmlParserName << "_tokens1_mid.gen.h")
-    , tokensOutCC(stringc << xmlParserName << "_lexer1_mid.gen.cc")
-    , lexerOut(stringc << xmlParserName << "_lexer1_mid.gen.lex")
+    : tokensOutH (fmt::format("{}_tokens1_mid.gen.h", xmlParserName))
+    , tokensOutCC(fmt::format("{}_lexer1_mid.gen.cc", xmlParserName))
+    , lexerOut   (fmt::format("{}_lexer1_mid.gen.lex", xmlParserName))
 
-    , parser0_decls(stringc << xmlParserName << "_parse1_0decl.gen.cc")
-    , parser1_defs (stringc << xmlParserName << "_parse1_1defn.gen.cc")
-    , parser2_ctorCalls    (stringc << xmlParserName << "_parse1_2ctrc.gen.cc")
-    , parser3_registerCalls(stringc << xmlParserName << "_parse1_3regc.gen.cc")
+    , parser0_decls(fmt::format("{}_parse1_0decl.gen.cc", xmlParserName))
+    , parser1_defs (fmt::format("{}_parse1_1defn.gen.cc", xmlParserName))
+    , parser2_ctorCalls    (fmt::format("{}_parse1_2ctrc.gen.cc", xmlParserName))
+    , parser3_registerCalls(fmt::format("{}_parse1_3regc.gen.cc", xmlParserName))
   {}
 
   private:
@@ -1553,7 +1553,7 @@ void HGen::emitVisitorInterfacePrelude(rostring visitorName)
       ;
 
   // custom additions to the visitor's constructor
-  emitTF_custom(out, stringc << visitorName << "_ctor", false /*addNewline*/);
+  emitTF_custom(out, fmt::format("{}_ctor", visitorName), false /*addNewline*/);
 
   out << "}\n"
       << "  virtual ~" << visitorName << "();   // silence gcc warning...\n"
@@ -1704,7 +1704,7 @@ void CGen::emitTraverse(ASTClass const *c, ASTClass const * /*nullable*/ super,
   // name of the 'visit' method that applies to this class;
   // these methods are always named according to the least-derived
   // class in the hierarchy
-  string visitName = stringc << "visit" << (super? super : c)->name;
+  string visitName = fmt::format("visit{}", (super ? super : c)->name);
 
   // we only call 'visit' in the most-derived classes; this of course
   // assumes that classes with children are never themselves instantiated
@@ -2046,7 +2046,7 @@ void CGen::emitXmlField(rostring type, rostring name, char const *baseName,
     } else {
       // FIX: get rid of this piece of crap when we get a way to put
       // an access specifier onto a ctor argument in the ast language
-      idPrefix = stringc << "TY";
+      idPrefix = "TY";
     }
     out << "  if (" << baseName << " && " << baseName << "->" << name << ") {\n";
     out << "    out << \"\\n\";\n";
@@ -2398,13 +2398,13 @@ void CGen::emitMTraverse(ASTClass const *c, rostring obj, rostring i)
 {
   // traverse into the ctor arguments
   FOREACH_ASTLIST(CtorArg, c->args, arg) {
-    string argVar = stringc << obj << "->" << arg->name;
+    string argVar = fmt::format("{}->{}", obj, arg->name);
 
     if (isTreeNode(arg->type) || isTreeNodePtr(arg->type)) {
       string eltType = extractNodeType(arg->type);
 
       out << i << "if (" << argVar << ") {\n";
-      emitMTraverseCall(stringc << i << "  ", eltType, argVar);
+      emitMTraverseCall(fmt::format("{}  ", i), eltType, argVar);
       out << i << "}\n";
     }
 
@@ -2414,7 +2414,7 @@ void CGen::emitMTraverse(ASTClass const *c, rostring obj, rostring i)
 
       // list of tree nodes: iterate and traverse
       out << i << "FOREACH_ASTLIST_NC(" << eltType << ", " << argVar << ", iter) {\n";
-      emitMTraverseCall(stringc << i << "  ", eltType, "iter.dataRef()");
+      emitMTraverseCall(fmt::format("{}  ", i), eltType, "iter.dataRef()");
       out << i << "}\n";
     }
 
@@ -2432,7 +2432,7 @@ void CGen::emitMTraverse(ASTClass const *c, rostring obj, rostring i)
           << i << "  while (*iter) {\n"
           ;
 
-      emitMTraverseCall(stringc << i << "    ", eltType, "*iter");
+      emitMTraverseCall(fmt::format("{}    ", i), eltType, "*iter");
 
       out << i << "    iter = &( (*iter)->next );\n"
           << i << "  }\n"
@@ -2659,13 +2659,13 @@ void XmlParserGen::emitXmlParser_objCtorArgs
       string type = arg->type;
       if (isListType(arg->type)) {
         // need to put a pointer onto the end of ASTList types
-        type = stringc << type << "*";
+        type = fmt::format("{}*", type);
       } else if (isTreeNode(arg->type)) {
         // dsw: FIX: I should probably have something like this here
         // (isTreeNodePtr(type) && isOwner)
         //
         // also for AST node types
-        type = stringc << type << "*";
+        type = fmt::format("{}*", type);
       }
       parser2_ctorCalls << "(" << type << ")0";
     }
@@ -2745,7 +2745,7 @@ void XmlParserGen::emitXmlParser_Node_registerAttr
 
 void XmlParserGen::emitXmlParser_ASTList(ListClass const *cls)
 {
-  string name = stringc << "List_" << cls->classAndMemberName;
+  string name = fmt::format("List_{}", cls->classAndMemberName);
   // only one rule as lists are homogeneous
   xassert(isTreeNode(cls->elementClassName));
   parser2_ctorCalls << "    case XTOK_" << name << ":\n"
@@ -3141,7 +3141,7 @@ void mergeExtension(ASTSpecFile *base, ASTSpecFile *ext)
 void recordListClass(ListKind lkind, rostring className, CtorArg const *arg) {
   rostring argName = arg->name;
   ListClass *cls = new ListClass
-    (lkind, stringc << className << "_" << argName, extractListType(arg->type));
+    (lkind, fmt::format("{}_{}", className, argName), extractListType(arg->type));
   auto result = listClassesSet.insert(cls->classAndMemberName);
   if (result.second) {
     listClasses.push_back(cls);
