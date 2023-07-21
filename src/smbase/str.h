@@ -80,5 +80,10 @@ string toString(long i);
 string toString(char const *str);
 string toString(float f);
 
+string toString(void const *p);
+
+// format "{str}({val})"
+string formatStrParenStr(const char *str, uintptr_t val);
+
 
 #endif // STR_H

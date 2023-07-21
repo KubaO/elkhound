@@ -65,6 +65,21 @@ string toString(char const *str)
   }
 }
 
+string toString(void const *p)
+{
+  if (!p) {
+    return "(null)";
+  }
+  else {
+    return fmt::format("0x{:08X}", p);
+  }
+}
+
+string formatStrParenStr(const char* str, uintptr_t val)
+{
+  return fmt::format("{}({})", str, val);
+}
+
 
 
 // ------------------ test code --------------------
