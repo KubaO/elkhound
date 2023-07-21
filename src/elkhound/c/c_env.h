@@ -71,6 +71,9 @@ public:     // funcs
   // must be defined in child class
   virtual Type const *err(rostring str)=0;
 
+  template <class F, class A1, class...Args>
+  Type const* err(F &&fmt, A1 &&arg1, Args &&...args);
+
   // manipulate a stack of lists of nodes whose 'next' link
   // needs to be set
   void pushNexts();          // push an empty top
@@ -103,6 +106,14 @@ public:     // funcs
   // check data structures for conditions which should hold between funcs
   void verifyFunctionEnd();
 };
+
+
+template <class F, class A1, class...Args>
+Type const* CFGEnv::err(F&& fmt, A1&& arg1, Args &&...args)
+{
+  return err(fmt::format(std::forward<F>(fmt), std::forward<A1>(arg1),
+            std::forward<Args>(args)...));
+}
 
 
 // elements of the environment which are scoped
@@ -173,6 +184,8 @@ public:     // funcs
   // misc
   StringRef str(char const *s) const { return strTable.add(s); }
 
+  using CFGEnv::err;
+
   // ------------- variables -------------
   // add a new variable to the innermost scope; it is an error
   // if a variable by this name already exists; 'decl' actually
@@ -237,6 +250,12 @@ public:     // funcs
 
   // report an error, and throw an exception
   void errThrow(rostring str);
+  template <class F, class A1, class...Args>
+  void errThrow(F&& fmt, A1&& arg1, Args &&...args)
+  {
+    errThrow(fmt::format(std::forward<F>(fmt),
+      std::forward<A1>(arg1), std::forward<Args>(args)...));
+  }
 
   // if 'condition' is true, report error 'str' and also throw an exception
   void errIf(bool condition, rostring str);
