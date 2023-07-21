@@ -7,7 +7,7 @@
 #include "trace.h"      // traceProgress
 #include "hashline.h"   // HashLineMap
 
-#include <stdio.h>      // fprintf
+#include <fmt/core.h>   // fmt::
 
 
 // this parameter controls the frequency of Markers in
@@ -470,9 +470,9 @@ SourceLoc SourceLocManager::encodeStatic(StaticLoc const &obj)
     // If this message is being printed because the program is just
     // really big and has lots of distinct static locations, then you
     // can increase maxStaticLocs manually.
-    fprintf(stderr,
-      "Warning: You've created %d static locations, which is symptomatic\n"
-      "of a bug.  See %s, line %d.\n",
+    fmt::println(stderr,
+      "Warning: You've created {} static locations, which is symptomatic\n"
+      "of a bug.  See {}, line {}.",
       maxStaticLocs, __FILE__, __LINE__);
   }
 
@@ -625,7 +625,7 @@ string SourceLocManager::getString(SourceLoc loc)
   int line, col;
   decodeLineCol(loc, name, line, col);
 
-  return stringc << name << ":" << line << ":" << col;
+  return fmt::format("{}:{}:{}", name, line, col);
 }
 
 string SourceLocManager::getLCString(SourceLoc loc)
@@ -634,7 +634,7 @@ string SourceLocManager::getLCString(SourceLoc loc)
   int line, col;
   decodeLineCol(loc, name, line, col);
 
-  return stringc << line << ":" << col;
+  return fmt::format("{}:{}", line, col);
 }
 
 
@@ -776,7 +776,7 @@ void expect(SourceLoc loc, char const *expFname, int expLine, int expCol)
   if (0!=strcmp(fname, expFname) ||
       line != expLine ||
       col != expCol) {
-    printf("expected %s:%d:%d, but got %s:%d:%d\n",
+    fmt::println("expected {}:{}:{}, but got {}:{}:{}",
            expFname, expLine, expCol,
            fname, line, col);
     exit(2);
@@ -787,7 +787,7 @@ void expect(SourceLoc loc, char const *expFname, int expLine, int expCol)
 // should this be exported?
 string locString(char const *fname, int line, int col)
 {
-  return stringc << fname << ":" << line << ":" << col;
+  return fmt::format("{}:{}:{}", fname, line, col);
 }
 
 

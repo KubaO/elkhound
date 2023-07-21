@@ -5,43 +5,18 @@
 #include "str.h"            // this module
 
 #include <istream>          // std::istream
-#include <stdio.h>          // sprintf
 #include <ctype.h>          // isspace
-#include <inttypes.h>       // string printf formats
+#include <fmt/format.h>     // fmt::println, etc.
 
-#include <assert.h>         // assert
-#include "xassert.h"        // xassert
-#include "ckheap.h"         // checkHeapNode
-#include "flatten.h"        // Flatten
-#include "nonport.h"        // vnprintf
-
-
-// ----------------------- string ---------------------
-
-std::string operator& (const std::string& head, const std::string& tail)
-{
-  std::string ret;
-  ret.reserve(head.length() + tail.length() + 1);
-  ret.append(head);
-  ret.append(tail);
-  return ret;
-}
 
 // --------------------- stringBuilder ------------------
 
 
 string& operator<< (string& str, void* ptr)
 {
-  return str << SBHex(intptr_t(ptr));
-}
-
-
-string& operator<< (string& str, SBHex h)
-{
-  char buf[32];        // should only need 19 for 64-bit word..
-  size_t len = sprintf(buf, "0x%" PRIXPTR, h.value);
-  assert(len <= sizeof(buf));
-  return str << buf;
+  fmt::basic_memory_buffer<char, 32> buf;
+  fmt::format_to(fmt::appender(buf), "0x{:02X}", ptr);
+  return str << string_view(buf.data(), buf.size());
 }
 
 
@@ -87,18 +62,29 @@ string toString(char const *str)
   }
 }
 
+string toString(void const *p)
+{
+  if (!p) {
+    return "(null)";
+  }
+  else {
+    return fmt::format("0x{:08X}", p);
+  }
+}
+
+string formatStrParenStr(const char* str, uintptr_t val)
+{
+  return fmt::format("{}({})", str, val);
+}
+
 
 
 // ------------------ test code --------------------
 #ifdef TEST_STR
 
-#include <iostream>    // std::cout
-
 void test(unsigned long val)
 {
-  //std::cout << stringb(val << " in hex: 0x" << stringBuilder::Hex(val)) << std::endl;
-
-  std::cout << (stringc << val << " in hex: " << SBHex(val)) << std::endl;
+  fmt::println("{0} in hex: 0x{0:02X}", val);
 }
 
 int main()
@@ -110,7 +96,7 @@ int main()
   test((unsigned long)(-1));
   test(1);
 
-  std::cout << "tests passed\n";
+  fmt::println("tests passed");
 
   return 0;
 }

@@ -26,9 +26,9 @@ void checkBoolean(Env &env, Type const *t, Expression const *e)
     // ok
   }
   else {
-    env.err(stringc << "expression " << e->toString()
-                    << " has type " << t->toString()
-                    << " but is used like a number or pointer");
+    env.err(
+      "expression {} has type {} but is used like a number or a pointer",
+      e->toString(), t->toString());
   }
 }
 
@@ -37,9 +37,8 @@ void checkBoolean(Env &env, Type const *t, Expression const *e)
 Type const *checkLval(Env &env, Type const *t, Expression const *e)
 {
   if (!t->isError() && !t->isLval()) {
-    env.err(stringc << "expression " << e->toString()
-                    << " has type " << t->toString()
-                    << " but is used like an lvalue");
+    env.err("expression {} has type {} but is used like an lvalue",
+            e->toString(), t->toString());
     return fixed(ST_ERROR);
   }
   else {
@@ -191,7 +190,7 @@ string stmtLoc(Statement const *s)
   int line, col;
   SourceLocManager::instance()->decodeLineCol(s->loc, fname, line, col);
 
-  return stringc << line << ":" << col;
+  return fmt::format("{}:{}", line, col);
 }
 
 
@@ -221,7 +220,7 @@ void Declaration::tcheck(Env &env)
       // ok
     }
     else {
-      env.err(stringc << "unsupported dflags: " << toString(df));
+      env.err("unsupported dflags: {}", toString(df));
       dflags = (DeclFlags)(dflags & ~DF_SOURCEFLAGS);
     }
   }
@@ -259,8 +258,8 @@ Type const *ASTTypeId::tcheck(Env &env)
 Type const *TypeSpecifier::applyCV(Env &env, Type const *base)
 {
   Type const *ret = env.applyCVToType(cv, base);
-  env.errIf(!ret, stringc << "can't apply " << toString(cv)
-                          << " to " << base->toString());
+  env.errIf(!ret, "can't apply {} to {}",
+            toString(cv), base->toString());
 
   return ret;
 }
@@ -269,7 +268,7 @@ Type const *TypeSpecifier::applyCV(Env &env, Type const *base)
 Type const *TS_name::tcheck(Env &env)
 {
   Type const *base = env.getTypedef(name);
-  env.errIf(!base, stringc << "unknown typedef " << name);
+  env.errIf(!base, "unknown typedef {}", name);
 
   return applyCV(env, base);
 }
@@ -286,7 +285,7 @@ Type const *TS_elaborated::tcheck(Env &env)
   AtomicType *ret;
   if (keyword != TI_ENUM) {
     ret = env.getOrAddCompound(name, (CompoundType::Keyword)keyword);
-    env.errIf(!ret, stringc << name << " already declared differently");
+    env.errIf(!ret, "{} already declared differently", name);
   }
   else {
     ret = env.getOrAddEnum(name);
@@ -300,8 +299,8 @@ Type const *TS_classSpec::tcheck(Env &env)
 {
   CompoundType *ct = env.getOrAddCompound(name, (CompoundType::Keyword)keyword);
   if (name) {
-    env.errIf(!ct, stringc << name << " already declared differently");
-    env.errIf(ct->isComplete(), stringc << name << " already declared");
+    env.errIf(!ct, "{} already declared differently", name);
+    env.errIf(ct->isComplete(), "{} already declared", name);
   }
   else {
     xassert(ct);
@@ -347,8 +346,8 @@ int constEval(Env &env, Expression *expr)
     return expr->constEval(env);
   }
   catch (XNonConst &x) {
-    env.err(stringc << expr->toString() << " is not const because "
-                    << x.subexpr->toString() << " is not const");
+    env.err("{} is not const because {} is not const",
+            expr->toString(), x.subexpr->toString());
     return 1;     // arbitrary (but not 0, for array sizes)
   }
 }
@@ -358,7 +357,7 @@ Type const *TS_enumSpec::tcheck(Env &env)
 {
   if (name) {
     EnumType *et = env.getEnum(name);
-    env.errIf(et, stringc << name << " already declared");
+    env.errIf(et, "{} already declared", name);
   }
 
   EnumType *et = env.addEnum(name);
@@ -445,11 +444,11 @@ void /*Type const * */D_name::itcheck(Env &env, Type const *base,
       if (at->name == env.str("addrtaken")) {
         var->setFlag(DF_ADDRTAKEN);
         if (!at->args.empty()) {
-          env.err(stringc << "addrtaken cannot have parameters");
+          env.err("addrtaken cannot have parameters");
         }
       }
       else {
-        env.err(stringc << "unknown attribute " << at->name);
+        env.err("unknown attribute {}", at->name);
       }
     }
   }
@@ -636,7 +635,7 @@ void connectEnclosingSwitch(Env &env, Statement *stmt, char const *kind)
 {
   S_switch *sw = env.getCurrentSwitch();
   if (!sw) {
-    env.err(stringc << kind << " can only appear in the context of a 'switch'");
+    env.err("{} can only appear in the context of a 'switch'", kind);
   }
   else {
     sw->cases.push_back(stmt);
@@ -954,14 +953,14 @@ string Statement::successorsToString() const
 
 string Statement::kindLocString() const
 {
-  return stringc << kindName() << "@" << stmtLoc(this);
+  return fmt::format("{}@{}", kindName(), stmtLoc(this));
 }
 
 
 string nextPtrString(NextPtr np)
 {
-  return stringc << nextPtrStmt(np)->kindLocString()
-                 << (nextPtrContinue(np)? "(c)" : "");
+  return fmt::format("{}{}", nextPtrStmt(np)->kindLocString(),
+                     (nextPtrContinue(np)? "(c)" : ""));
 }
 
 
@@ -1042,21 +1041,21 @@ Type const *E_variable::itcheck(Env &env)
     // all class and struct tags are automatically typedef names too)
     Type const *scopeType = env.getTypedef(scopeName);
     if (!scopeType) {
-      return env.err(stringc << "unknown type in qualifier: " << scopeName);
+      return env.err("unknown type in qualifier: {}", scopeName);
     }
 
     // the type should be a struct (an enum would be conceivable, but
     // redundant..)
     CompoundType const *ct = scopeType->ifCompoundType();
     if (!ct || (ct->keyword == CompoundType::K_UNION)) {
-      return env.err(stringc << "qualifier must be struct or class, in "
-                             << toString());
+      return env.err("qualifier must be struct or class, in {}",
+                     toString());
     }
 
     // look up the field the user asked for
     CompoundType::Field const *f = ct->getNamedField(name);
     if (!f) {
-      return env.err(stringc << "unknown field: " << toString());
+      return env.err("unknown field: {}", toString());
     }
     v = f->decl;
     xassert(v);    // I think this should be non-null by now
@@ -1065,7 +1064,7 @@ Type const *E_variable::itcheck(Env &env)
   else {           // no scope qualifier
     v = env.getVariable(name);
     if (!v) {
-      return env.err(stringc << "undeclared variable: " << name);
+      return env.err("undeclared variable: {}", name);
     }
   }
 
@@ -1074,7 +1073,7 @@ Type const *E_variable::itcheck(Env &env)
 
   if (v->hasFlag(DF_LOGIC) &&
       !env.inPredicate) {
-    env.err(stringc << name << " cannot be referenced outside a predicate");
+    env.err("{} cannot be referenced outside a predicate", name);
   }
 
   // if this is a global, annotate the current function to say
@@ -1104,10 +1103,10 @@ Type const *typeError(Env &env, Expression const *expr,
     return type;      // no need to report error twice
   }
   else {
-    return env.err(
-      stringc << "expression `" << expr->toString()
-              << "', type `" << type->toString()
-              << "': " << msg);
+    return env.err("expression `{}', type `{}': {}",
+                   expr->toString(),
+                   type->toString(),
+                   msg);
   }
 }
 
@@ -1175,14 +1174,14 @@ Type const *E_fieldAcc::itcheck(Env &env)
       ctype = &( lhstype->asCVAtomicTypeC().atomic->asCompoundTypeC() );
     }
     catch (...) {
-      return env.err(stringc << obj->toString() << " is not a compound type");
+      return env.err("{} is not a compound type", obj->toString());
     }
   }
 
   // get corresponding Field; this sets the 'field' member of E_fieldAcc
   field = ctype->getNamedField(fieldName);
   if (!field) {
-    env.err(stringc << "no field named " << fieldName);
+    env.err("no field named {}", fieldName);
     return fixed(ST_ERROR);
   }
 
@@ -1275,8 +1274,8 @@ Type const *E_binary::itcheck(Env &env)
   if (!env.inPredicate && op >= BIN_IMPLIES) {
     // this restriction is useful because it means I don't have to
     // do path analysis for this operator
-    env.err(stringc << "the " << ::toString(op)
-                    << " operator can only be used in predicates");
+    env.err("the {} operator can only be used in predicates",
+            ::toString(op));
   }
 
   checkBoolean(env, t1, e1);     // pointer is acceptable here..
@@ -1315,8 +1314,9 @@ Type const *E_addrOf::itcheck(Env &env)
       // the thmprv_attr stuff...
       if (!v->hasFlag(DF_ADDRTAKEN) &&
           !tracingSys("suppressAddrOfError")) {
-        env.err(stringc << "you have to mark the global " << v->name
-                        << " as thmprv_attr(addrtaken) if you take its address");
+        env.err("you have to mark the global {}"
+                " as thmprv_attr(addrtaken) if you take its address",
+                v->name);
       }
     }
   }
@@ -1333,7 +1333,7 @@ Type const *E_deref::itcheck(Env &env)
   }
 
   if (!t->isPointer()) {
-    env.err(stringc << "can only dereference pointers, not " << t->toCString());
+    env.err("can only dereference pointers, not {}", t->toCString());
     return fixed(ST_ERROR);
   }
 
@@ -1406,7 +1406,7 @@ Type const *E_assign::itcheck(Env &env)
   Type const *ttype = checkLval(env, target->tcheck(env), target);
 
   if (env.inPredicate) {
-    env.err(stringc << "cannot have side effects in predicates: " << toString());
+    env.err("cannot have side effects in predicates: {}", toString());
   }
 
   if (op != BIN_ASSIGN) {
@@ -1449,9 +1449,8 @@ Type const *E_quantifier::itcheck(Env &env)
   // I really want this to be an int.. in fact I want it to be
   // bool, but that type doesn't exist (yet?)
   if (!type->isSimple(ST_INT)) {
-    env.err(stringc << "type of " << (forall? "forall" : "exists")
-                    << " predicate should be int, not "
-                    << type->toString());
+    env.err("type of {} predicate should be int, not {}",
+            (forall? "forall" : "exists"), type->toString());
   }
 
   // remove declared variables
@@ -1583,23 +1582,23 @@ int E_quantifier::constEval(Env &) const { return xnonconst(); }
 // not sure how/if to improve the situation easily
 
 string E_intLit::toString() const
-  { return stringc << i; }
+  { return std::to_string(i); }
 string E_floatLit::toString() const
-  { return stringc << f; }
+  { return std::to_string(f); }
 string E_stringLit::toString() const
-  { return stringc << quoted(s); }
+  { return quoted(s); }
 string E_charLit::toString() const
-  { return stringc << "'" << c << "'"; }
+  { return fmt::format("'{}'", c); }
 //string E_structLit::toString() const
-//  { return stringc << "(..some type..){ ... }"; }
+//  { return "(..some type..){ ... }"; }
 
 string E_variable::toString() const
 {
   if (!scopeName) {
-    return stringc << name;
+    return name;
   }
   else {
-    return stringc << scopeName << "::" << name;
+    return fmt::format("{}::{}", scopeName, name);
   }
 }
 
@@ -1620,52 +1619,52 @@ string E_funCall::toString() const
 }
 
 string E_fieldAcc::toString() const
-  { return stringc << obj->toString() << "." << fieldName; }
+  { return fmt::format("{}.{}", obj->toString(), fieldName); }
 string E_sizeof::toString() const
-  { return stringc << "sizeof(" << expr->toString() << ")"; }
+  { return fmt::format("sizeof({})", expr->toString()); }
 string E_unary::toString() const
-  { return stringc << ::toString(op) << expr->toString(); }
+  { return fmt::format("{}{}", ::toString(op), expr->toString()); }
 
 string E_effect::toString() const
 {
   if (isPostfix(op)) {
-    return stringc << expr->toString() << ::toString(op);
+    return fmt::format("{}{}", expr->toString(), ::toString(op));
   }
   else {
-    return stringc << ::toString(op) << expr->toString();
+    return fmt::format("{}{}", ::toString(op), expr->toString());
   }
 }
 
 string E_binary::toString() const
-  { return stringc << e1->toString() << ::toString(op) << e2->toString(); }
+  { return fmt::format("{}{}{}", e1->toString(), ::toString(op), e2->toString()); }
 string E_addrOf::toString() const
-  { return stringc << "&" << expr->toString(); }
+  { return fmt::format("&{}", expr->toString()); }
 string E_deref::toString() const
-  { return stringc << "*(" << ptr->toString() << ")"; }
+  { return fmt::format("*({})", ptr->toString()); }
 string E_cast::toString() const
-  { return stringc << "(" << type->toCString() << ")" << expr->toString(); }
+  { return fmt::format("({}){}", type->toCString(), expr->toString()); }
 string E_cond::toString() const
-  { return stringc << cond->toString() << "?" << th->toString() << ":" << el->toString(); }
+  { return fmt::format("{}?{}:{}", cond->toString(), th->toString(), el->toString()); }
 //string E_gnuCond::toString() const
-//  { return stringc << cond->toString() << "?:" << el->toString(); }
+//  { return fmt::format("{}?:{}", cond->toString(), el->toString()); }
 string E_comma::toString() const
-  { return stringc << e1->toString() << ", " << e2->toString(); }
+  { return fmt::format("{}, {}", e1->toString(), e2->toString()); }
 string E_sizeofType::toString() const
-  { return stringc << "sizeof(..some type..)"; }
+  { return "sizeof(..some type..)"; }
 
 string E_new::toString() const
 {
-  return stringc << "new (" << type->asPointerTypeC().atType->toString() << ")";
+  return fmt::format("new ({})", type->asPointerTypeC().atType->toString());
 }
 
 string E_assign::toString() const
 {
   if (op == BIN_ASSIGN) {
-    return stringc << target->toString() << " = " << src->toString();
+    return fmt::format("{} = {}", target->toString(), src->toString());
   }
   else {
-    return stringc << target->toString() << " " << ::toString(op)
-                   << "= " << src->toString();
+    return fmt::format("{} {}= {}",
+      target->toString(), ::toString(op), src->toString());
   }
 }
 
@@ -1731,9 +1730,8 @@ void IN_compound::tcheck(Env &env, Type const *type)
 
     // check size restriction
     if (at.hasSize && inits.size() > at.size) {
-      env.err(stringc << "initializer has " << inits.size()
-                      << " elements but array only has " << at.size
-                      << " elements");
+      env.err("initializer has {} elements but array only has {} elements",
+              inits.size(), at.size);
     }
   }
 
@@ -1751,10 +1749,10 @@ void IN_compound::tcheck(Env &env, Type const *type)
     int field = 0;
     FOREACH_ASTLIST_NC(Initializer, inits, iter) {
       if (field >= ct.numFields()) {
-        env.err(stringc
-          << "too many initializers; " << ct.keywordAndName()
-          << " only has " << ct.numFields() << " fields, but "
-          << inits.size() << " initializers are present");
+        env.err(
+          "too many initializers; {} only has {} fields, "
+          "but {} initializers are present",
+          ct.keywordAndName(), ct.numFields(), inits.size());
         return;
       }
 
@@ -1772,7 +1770,7 @@ void IN_compound::tcheck(Env &env, Type const *type)
   }
 
   else {
-    env.err(stringc << "you can't use a compound initializer to initialize "
-                    << type->toString());
+    env.err("you can't use a compound initializer to initialize {}",
+            type->toString());
   }
 }

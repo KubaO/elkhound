@@ -65,6 +65,9 @@ public:
   // called by parser
   void error(char const *msg);
   void emit(Lexer1TokenType toktype, char const *text, int length);
+
+private:
+  void printErrorLoc();
 };
 
 

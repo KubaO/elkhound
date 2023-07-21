@@ -1141,7 +1141,7 @@ template <class EltType>
 void emitTable2(EmitCode &out, EltType const *table, int size, int rowLength,
                 rostring typeName, rostring tableName)
 {
-  string tempName = stringc << tableName << "_static";
+  string tempName = fmt::format("{}_static", tableName);
   emitTable(out, table, size, rowLength, typeName, tempName);
   out << "  " << tableName << " = const_cast<" << typeName << "*>("
       << tempName << ");\n\n";
@@ -1175,7 +1175,7 @@ void emitOffsetTable(EmitCode &out, EltType **table, EltType *base, int size,
   if (size > 0) {
     out << "  " << tableName << " = new " << typeName << " [" << size << "];\n";
 
-    emitTable(out, offsets, 16, "int", stringc << tableName << "_offsets");
+    emitTable(out, offsets, 16, "int", fmt::format("{}_offsets", tableName));
 
     // at run time, interpret the offsets table
     out << "  for (int i=0; i < " << size << "; i++) {\n"

@@ -449,7 +449,7 @@ string AccessMod::getModSuffixFromPrefix(char const *mod) const
     rostring s = *iter;
     if (prefixEquals(s, mod0)) {
       if (found) {
-        xfailure(stringc << "two modifiers with this prefix found " << mod << c_str);
+        xfailure("two modifiers with this prefix found {}", mod);
       }
       int len = strlen(mod);
       ret = s.substr(len, s.length()-len);
@@ -457,7 +457,7 @@ string AccessMod::getModSuffixFromPrefix(char const *mod) const
     }
   }
   if (!found) {
-    xfailure(stringc << "no such prefix found " << mod << c_str);
+    xfailure("no such prefix found {}", mod);
   }
   return ret;
 }

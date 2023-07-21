@@ -46,8 +46,8 @@ string Lexer::tokenDesc() const
 
 string Lexer::tokenKindDesc(int kind) const
 {
-  string k = quoted(stringc << (char)kind);
-  return fmt::format("{} ({})", k.c_str(), kind);
+  string k = quoted(std::to_string((char)kind));
+  return fmt::format("{} ({})", k, kind);
 }
 
 

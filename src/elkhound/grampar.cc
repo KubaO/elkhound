@@ -47,11 +47,10 @@ STATICDEF string XASTParse::
 {
   if (tok.validLoc()) {
     if (tok.isNonNull()) {
-      return stringc << tok.locString() << ": near " << tok
-                     << ", " << msg;
+      return fmt::format("{}: near {}, {}", tok.locString(), tok.str, msg);
     }
     else {
-      return stringc << tok.locString() << ": " << msg;
+      return fmt::format("{}: {}", tok.locString(), msg);
     }
   }
   else {
@@ -91,6 +90,13 @@ void astParseProduction(Environment &env, Nonterminal *nonterm,
 void astParseError(LocString const &failToken, rostring msg)
 {
   THROW(XASTParse(failToken, msg));
+}
+
+template <class F, class A1, class...Args>
+void astParseError(LocString const &failToken, F &&fmt, A1 &&arg1, Args &&...args)
+{
+  astParseError(failToken, fmt::format(
+    std::forward<F>(fmt), std::forward<A1>(arg1), std::forward<Args>(args)...));
 }
 
 void astParseError(SourceLoc loc, rostring msg)
@@ -411,7 +417,7 @@ void astParseTerminals(Environment &env, TF_terminals const &terms)
     for (int i=0; i<maxCode; i++) {
       if (!codeHasTerm[i]) {
         LocString dummy(dummyLoc, grammarStringTable.add(
-          stringc << "__dummy_filler_token" << i));
+          fmt::format("__dummy_filler_token{}", i)));
         env.g.declareToken(dummy, i, dummy);
       }
     }
@@ -451,8 +457,7 @@ void astParseTerminals(Environment &env, TF_terminals const &terms)
         // look up the token
         Terminal *t = astParseToken(env, tokName);
         if (t->precedence) {
-          astParseError(tokName,
-            stringc << tokName << " already has a specified precedence");
+          astParseError(tokName, "{} already has a specified precedence", tokName.str);
         }
 
         if (spec.prec == 0) {
@@ -575,8 +580,7 @@ void astParseDDM(Environment &, Symbol *sym,
     }
 
     else {
-      astParseError(func.name,
-        stringc << "unrecognized spec function \"" << func.name << "\"");
+      astParseError(func.name, "unrecognized spec function \"{}\"", func.name.str);
     }
   }
 }
@@ -1193,7 +1197,7 @@ GrammarAST *parseGrammarFile(rostring origFname, bool useML)
   else {
     in.reset(new std::ifstream(fname));
     if (!*in) {
-      xsyserror("open", stringc << "error opening input file " << fname);
+      xsyserror("open", "error opening input file {}", fname);
     }
   }
 

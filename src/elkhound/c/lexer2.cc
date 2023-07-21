@@ -9,7 +9,6 @@
 #include "glrconfig.h"   // SOURCELOC
 
 #include <stdlib.h>      // strtoul
-#include <string.h>      // strlen, strcmp
 
 // ------------------ token type descriptions ----------------------
 struct Lexer2TokenTypeDesc
@@ -390,11 +389,11 @@ string Lexer2Token::toStringType(bool asSexp, Lexer2TokenType type) const
     case L2_TYPE_NAME:
     case L2_VARIABLE_NAME:
     case L2_STRING_LITERAL:
-      litVal = stringc << strValue;
+      litVal = strValue;
       break;
 
     case L2_INT_LITERAL:
-      litVal = stringc << intValue;
+      litVal = std::to_string(intValue);
       break;
 
     default:
@@ -402,10 +401,10 @@ string Lexer2Token::toStringType(bool asSexp, Lexer2TokenType type) const
   }
 
   if (!asSexp) {
-    return stringc << tokType << "(" << litVal << ")";
+    return fmt::format("{}({})", tokType, litVal);
   }
   else {
-    return stringc << "(" << tokType << " " << litVal << ")";
+    return fmt::format("({} {})", tokType, litVal);
   }
 }
 
@@ -417,10 +416,10 @@ string Lexer2Token::unparseString() const
       return string(strValue);
 
     case L2_STRING_LITERAL:
-      return stringc << quoted(strValue);
+      return quoted(strValue);
 
     case L2_INT_LITERAL:
-      return stringc << intValue;
+      return std::to_string(intValue);
 
     default:
       return l2Tok2String(type);     // operators and keywords
@@ -735,12 +734,12 @@ Lexer2Token const *yylval = NULL;
 
 int main(int argc, char **argv)
 {
-  if (argc > 1 && 0==strcmp(argv[1], "-bison")) {
+  if (argc > 1 && string_view(argv[1]) == "-bison") {
     printBisonTokenDecls(true /*spellings*/);
     return 0;
   }
 
-  if (argc > 1 && 0==strcmp(argv[1], "-myparser")) {
+  if (argc > 1 && string_view(argv[1]) == "-myparser") {
     printMyTokenDecls();
     return 0;
   }

@@ -10,6 +10,7 @@
 #include "locstr.h"      // LocString
 
 #include <iostream>      // std::ostream
+#include <fmt/core.h>    // fmt::format
 
 // ----------------- downcasts --------------------
 // the 'if' variants return NULL if the type isn't what's expected;
@@ -213,12 +214,12 @@ template <class T>
 void debugPrintList(ASTList<T> const &list, char const *name,
                     std::ostream &os, int indent)
 {
-  ind(os, indent) << name << ":\n";
+  os << fmt::format("{: {}}:\n", name, indent);
   int ct=0;
   {
     FOREACH_ASTLIST(T, list, iter) {
       iter->debugPrint(os, indent+2,
-        stringc << name << "[" << ct++ << "]" << c_str);
+        fmt::format("{}[{}]", name, ct++).c_str());
     }
   }
 }
@@ -237,12 +238,12 @@ template <class T>
 void debugPrintFakeList(FakeList<T> const *list, char const *name,
                         std::ostream &os, int indent)
 {
-  ind(os, indent) << name << ":\n";
+  os << fmt::format("{: {}}:\n", name, indent);
   int ct=0;
   {
     FAKELIST_FOREACH(T, list, iter) {
       iter->debugPrint(os, indent+2,
-        stringc << name << "[" << ct++ << "]");
+        fmt::format("{}[{}]", name, ct++));
     }
   }
 }

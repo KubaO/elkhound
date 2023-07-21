@@ -12,8 +12,7 @@
 #define STR_H
 
 #include <iosfwd>                  // istream forward declaration
-#include <stdarg.h>                // va_list
-#include <type_traits>
+#include <type_traits>             // std::conditional_t etc.
 #include <string>                  // std::string
 #include "nonstd/string_view.hpp"  // nonstd::string_view
 
@@ -66,18 +65,8 @@ inline const char* operator << (string& str, C_Str) { return str.c_str(); }
 
 string readdelim(std::istream &is, char const *delim);
 
-struct SBHex {
-  uintptr_t value;
-  SBHex(uintptr_t v) : value(v) {}
-};
-string& operator<< (string& str, SBHex);
-
 
 // ---------------------- misc utils ------------------------
-
-// The "c" can be interpreted as "constructor".
-#define stringc string()
-
 
 // experimenting with using toString as a general method for datatypes
 string toString(int i);
@@ -86,6 +75,11 @@ string toString(char c);
 string toString(long i);
 string toString(char const *str);
 string toString(float f);
+
+string toString(void const *p);
+
+// format "{str}({val})"
+string formatStrParenStr(const char *str, uintptr_t val);
 
 
 #endif // STR_H
