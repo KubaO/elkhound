@@ -88,6 +88,13 @@ public:    // funcs
 void xsyserror(char const *syscallName);
 void xsyserror(rostring syscallName, rostring context);
 
+template <class F, class A1, class...Args>
+void xsyserror(rostring syscallName, F&& fmt, A1&& arg1, Args &&...args)
+{
+  xsyserror(syscallName, fmt::format(
+    std::forward<F>(fmt), std::forward<A1>(arg1), std::forward<Args>(args)...));
+}
+
 
 // get a representative string, for logging etc.
 string sysErrorCodeString(int systemErrorCode, rostring syscallName,

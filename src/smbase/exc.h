@@ -14,6 +14,7 @@
 #include "xassert.h"     // xassert, for convenience for #includers
 #include "str.h"         // string
 #include <iostream>      // ostream
+#include <fmt/format.h>  // fmt::memory_buffer
 
 
 // by using this macro, the debugger gets a shot before the stack is unwound
@@ -88,6 +89,15 @@ public:
 // equivalent to THROW(xBase(msg))
 void xbase(rostring msg) NORETURN;
 
+template <class F, class A1, class...Args>
+void xbase(F&& fmt, A1&& a1, Args&&...args) NORETURN
+{
+  fmt::basic_memory_buffer<char, 128> buf;
+  fmt::format_to(fmt::appender(buf), std::forward<F>(fmt),
+    std::forward<A1>(a1), std::forward<Args>(args)...);
+  xbase(buf.data());
+}
+
 
 // -------------------- x_assert -----------------------
 // thrown by _xassert_fail, declared in xassert.h
@@ -125,6 +135,15 @@ public:
 
 // compact way to throw an xFormat
 void xformat(rostring condition) NORETURN;
+
+template <class F, class A1, class...Args>
+void xformat(F &&fmt, A1 &&a1, Args&&...args) NORETURN
+{
+  fmt::basic_memory_buffer<char, 128> buf;
+  fmt::format_to(fmt::appender(buf), std::forward<F>(fmt),
+                 std::forward<A1>(a1), std::forward<Args>(args)...);
+  xformat(buf.data());
+}
 
 // convenient combination of condition and human-readable message
 #define checkFormat(cond, message) \

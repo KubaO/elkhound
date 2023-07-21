@@ -240,6 +240,12 @@ public:     // funcs
 
   // if 'condition' is true, report error 'str' and also throw an exception
   void errIf(bool condition, rostring str);
+  template <class F, class A1, class...Args>
+  void errIf(bool condition, F&& fmt, A1&& arg1, Args &&...args)
+  {
+    errIf(condition, fmt::format(std::forward<F>(fmt),
+      std::forward<A1>(arg1), std::forward<Args>(args)...));
+  }
 
   // # reported errors
   int getErrors() const { return errors; }
